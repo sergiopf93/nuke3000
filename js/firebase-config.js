@@ -1,5 +1,5 @@
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyDLbKBIWsV9FKsovfS5HXLr8mL05F0vl04",
+  apiKey:            "AIzaSyClF3SzURrjqotoiktttSKq-zID-3DQRLg",
   authDomain:        "nuke3000.firebaseapp.com",
   projectId:         "nuke3000",
   storageBucket:     "nuke3000.firebasestorage.app",
