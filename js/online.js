@@ -244,6 +244,12 @@ const ONLINE = (() => {
         }
         break;
 
+      case 'SETUP_NEXT_STEP':
+        // Host confirmed step (e.g. roll order) — guest advances
+        if (payload.order) G.setup.order = payload.order;
+        if (typeof nextSetupStep === 'function') nextSetupStep();
+        break;
+
       case 'SETUP_AUTOCLAIM':
         if (typeof autoClaimAll === 'function') autoClaimAll();
         break;

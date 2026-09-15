@@ -324,6 +324,24 @@ function resolveRollOrder() {
   G.setup._tieGroups = newTieGroups;
 
   if(anyPending) {
+    // Auto-roll CPUs in pending groups (host only)
+    const amHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
+    if (amHost) {
+      newTieGroups.forEach(grp => {
+        grp.forEach(fk2 => {
+          if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
+            setTimeout(() => {
+              const cpuRoll = Math.floor(Math.random()*6)+1;
+              _applyRoll(fk2, cpuRoll);
+              if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+                ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: cpuRoll });
+              }
+            }, 600 + Math.random()*400);
+          }
+        });
+      });
+    }
+
     // Show re-roll UI
     const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
     let infoHtml = '<div style="margin-bottom:8px;color:#888;font-size:10px;">Re-roll requerido:</div>';
@@ -406,7 +424,13 @@ function resolveRollOrder() {
 
   const acts2 = document.getElementById('setup-actions');
   acts2.innerHTML = '';
-  acts2.appendChild(setupBtn('CONTINUAR ▶', nextSetupStep, '#C8A800'));
+  acts2.appendChild(setupBtn('CONTINUAR ▶', () => {
+    // Publish final order so guests advance too
+    if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && ONLINE.isHost()) {
+      ONLINE.pushAction('SETUP_NEXT_STEP', { order: G.setup.order });
+    }
+    nextSetupStep();
+  }, '#C8A800'));
 }
 
 // ════════════════════════════════════════════════════════════════
