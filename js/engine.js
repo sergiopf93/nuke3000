@@ -201,9 +201,11 @@ function renderStepActions(step) {
       </div>
       <div style="font-size:11px;color:#888;margin-bottom:10px;">Haz clic en tus territorios resaltados (verde)</div>
       ${left===0 ? nextBtn() : `<button class="abtn" onclick="autoDistributeReinf()" style="width:100%;margin-bottom:6px;border-color:#336633;color:#448844;">AUTO-DISTRIBUIR</button>`}
-      <div id="reinf-left-display" style="font-size:11px;color:#888;margin-top:6px;"></div>`;
+      <div id="reinf-left-display" style="font-size:11px;color:#888;margin-top:6px;"></div>
+      ${left>0 ? nextBtn('SIGUIENTE (dejar sin colocar)') : ''}`;
 
   } else if(sid==='upgrade') {
+    G.sel = null; G.attackSrc = null; // clear selection to avoid wrong territory
     const f = G.factions[fk];
     const myTersU = Object.values(G.territories).filter(t=>t.owner===fk);
     const totalSol = myTersU.reduce((s,t)=>s+t.soldiers,0);
@@ -1184,4 +1186,16 @@ function updateMissilePips() {
   cont.innerHTML = '';
   for(let i=0;i<5;i++){
     const p = document.createElement('div');
-    p.className = 'miss-pip' + (
+    p.className = 'miss-pip' + (i < myF.missiles ? ' full' : '');
+    cont.appendChild(p);
+  }
+}
+
+// ── COMBAT / DICE ─────────────────────────────────────────────
+
+// ════════════════════════════════════════════════════════════════
+// COMBAT — iterative with unit selection and retreat
+// ════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════
+// COMBAT DI
