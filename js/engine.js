@@ -412,6 +412,134 @@ function executePlayerStep(step) {
 
 // ── CPU Attack ────────────────────────────────────────────────────
 
+
+
+function applyExplosions(box, modal, fk, nucTers, rolls, R, explosionCount, isMyMaint, callback) {
+  const fd = FDATA[fk]||{name:fk,color:'#888'};
+  const explodedIndices = rolls.map((v,i)=>v===R.maintenanceExplosionOn?i:-1).filter(i=>i>=0);
+
+  if(!isMyMaint) {
+    // CPU: auto-destroy territories that rolled explosion
+    explodedIndices.forEach(i=>{
+      const t=nucTers[i]; t.hasNuclear=false;
+      if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
+      else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
+      addLog('EXPLOSION en '+terName(t.id)+' (D'+R.maintenanceDie+'='+rolls[i]+')','combat');
+      showNuclearExplosionBanner(t.id, fd);
+    });
+    updateMap(); refreshCards();
+    setTimeout(()=>{modal.remove();if(callback)callback();},3000);
+    return;
+  }
+
+  // Player: choose which nuclears to destroy
+  const allMyNucs = Object.values(G.territories).filter(t=>t.owner===G.pf&&t.hasNuclear);
+  const chosen = new Set();
+
+  const selDiv = document.createElement('div');
+  selDiv.style.cssText = 'margin-top:16px;text-align:left;';
+  selDiv.innerHTML = '<div style="font-family:Orbitron,sans-serif;font-size:10px;color:#ff4444;letter-spacing:2px;margin-bottom:10px;text-align:center;">ELIGE '+explosionCount+' NUCLEAR A DESTRUIR</div>';
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;';
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.textContent = 'CONFIRMAR DESTRUCCION';
+  confirmBtn.disabled = true;
+  confirmBtn.style.cssText = 'margin-top:14px;width:100%;background:#0a0a0d;border:1px solid #ff4444;color:#ff4444;padding:10px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;opacity:0.4;';
+
+  allMyNucs.forEach(t=>{
+    const btn = document.createElement('button');
+    btn.dataset.tid = t.id;
+    btn.style.cssText = 'background:#0a0a0d;border:1px solid #333;color:#888;padding:8px 12px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;text-align:left;';
+    btn.textContent = terName(t.id);
+    btn.onclick = ()=>{
+      if(chosen.has(t.id)){
+        chosen.delete(t.id);
+        btn.style.cssText=btn.style.cssText.replace('#1a0000','#0a0a0d').replace('#ff4444','#333');
+        btn.style.color='#888';
+      } else if(chosen.size<explosionCount){
+        chosen.add(t.id);
+        btn.style.background='#1a0000'; btn.style.borderColor='#ff4444'; btn.style.color='#ff4444';
+      }
+      confirmBtn.disabled=(chosen.size!==explosionCount);
+      confirmBtn.style.opacity=chosen.size===explosionCount?'1':'0.4';
+    };
+    grid.appendChild(btn);
+  });
+
+  confirmBtn.onclick = ()=>{
+    chosen.forEach(tid=>{
+      const t=G.territories[tid]; if(!t) return;
+      t.hasNuclear=false;
+      if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
+      else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
+      addLog('EXPLOSION: '+terName(tid)+' destruido','combat');
+      showNuclearExplosionBanner(tid, fd);
+    });
+    updateMap(); refreshCards();
+    modal.remove(); if(callback) callback();
+  };
+
+  selDiv.appendChild(grid);
+  selDiv.appendChild(confirmBtn);
+  box.appendChild(selDiv);
+}
+
+function showNuclearExplosionBanner(terId, fd) {
+  // Flash the hex orange
+  const ring = document.getElementById('tr-'+terId);
+  if(ring) {
+    ring.setAttribute('stroke','#ff8800');
+    ring.setAttribute('stroke-width','5');
+    ring.setAttribute('filter','url(#fx-glow)');
+    setTimeout(()=>{
+      if(ring){ring.setAttribute('stroke','');ring.setAttribute('stroke-width','1.5');ring.setAttribute('filter','');}
+    }, 4000);
+  }
+
+  // Add SVG explosion label on hex
+  const td = TERRITORIES_DEF.find(x=>x.id===terId);
+  if(td) {
+    const oldLbl = document.getElementById('nuke-lbl-'+terId);
+    if(oldLbl) oldLbl.remove();
+    const bg = document.createElementNS(NS,'rect');
+    bg.setAttribute('x',td.cx-22); bg.setAttribute('y',td.cy-8);
+    bg.setAttribute('width','44'); bg.setAttribute('height','14');
+    bg.setAttribute('rx','2'); bg.setAttribute('fill','rgba(255,140,0,0.9)');
+    bg.setAttribute('pointer-events','none');
+    const lbl = document.createElementNS(NS,'text');
+    lbl.setAttribute('x',td.cx); lbl.setAttribute('y',td.cy+3);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('font-size','7'); lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('font-family','Orbitron,monospace');
+    lbl.setAttribute('fill','#000'); lbl.setAttribute('pointer-events','none');
+    lbl.textContent = 'EXPLOSION';
+    const grp = document.createElementNS(NS,'g');
+    grp.setAttribute('id','nuke-lbl-'+terId);
+    grp.appendChild(bg); grp.appendChild(lbl);
+    svgG.appendChild(grp);
+    setTimeout(()=>{ const g=document.getElementById('nuke-lbl-'+terId);if(g)g.remove(); }, 5000);
+  }
+
+  // Green banner at top
+  const ex = document.getElementById('explosion-banner');
+  if(ex) ex.remove();
+  const banner = document.createElement('div');
+  banner.id = 'explosion-banner';
+  banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:800;'+
+    'background:#001a00;border:2px solid #44ff44;padding:10px 24px;font-family:Orbitron,sans-serif;'+
+    'text-align:center;box-shadow:0 0 24px #44ff4488;cursor:pointer;';
+  banner.innerHTML = '<div style="font-size:12px;color:#44ff44;letter-spacing:3px;margin-bottom:4px;">☢ EXPLOSION NUCLEAR</div>'+
+    '<div style="font-size:10px;color:#aaa;">'+terName(terId)+
+    ' — <span style="color:'+(fd.color||'#888')+'">'+fd.name+'</span></div>';
+  banner.onclick = () => banner.remove();
+  document.body.appendChild(banner);
+  setTimeout(()=>{ const b=document.getElementById('explosion-banner');if(b)b.remove(); }, 6000);
+
+  updateMap();
+}
+
 function flashAttackedTerritory(tgtId, srcId, attFk) {
   // Store pending attack so clicking the hex opens the combat modal
   if(!G.pendingCpuAttack) G.pendingCpuAttack = {};
@@ -574,15 +702,8 @@ function openMaintenanceModal(fk, nucTers, R, callback) {
         el.style.color = v===R.maintenanceExplosionOn ? '#ff4444' : '#88cc44';
         el.style.fontSize = '24px';
       }
-      if(v===R.maintenanceExplosionOn) {
-        explosions++;
-        nucTers[i].hasNuclear = false;
-        if(nucTers[i].aircraft>0){nucTers[i].soldiers=0;nucTers[i].mechs=0;nucTers[i].scorpions=0;}
-        else{nucTers[i].soldiers=Math.max(1,nucTers[i].soldiers);nucTers[i].mechs=0;nucTers[i].scorpions=0;}
-        addLog(`💥 EXPLOSIÓN en ${nucTers[i].id} (D${R.maintenanceDie}=${v})`,'combat');
-      } else {
-        addLog(`☢ ${nucTers[i].id}: D${R.maintenanceDie}=${v} — seguro`,'res');
-      }
+      if(v===R.maintenanceExplosionOn) explosions++;
+      else addLog(`☢ ${terName(nucTers[i].id)}: D${R.maintenanceDie}=${v} — seguro`,'res');
     });
 
     const res = document.getElementById('maint-result');
@@ -590,22 +711,24 @@ function openMaintenanceModal(fk, nucTers, R, callback) {
       res.textContent = explosions>0 ? `${explosions} EXPLOSIÓN${explosions>1?'ES':''}!` : 'Sin explosiones ✓';
       res.style.color = explosions>0 ? '#ff4444' : '#88cc44';
     }
-
-    updateMap(); refreshCards();
-
-    // Player: show CERRAR button. Others (CPU): auto-close
-    const res2 = document.getElementById('maint-result');
     const rollBtn2 = document.getElementById('maint-roll-btn');
     if(rollBtn2) rollBtn2.style.display='none';
-    if(isMyMaint) {
-      const closeBtn=document.createElement('button');
-      closeBtn.textContent='CERRAR ▶';
-      closeBtn.style.cssText='background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-top:8px;';
-      closeBtn.onclick=()=>{modal.remove();if(callback)callback();};
-      box.appendChild(closeBtn);
+
+    if(explosions === 0) {
+      // No explosions — just close
+      updateMap(); refreshCards();
+      if(isMyMaint) {
+        const closeBtn=document.createElement('button');
+        closeBtn.textContent='CERRAR ▶';
+        closeBtn.style.cssText='background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-top:8px;';
+        closeBtn.onclick=()=>{modal.remove();if(callback)callback();};
+        box.appendChild(closeBtn);
+      } else {
+        setTimeout(()=>{modal.remove();if(callback)callback();},2500);
+      }
     } else {
-      // CPU/spectator: auto-close after showing result
-      setTimeout(()=>{modal.remove();if(callback)callback();},2500);
+      // Explosions occurred — let faction choose which nuclears to destroy
+      applyExplosions(box, modal, fk, nucTers, rolls, R, explosions, isMyMaint, callback);
     }
   };
 
@@ -1032,9 +1155,14 @@ function onTerritoryClick(id, event) {
     return;
   }
 
-  // Pending CPU attack — player clicks attacked hex to open defense modal
+  // Pending CPU attack — player clicks attacked hex
   if(G.pendingCpuAttack && G.pendingCpuAttack[id]) {
-    openCombatModal('cpu-att-player-def');
+    const pending = G.pendingCpuAttack[id];
+    if(pending.spectator) {
+      openCombatModal('cpu-att-cpu-def'); // spectator view
+    } else {
+      openCombatModal('cpu-att-player-def'); // player defends
+    }
     return;
   }
   // During setup, block all territory interaction

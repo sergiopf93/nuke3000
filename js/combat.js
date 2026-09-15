@@ -21,11 +21,29 @@ function openDiceCpu(srcId, targetId, cpuFk, callback) {
   G_combat={srcId,targetId,attFk:cpuFk,defFk:tgt.owner,round:1,done:false,
             isPlayerAtt:false,isPlayerDef,callback};
   if(isPlayerDef) {
-    // Don't open modal yet — player must click the hex to open it
-    // G_combat is stored, flashAttackedTerritory already called
+    // Player defends — wait for click on hex
+    // G_combat stored, flashAttackedTerritory already called
   } else {
-    // CPU vs CPU — open spectator modal directly
-    openCombatModal('cpu-att-cpu-def');
+    // CPU vs CPU — flash hex, player can click to watch as spectator
+    // Store pending so onTerritoryClick can open spectator modal
+    if(!G.pendingCpuAttack) G.pendingCpuAttack = {};
+    G.pendingCpuAttack[targetId] = { srcId, attFk: cpuFk, spectator: true };
+    // Also show banner for CPU vs CPU
+    const attFd = FDATA[cpuFk]||{name:cpuFk,color:'#888'};
+    const defFd = FDATA[tgt.owner]||{name:tgt.owner,color:'#888'};
+    const ex = document.getElementById('attack-banner');
+    if(ex) ex.remove();
+    const banner = document.createElement('div');
+    banner.id = 'attack-banner';
+    banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:800;'+
+      'background:#0a0010;border:2px solid #6644aa;padding:8px 20px;font-family:Orbitron,sans-serif;'+
+      'text-align:center;box-shadow:0 0 16px #6644aa88;';
+    banner.innerHTML = '<div style="font-size:10px;color:#9966cc;letter-spacing:2px;">COMBATE RIVAL</div>'+
+      '<div style="font-size:9px;color:#aaa;margin-top:3px;">'+
+      '<span style="color:'+attFd.color+'">'+attFd.name+'</span> ataca <span style="color:'+defFd.color+'">'+defFd.name+'</span> en '+terName(targetId)+
+      '</div><div style="font-size:8px;color:#666;margin-top:2px;">Pulsa el hexágono para observar</div>';
+    document.body.appendChild(banner);
+    setTimeout(()=>{ const b=document.getElementById('attack-banner');if(b)b.remove(); }, 6000);
   }
 }
 
@@ -604,6 +622,7 @@ function runEndPhase() {
         if(t.soldiers===0) t.soldiers=1;
       }
       addLog(`💥 EXPLOSIÓN NUCLEAR en ${t.id}! Roll=${roll}`, 'combat');
+        showNuclearExplosionBanner(t.id, FDATA[fk]||{name:fk,color:'#88cc44'});
     }
   });
   if(explosions===0) addLog('☢ Mantenimiento completado. Sin explosiones.','res'); markStepDone('maint');
