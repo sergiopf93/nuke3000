@@ -249,15 +249,22 @@ function _applyRoll(fk, roll) {
     if(b) b.style.display='none';
   }
 
-  // Auto-roll CPU factions
-  G.setup.order.forEach(fk2 => {
-    if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
-      setTimeout(() => {
-        const cpuRoll = Math.floor(Math.random()*6)+1;
-        _applyRoll(fk2, cpuRoll);
-      }, 300 + Math.random()*400);
-    }
-  });
+  // Auto-roll CPU factions — only host does this to avoid duplicate rolls
+  const amHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
+  if (amHost) {
+    G.setup.order.forEach(fk2 => {
+      if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
+        setTimeout(() => {
+          const cpuRoll = Math.floor(Math.random()*6)+1;
+          _applyRoll(fk2, cpuRoll);
+          // Publish CPU roll so guests see it too
+          if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+            ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: cpuRoll });
+          }
+        }, 300 + Math.random()*400);
+      }
+    });
+  }
 
   // Check if all have rolled
   const allRolled = G.setup.order.every(fk2 => G.setup.rollResults[fk2] !== undefined);
