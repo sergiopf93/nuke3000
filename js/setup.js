@@ -1,5 +1,4 @@
 const SETUP_STEPS = ['roll', 'claim', 'soldiers', 'nuclear'];
-// Options: 'roll' | 'claim' | 'soldiers' | 'nuclear'
 
 function setupLog(msg) {
   const el = document.getElementById('setup-log');
@@ -35,22 +34,21 @@ function showSetupPanel(title, info, mode) {
   const p = document.getElementById('setup-panel');
   p.style.display = 'block';
   const rollMode = document.getElementById('setup-roll-mode');
-  const barMode = document.getElementById('setup-bar-mode');
-  
+  const barMode  = document.getElementById('setup-bar-mode');
   if(mode === 'bar') {
     rollMode.style.display = 'none';
-    barMode.style.display = 'flex';
+    barMode.style.display  = 'flex';
     document.getElementById('setup-bar-title').textContent = title;
-    document.getElementById('setup-bar-info').innerHTML = info;
+    document.getElementById('setup-bar-info').innerHTML    = info;
     document.getElementById('setup-bar-actions').innerHTML = '';
-    document.getElementById('setup-bar-log').textContent = '';
+    document.getElementById('setup-bar-log').textContent   = '';
   } else {
     rollMode.style.display = 'flex';
-    barMode.style.display = 'none';
-    document.getElementById('setup-title').textContent = title;
-    document.getElementById('setup-info').innerHTML = info;
-    document.getElementById('setup-rolls').innerHTML = '';
-    document.getElementById('setup-actions').innerHTML = '';
+    barMode.style.display  = 'none';
+    document.getElementById('setup-title').textContent  = title;
+    document.getElementById('setup-info').innerHTML     = info;
+    document.getElementById('setup-rolls').innerHTML    = '';
+    document.getElementById('setup-actions').innerHTML  = '';
   }
 }
 
@@ -58,22 +56,53 @@ function hideSetupPanel() {
   document.getElementById('setup-panel').style.display = 'none';
 }
 
+// ── Determine which factions are human players ───────────────
+// In online mode: factions that have a userId in meta.players
+// In local mode: only G.pf is human
+let _onlinePlayerFactions = null; // set when game starts online
+
+function isHumanFaction(fk) {
+  if (_onlinePlayerFactions) return _onlinePlayerFactions.has(fk);
+  return fk === G.pf;
+}
+
+function isMyFaction(fk) {
+  return fk === G.pf;
+}
+
+// ── Start setup ───────────────────────────────────────────────
 function startSetupPhase() {
-  // Always include player's chosen faction; fill rest with CPU factions
   const allFkeys = Object.keys(FDATA);
-  const cpuFkeys = allFkeys.filter(k => k !== G.pf).slice(0, G.playerCount - 1);
-  const fkeys = [G.pf, ...cpuFkeys]; // player first, then CPUs
-  G.setup.order = fkeys;
-  G.setup.orderIdx = 0;
+
+  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+    // Online: use factions from the room players
+    // _onlinePlayerFactions populated by _launchOnlineGame
+    const humanFks = _onlinePlayerFactions
+      ? [..._onlinePlayerFactions]
+      : [G.pf];
+    // Fill remaining slots with CPU factions
+    const cpuFks = allFkeys
+      .filter(k => !humanFks.includes(k))
+      .slice(0, G.playerCount - humanFks.length);
+    G.setup.order = [...humanFks, ...cpuFks];
+  } else {
+    // Local: player first, then CPUs
+    const cpuFkeys = allFkeys.filter(k => k !== G.pf).slice(0, G.playerCount - 1);
+    G.setup.order = [G.pf, ...cpuFkeys];
+  }
+
+  G.setup.orderIdx   = 0;
   G.setup.rollResults = {};
-  G.setup.claimRound = 0;
-  G.setup._tieGroups = null;
-  G.setup._posStart = {};
-  G.setup._inSetup = true;
-  // Init soldiers/nukes tracking
-  fkeys.forEach(fk => {
+  G.setup.claimRound  = 0;
+  G.setup._tieGroups  = null;
+  G.setup._posStart   = {};
+  G.setup._inSetup    = true;
+  G.setup.soldiersLeft = {};
+  G.setup.nukesLeft    = {};
+
+  G.setup.order.forEach(fk => {
     G.setup.soldiersLeft[fk] = G.factions[fk].soldiers;
-    G.setup.nukesLeft[fk] = fk === 'lib' ? 0 : G.factions[fk].nukes;
+    G.setup.nukesLeft[fk]    = fk === 'lib' ? 0 : G.factions[fk].nukes;
   });
   runSetupStep(0);
 }
@@ -89,15 +118,67 @@ function runSetupStep(stepIdx) {
 }
 
 function nextSetupStep() {
-  refreshCards(); // update turn order dots now that order may be set
+  refreshCards();
   runSetupStep((G.setup._stepIdx||0) + 1);
 }
 
-// ── STEP: Roll D6 — determine turn order ────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  STEP: ROLL D6
+//  Online: each human player sees ONLY their own die.
+//          When all humans have rolled, results appear for all.
+//  Local:  same as before.
+// ════════════════════════════════════════════════════════════════
 function setupStep_Roll() {
   G.setup.rollResults = {};
-  showSetupPanel('ROLL D6 — DETERMINE ORDER',
-    'Each faction rolls a D6. Highest goes first. Ties re-roll.<br>Click each faction to roll, or use Auto.');
+  const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
+
+  if (isOnline) {
+    _setupRoll_Online();
+  } else {
+    _setupRoll_Local();
+  }
+}
+
+// ── Online roll UI ────────────────────────────────────────────
+function _setupRoll_Online() {
+  showSetupPanel('ROLL D6 — DETERMINA EL ORDEN',
+    'Tira tu dado para determinar el orden de turno.');
+
+  const rollsDiv = document.getElementById('setup-rolls');
+  rollsDiv.innerHTML = '';
+
+  // Show ONLY player's own die
+  const myCard = document.createElement('div');
+  myCard.id = 'roll-card-' + G.pf;
+  const fd = FDATA[G.pf];
+  myCard.style.cssText = `border:1px solid #333;padding:20px 30px;cursor:pointer;
+    text-align:center;transition:border-color 0.3s;min-width:120px;`;
+  myCard.innerHTML = `
+    <div style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;
+      color:${fd.color};margin-bottom:12px;">${fd.name}</div>
+    <div id="roll-result-${G.pf}" style="font-size:48px;font-family:Orbitron,sans-serif;color:#333;">?</div>
+    <div style="font-size:9px;color:#555;margin-top:8px;letter-spacing:2px;">CLICK PARA TIRAR</div>`;
+  myCard.onclick = () => rollFor(G.pf);
+  rollsDiv.appendChild(myCard);
+
+  // Waiting indicators for other human players
+  const otherHumans = G.setup.order.filter(fk => isHumanFaction(fk) && fk !== G.pf);
+  if (otherHumans.length) {
+    const waitDiv = document.createElement('div');
+    waitDiv.id = 'roll-waiting';
+    waitDiv.style.cssText = 'margin-top:16px;font-size:10px;color:#555;letter-spacing:2px;';
+    waitDiv.innerHTML = 'ESPERANDO: ' + otherHumans.map(fk =>
+      `<span id="roll-wait-${fk}" style="color:${FDATA[fk].color};margin-right:10px;">
+        ${FDATA[fk].name} ⏳</span>`
+    ).join('');
+    rollsDiv.appendChild(waitDiv);
+  }
+}
+
+// ── Local roll UI (original) ──────────────────────────────────
+function _setupRoll_Local() {
+  showSetupPanel('ROLL D6 — DETERMINA EL ORDEN',
+    'Cada facción tira un D6. El mayor va primero. Empates repiten.');
 
   const rollsDiv = document.getElementById('setup-rolls');
   G.setup.order.forEach(fk => {
@@ -106,80 +187,116 @@ function setupStep_Roll() {
     card.id = 'roll-card-'+fk;
     card.style.cssText = `border:1px solid #222;padding:10px 14px;cursor:pointer;min-width:80px;
       text-align:center;transition:border-color 0.3s;`;
-    card.innerHTML = `<div style="font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1px;
-      color:${fd.color};margin-bottom:8px;">${fd.name.toUpperCase()}</div>
+    card.innerHTML = `
+      <div style="font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1px;
+        color:${fd.color};margin-bottom:8px;">${fd.name}</div>
       <div id="roll-result-${fk}" style="font-size:30px;font-family:Orbitron,sans-serif;color:#999;">?</div>`;
     card.onclick = () => rollFor(fk);
     rollsDiv.appendChild(card);
   });
 
   const acts = document.getElementById('setup-actions');
-  const rollAllBtn = setupBtn('ROLL ALL', () => {
+  const rollAllBtn = setupBtn('TIRAR TODOS', () => {
     G.setup.order.forEach(fk => { if(G.setup.rollResults[fk]===undefined) rollFor(fk); });
   }, '#555');
   rollAllBtn.id = 'roll-all-btn';
   acts.appendChild(rollAllBtn);
 }
 
+// ── Roll for a faction ────────────────────────────────────────
 function rollFor(fk) {
   if(G.setup.rollResults[fk] !== undefined) return;
+  // Only allow rolling your own faction online
+  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && fk !== G.pf) return;
+
   const roll = Math.floor(Math.random()*6)+1;
-  G.setup.rollResults[fk] = roll;
-  const el = document.getElementById('roll-result-'+fk);
-  if(el){ el.textContent = roll; el.style.color = '#fff'; }
-  const card = document.getElementById('roll-card-'+fk);
-  if(card) card.style.borderColor = FDATA[fk].color;
-  setupLog(`${FDATA[fk].name}: ${roll}`);
-  // Hide ROLL ALL button once any die is rolled
-  const rollAllBtn = document.getElementById('roll-all-btn');
-  if(rollAllBtn) rollAllBtn.style.display = 'none';
-  // Check if all rolled
-  const rolled = G.setup.order.filter(fk2 => G.setup.rollResults[fk2] !== undefined);
-  if(rolled.length === G.setup.order.length) {
-    setTimeout(resolveRollOrder, 600);
+  _applyRoll(fk, roll);
+
+  // Publish online
+  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+    ONLINE.pushAction('SETUP_ROLL', { fk, roll });
   }
+}
+
+// ── Apply a roll result (local + remote) ──────────────────────
+function _applyRoll(fk, roll) {
+  if(G.setup.rollResults[fk] !== undefined) return;
+  G.setup.rollResults[fk] = roll;
+  setupLog(`${FDATA[fk].name}: ${roll}`);
+
+  const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
+
+  if (isOnline) {
+    // Update waiting indicator
+    const waitEl = document.getElementById('roll-wait-' + fk);
+    if (waitEl) {
+      waitEl.innerHTML = `${FDATA[fk].name} ✓ <span style="color:#fff;">${roll}</span>`;
+    }
+    // Update own card if it's mine
+    if (fk === G.pf) {
+      const el = document.getElementById('roll-result-' + fk);
+      if (el) { el.textContent = roll; el.style.color = '#fff'; }
+      const card = document.getElementById('roll-card-' + fk);
+      if (card) { card.style.borderColor = FDATA[fk].color; card.style.cursor = 'default'; }
+    }
+  } else {
+    const el = document.getElementById('roll-result-'+fk);
+    if(el){ el.textContent = roll; el.style.color = '#fff'; }
+    const card = document.getElementById('roll-card-'+fk);
+    if(card) card.style.borderColor = FDATA[fk].color;
+    // Hide ROLL ALL btn
+    const b = document.getElementById('roll-all-btn');
+    if(b) b.style.display='none';
+  }
+
+  // Auto-roll CPU factions
+  G.setup.order.forEach(fk2 => {
+    if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
+      setTimeout(() => {
+        const cpuRoll = Math.floor(Math.random()*6)+1;
+        _applyRoll(fk2, cpuRoll);
+      }, 300 + Math.random()*400);
+    }
+  });
+
+  // Check if all have rolled
+  const allRolled = G.setup.order.every(fk2 => G.setup.rollResults[fk2] !== undefined);
+  if (allRolled) {
+    setTimeout(resolveRollOrder, 800);
+  }
+}
+
+// ── Remote roll handler (called by online.js) ─────────────────
+function _onRemoteRoll(fk, roll) {
+  _applyRoll(fk, roll);
 }
 
 function resolveRollOrder() {
   const results = G.setup.rollResults;
 
-  // G.setup._tieGroups: array of arrays — each inner array is a group of factions
-  // competing for a specific position range. Initialized on first call.
   if(!G.setup._tieGroups) {
-    // First resolution: every faction is in one big group
     G.setup._tieGroups = [G.setup.order.slice()];
-    G.setup._posStart = {};
+    G.setup._posStart  = {};
     G.setup.order.forEach((fk,i) => G.setup._posStart[fk] = i+1);
   }
 
-  // Check each group independently
   const groupColors = ['#ffdd00','#ff8800','#ff44ff','#44ffff','#ff4444','#44ff88'];
   let anyPending = false;
   const newTieGroups = [];
 
-  // Resolve each current group
   G.setup._tieGroups.forEach((grp, gi) => {
-    // Check if all in this group have rolled
     const rolledInGrp = grp.filter(fk => results[fk] !== undefined);
     if(rolledInGrp.length < grp.length) {
-      // Still waiting for some to roll
-      newTieGroups.push(grp);
-      anyPending = true;
-      return;
+      newTieGroups.push(grp); anyPending = true; return;
     }
-
-    // All rolled — check for ties WITHIN this group
     const byValGrp = {};
     grp.forEach(fk => {
       const v = results[fk];
       if(!byValGrp[v]) byValGrp[v] = [];
       byValGrp[v].push(fk);
     });
-
     const subTies = Object.values(byValGrp).filter(g => g.length > 1);
     if(subTies.length > 0) {
-      // Sub-ties within this group — delete their results and re-add as new groups
-      // Sort the values to assign positions correctly
       const vals = Object.keys(byValGrp).map(Number).sort((a,b)=>b-a);
       let pos = G.setup._posStart[grp[0]] || 1;
       vals.forEach(v => {
@@ -187,88 +304,109 @@ function resolveRollOrder() {
         subGrp.forEach(fk => G.setup._posStart[fk] = pos);
         if(subGrp.length > 1) {
           subGrp.forEach(fk => { delete results[fk]; });
-          newTieGroups.push(subGrp);
-          anyPending = true;
+          newTieGroups.push(subGrp); anyPending = true;
         }
         pos += subGrp.length;
       });
     } else {
-      // No ties in this group — sort and assign final positions
       const sorted = grp.slice().sort((a,b) => results[b]-results[a]);
       let pos = G.setup._posStart[grp[0]] || 1;
       sorted.forEach(fk => { G.setup._posStart[fk] = pos++; });
-      // This group is done — no need to re-add
     }
   });
 
   G.setup._tieGroups = newTieGroups;
 
   if(anyPending) {
-    // Show re-roll UI for pending groups
-    let infoHtml = '<div style="margin-bottom:8px;color:#888;font-size:10px;">Re-roll required:</div>';
+    // Show re-roll UI
+    const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
+    let infoHtml = '<div style="margin-bottom:8px;color:#888;font-size:10px;">Re-roll requerido:</div>';
     newTieGroups.forEach((grp, gi) => {
       const col = groupColors[gi % groupColors.length];
       const startPos = G.setup._posStart[grp[0]];
-      const endPos = startPos + grp.length - 1;
-      const posLabel = startPos === endPos ? `Position ${startPos}` : `Positions ${startPos}-${endPos}`;
-      infoHtml +=
-        `<div style="margin:6px 0;padding:6px 10px;border-left:3px solid ${col};">` +
-        `<span style="color:${col};font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:1px;">🎲 ${posLabel}</span><br>` +
-        grp.map(fk=>`<span style="color:${FDATA[fk].color};margin-right:8px;">${FDATA[fk].name}</span>`).join('') +
-        `</div>`;
+      const endPos   = startPos + grp.length - 1;
+      const posLabel = startPos === endPos ? `Posición ${startPos}` : `Posiciones ${startPos}-${endPos}`;
+      infoHtml += `<div style="margin:6px 0;padding:6px 10px;border-left:3px solid ${col};">
+        <span style="color:${col};font-family:Orbitron,sans-serif;font-size:11px;">🎲 ${posLabel}</span><br>
+        ${grp.map(fk=>`<span style="color:${FDATA[fk].color};margin-right:8px;">${FDATA[fk].name}</span>`).join('')}
+        </div>`;
     });
     document.getElementById('setup-info').innerHTML = infoHtml;
 
-    const pendingFks = newTieGroups.flat();
-    G.setup.order.forEach(fk => {
-      const card = document.getElementById('roll-card-'+fk);
-      const el = document.getElementById('roll-result-'+fk);
-      const grpIdx = newTieGroups.findIndex(g => g.includes(fk));
-      if(grpIdx >= 0) {
-        if(el){ el.textContent='?'; el.style.color='#333'; }
-        if(card){
-          const col = groupColors[grpIdx % groupColors.length];
-          card.style.borderColor = col;
-          card.style.boxShadow = `0 0 6px ${col}44`;
-          card.style.cursor = 'pointer';
-          card.style.opacity = '1';
-        }
+    if (isOnline) {
+      // Online: show only own die if in pending group
+      const rollsDiv = document.getElementById('setup-rolls');
+      rollsDiv.innerHTML = '';
+      const myGroup = newTieGroups.find(g => g.includes(G.pf));
+      if (myGroup) {
+        const fd = FDATA[G.pf];
+        const card = document.createElement('div');
+        card.id = 'roll-card-' + G.pf;
+        card.style.cssText = `border:1px solid ${groupColors[newTieGroups.indexOf(myGroup)%groupColors.length]};
+          padding:20px 30px;cursor:pointer;text-align:center;min-width:120px;`;
+        card.innerHTML = `
+          <div style="font-family:Orbitron,sans-serif;font-size:11px;color:${fd.color};margin-bottom:12px;">${fd.name}</div>
+          <div id="roll-result-${G.pf}" style="font-size:48px;font-family:Orbitron,sans-serif;color:#333;">?</div>
+          <div style="font-size:9px;color:#555;margin-top:8px;letter-spacing:2px;">CLICK PARA RE-TIRAR</div>`;
+        card.onclick = () => rollFor(G.pf);
+        rollsDiv.appendChild(card);
+
+        // Waiting for others in same group
+        myGroup.filter(fk => fk !== G.pf && isHumanFaction(fk)).forEach(fk => {
+          const w = document.createElement('span');
+          w.id = 'roll-wait-' + fk;
+          w.style.cssText = `color:${FDATA[fk].color};margin-left:10px;font-size:10px;`;
+          w.textContent = FDATA[fk].name + ' ⏳';
+          rollsDiv.appendChild(w);
+        });
       } else {
-        if(card){ card.style.opacity='0.35'; card.style.cursor='default'; card.style.boxShadow='none'; }
+        rollsDiv.innerHTML = `<div style="color:#888;font-size:11px;letter-spacing:2px;">
+          Esperando re-tirada de otros jugadores...</div>`;
       }
-    });
+    } else {
+      G.setup.order.forEach(fk => {
+        const card = document.getElementById('roll-card-'+fk);
+        const el   = document.getElementById('roll-result-'+fk);
+        const grpIdx = newTieGroups.findIndex(g => g.includes(fk));
+        if(grpIdx >= 0) {
+          if(el){ el.textContent='?'; el.style.color='#333'; }
+          if(card){
+            const col = groupColors[grpIdx%groupColors.length];
+            card.style.borderColor=col; card.style.cursor='pointer'; card.style.opacity='1';
+          }
+        } else {
+          if(card){ card.style.opacity='0.35'; card.style.cursor='default'; }
+        }
+      });
+    }
     return;
   }
 
-  // All groups resolved — build final order from _posStart
-  const sorted = G.setup.order.slice().sort((a,b) => G.setup._posStart[a] - G.setup._posStart[b]);
-  G.setup.order = sorted;
+  // All resolved — build final order
+  const sorted = G.setup.order.slice().sort((a,b) => G.setup._posStart[a]-G.setup._posStart[b]);
+  G.setup.order    = sorted;
   G.setup.orderIdx = 0;
   G.setup._tieGroups = null;
 
   document.getElementById('setup-info').innerHTML =
-    `<div style="margin-bottom:10px;color:#C8A800;letter-spacing:2px;font-size:10px;">FINAL ORDER</div>` +
+    `<div style="margin-bottom:10px;color:#C8A800;letter-spacing:2px;font-size:10px;">ORDEN FINAL</div>` +
     sorted.map((fk,i) =>
-      `<div style="margin:5px 0;display:flex;align-items:center;gap:8px;">` +
-      `<span style="color:#777;font-size:18px;font-family:Orbitron,sans-serif;width:20px;">${i+1}</span>` +
-      `<span style="color:${FDATA[fk].color};font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:1px;">${FDATA[fk].name}</span>` +
-      `<span style="color:#999;font-size:10px;">rolled ${results[fk]}</span></div>`
+      `<div style="margin:5px 0;display:flex;align-items:center;gap:8px;">
+        <span style="color:#777;font-size:18px;width:20px;">${i+1}</span>
+        <span style="color:${FDATA[fk].color};font-family:Orbitron,sans-serif;font-size:12px;">${FDATA[fk].name}</span>
+        <span style="color:#999;font-size:10px;">tiró ${results[fk]}</span>
+      </div>`
     ).join('');
 
   const acts2 = document.getElementById('setup-actions');
   acts2.innerHTML = '';
-  acts2.appendChild(setupBtn('CONTINUE ▶', nextSetupStep, '#C8A800'));
+  acts2.appendChild(setupBtn('CONTINUAR ▶', nextSetupStep, '#C8A800'));
 }
 
+// ════════════════════════════════════════════════════════════════
+//  STEP: CLAIM TERRITORIES
+// ════════════════════════════════════════════════════════════════
 function setupStep_Claim() {
-  // Turn off all LEDs initially — they light up as territories are claimed
-  Object.values(G.territories).forEach(t => {
-    const led = document.getElementById('led-'+t.id);
-    const glow = document.getElementById('glow-'+t.id);
-    if(led) led.setAttribute('opacity','0');
-    if(glow) glow.setAttribute('opacity','0');
-  });
-
   G.setup.orderIdx = 0;
   setupStep_Claim_Next();
 }
@@ -277,68 +415,69 @@ function setupStep_Claim_Next() {
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(unclaimed.length === 0) { nextSetupStep(); return; }
 
-  const fk = G.setup.order[G.setup.orderIdx % G.setup.order.length];
-  const fd = FDATA[fk];
-  const isPlayer = fk === G.pf;
+  const fk       = G.setup.order[G.setup.orderIdx % G.setup.order.length];
+  const fd       = FDATA[fk];
+  const isMe     = isMyFaction(fk);
+  const isHuman  = isHumanFaction(fk);
 
-  showSetupPanel('TERRITORY CLAIMING',
-    `<span style="color:${fd.color}">${fd.name}</span> — pick territory · Unclaimed: <b>${unclaimed.length}</b>`,
+  showSetupPanel('RECLAMAR TERRITORIOS',
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':' (CPU)'} — Sin reclamar: <b>${unclaimed.length}</b>`,
     'bar');
 
-  // Highlight unclaimed — static gold border, no animation
+  // Highlight unclaimed
   unclaimed.forEach(t => {
     const ring = document.getElementById('tr-'+t.id);
-    if(ring){
-      ring.setAttribute('stroke','#C8A800');
-      ring.setAttribute('stroke-width','2');
-      ring.style.animation = 'none';
-      ring.style.transition = 'none';
-    }
+    if(ring){ ring.setAttribute('stroke','#C8A800'); ring.setAttribute('stroke-width','2'); }
   });
 
-  if(isPlayer) {
+  if(isMe) {
+    // It's my turn to claim
     G.setup.claimCallback = (id) => {
       const t = G.territories[id];
       if(t.owner) return false;
       doClaimTerritory(fk, id);
+      // Publish online
+      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+        ONLINE.pushAction('SETUP_CLAIM', { fk, terId: id });
+      }
       return true;
     };
+    const acts = getSetupActionsDiv();
+    acts.innerHTML = '';
+    acts.appendChild(setupBtn('AUTO-RECLAMAR TODO', () => {
+      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+        ONLINE.pushAction('SETUP_AUTOCLAIM', {});
+      }
+      autoClaimAll();
+    }, '#444'));
+  } else if(isHuman) {
+    // Another human player's turn — wait for their action
+    G.setup.claimCallback = null;
+    const acts = getSetupActionsDiv();
+    acts.innerHTML = '';
+    setupBarLog(`Esperando a ${fd.name}...`);
   } else {
-    // CPU picks random unclaimed territory
+    // CPU
+    G.setup.claimCallback = null;
     const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
     setTimeout(() => doClaimTerritory(fk, pick.id), 350);
   }
-
-  const acts = getSetupActionsDiv();
-  acts.innerHTML = '';
-  acts.appendChild(setupBtn('AUTO-CLAIM ALL', autoClaimAll, '#444'));
 }
 
 function doClaimTerritory(fk, id) {
   G.setup.claimCallback = null;
-  // Remove all claim highlights statically before processing
-  Object.values(G.territories).forEach(t => {
-    const ring = document.getElementById('tr-'+t.id);
-    if(ring){ ring.style.animation='none'; ring.style.transition='none'; }
-  });
   const t = G.territories[id];
-  t.owner = fk;
-  t.soldiers = 1;
-  G.factions[fk].soldiers = Math.max(0, G.factions[fk].soldiers-1);
-  G.setup.soldiersLeft[fk] = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
+  if(!t || t.owner) return; // already claimed
+  t.owner = fk; t.soldiers = 1;
+  G.factions[fk].soldiers   = Math.max(0, G.factions[fk].soldiers-1);
+  G.setup.soldiersLeft[fk]  = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
   setupLog(`${FDATA[fk].name} → ${id}`);
 
-  // Clear highlights, light up the LED of claimed territory
+  // Clear highlights
   Object.values(G.territories).filter(tt=>!tt.owner).forEach(tt => {
     const ring = document.getElementById('tr-'+tt.id);
     if(ring){ ring.setAttribute('stroke','#1a1a20'); ring.setAttribute('stroke-width','1.5'); }
   });
-  // Light up LED for claimed territory
-  const led = document.getElementById('led-'+id);
-  const glow = document.getElementById('glow-'+id);
-  if(led){ led.setAttribute('opacity','0.95'); led.setAttribute('fill', FDATA[fk].color); }
-  if(glow){ glow.setAttribute('opacity','0.25'); glow.setAttribute('stroke', FDATA[fk].color); }
-
   updateMap();
   G.setup.orderIdx++;
   setTimeout(setupStep_Claim_Next, 150);
@@ -347,12 +486,12 @@ function doClaimTerritory(fk, id) {
 function autoClaimAll() {
   G.setup.claimCallback = null;
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
-  const shuffled = [...unclaimed].sort(()=>Math.random()-.5);
+  const shuffled  = [...unclaimed].sort(()=>Math.random()-.5);
   let i = G.setup.orderIdx;
   shuffled.forEach(t => {
     const fk = G.setup.order[i % G.setup.order.length];
     t.owner = fk; t.soldiers = 1;
-    G.factions[fk].soldiers = Math.max(0, G.factions[fk].soldiers-1);
+    G.factions[fk].soldiers  = Math.max(0, G.factions[fk].soldiers-1);
     G.setup.soldiersLeft[fk] = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
     i++;
   });
@@ -360,83 +499,88 @@ function autoClaimAll() {
   nextSetupStep();
 }
 
-// ── STEP: Distribute soldiers ─────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  STEP: PLACE SOLDIERS
+// ════════════════════════════════════════════════════════════════
 function setupStep_PlaceSoldiers() {
   G.setup.orderIdx = 0;
   setupStep_Soldiers_Next();
 }
 
 function setupStep_Soldiers_Next() {
-  // Find next faction with soldiers to place
   for(let i=0; i<G.setup.order.length; i++){
     const idx = (G.setup.orderIdx + i) % G.setup.order.length;
-    const fk = G.setup.order[idx];
+    const fk  = G.setup.order[idx];
     if((G.setup.soldiersLeft[fk]||0) > 0){
       G.setup.orderIdx = idx;
       setupStep_Soldiers_ForFaction(fk);
       return;
     }
   }
-  nextSetupStep(); // all done
+  nextSetupStep();
 }
 
 function setupStep_Soldiers_ForFaction(fk) {
-  const fd = FDATA[fk];
-  const left = G.setup.soldiersLeft[fk]||0;
-  const myTers = Object.values(G.territories).filter(t=>t.owner===fk);
-  const validTers = myTers; // setup: free placement in any owned territory
-  const note = 'Place soldiers freely in any of your territories.';
+  const fd       = FDATA[fk];
+  const left     = G.setup.soldiersLeft[fk]||0;
+  const myTers   = Object.values(G.territories).filter(t=>t.owner===fk);
+  const isMe     = isMyFaction(fk);
+  const isHuman  = isHumanFaction(fk);
 
-  showSetupPanel('DISTRIBUTE SOLDIERS',
-    `<span style="color:${fd.color}">${fd.name}</span> — place <b>${left}</b> soldier(s) · ${note}`,
+  showSetupPanel('DISTRIBUIR SOLDADOS',
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':''} — coloca <b>${left}</b> soldado(s)`,
     'bar');
 
-  if(fk === G.pf) {
-    validTers.forEach(t => {
+  if(isMe) {
+    myTers.forEach(t => {
       const ring = document.getElementById('tr-'+t.id);
       if(ring){ ring.setAttribute('stroke','#44ff88'); ring.setAttribute('stroke-width','2.5'); }
     });
     G.setup.claimCallback = (id, evt) => {
       const t = G.territories[id];
       if(t.owner !== fk) return false;
-      // Setup: any owned territory is valid
-      showSoldierCounter(fk, id, validTers, evt); return true;
+      showSoldierCounter(fk, id, myTers, evt);
+      return true;
     };
     const acts = getSetupActionsDiv();
-    acts.innerHTML='';
-    acts.appendChild(setupBtn('AUTO-DISTRIBUTE ALL', autoDistributeAll, '#444'));
+    acts.innerHTML = '';
+    acts.appendChild(setupBtn('AUTO-DISTRIBUIR TODO', () => {
+      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+        ONLINE.pushAction('SETUP_AUTODISTRIBUTE', {});
+      }
+      autoDistributeAll();
+    }, '#444'));
+  } else if(isHuman) {
+    G.setup.claimCallback = null;
+    const acts = getSetupActionsDiv();
+    acts.innerHTML = '';
+    setupBarLog(`Esperando a ${fd.name}...`);
   } else {
-    // CPU distributes evenly
-    let n = left;
+    // CPU
+    const n = left;
     for(let s=0;s<n;s++){
-      const pick=validTers[s%validTers.length]; if(pick) pick.soldiers++;
+      const pick = myTers[s%myTers.length]; if(pick) pick.soldiers++;
     }
-    G.setup.soldiersLeft[fk]=0;
-    G.factions[fk].soldiers=0;
+    G.setup.soldiersLeft[fk] = 0;
+    G.factions[fk].soldiers  = 0;
     updateMap();
-    G.setup.orderIdx=(G.setup.orderIdx+1)%G.setup.order.length;
+    G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
     setTimeout(setupStep_Soldiers_Next, 200);
   }
 }
 
-
 function showSoldierCounter(fk, id, validTers, evt) {
-  const t = G.territories[id];
   const maxAdd = G.setup.soldiersLeft[fk]||0;
   if(maxAdd === 0) return;
-
-  // Remove any existing counter
   const existing = document.getElementById('soldier-counter-popup');
   if(existing) existing.remove();
 
-  // Position near click
   let popX, popY;
   if(evt && evt.clientX) {
-    popX = Math.min(evt.clientX - 70, window.innerWidth - 160);
-    popY = Math.max(evt.clientY - 130, 10);
+    popX = Math.min(evt.clientX-70, window.innerWidth-160);
+    popY = Math.max(evt.clientY-130, 10);
   } else {
-    const mapWrap = document.getElementById('map-wrap');
-    const mRect = mapWrap ? mapWrap.getBoundingClientRect() : {left:300,top:50,width:900};
+    const mRect = document.getElementById('map-wrap').getBoundingClientRect();
     popX = mRect.left + mRect.width/2 - 70;
     popY = mRect.top + 60;
   }
@@ -448,46 +592,47 @@ function showSoldierCounter(fk, id, validTers, evt) {
     font-family:Orbitron,sans-serif;text-align:center;min-width:130px;`;
 
   let qty = 1;
-
   const title = document.createElement('div');
   title.style.cssText = `font-size:10px;letter-spacing:2px;color:${FDATA[fk].color};margin-bottom:8px;`;
-  title.textContent = 'PLACE SOLDIERS';
+  title.textContent = 'COLOCAR SOLDADOS';
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;';
-
   const btnMinus = document.createElement('button');
-  btnMinus.textContent = '−';
-  btnMinus.style.cssText = 'background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;';
-
+  btnMinus.textContent='−';
+  btnMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
   const qtyEl = document.createElement('span');
-  qtyEl.style.cssText = 'font-size:22px;color:#fff;min-width:32px;display:inline-block;text-align:center;';
+  qtyEl.style.cssText='font-size:22px;color:#fff;min-width:32px;display:inline-block;text-align:center;';
   qtyEl.textContent = qty;
-
   const btnPlus = document.createElement('button');
-  btnPlus.textContent = '+';
-  btnPlus.style.cssText = 'background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;';
-
+  btnPlus.textContent='+';
+  btnPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
   const maxEl = document.createElement('div');
-  maxEl.style.cssText = 'font-size:10px;color:#777;margin-bottom:10px;';
-  maxEl.textContent = `available: ${maxAdd}`;
+  maxEl.style.cssText='font-size:10px;color:#777;margin-bottom:10px;';
+  maxEl.textContent=`disponibles: ${maxAdd}`;
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:6px;';
-
+  btnRow.style.cssText='display:flex;gap:6px;';
   const btnOk = document.createElement('button');
-  btnOk.textContent = '✓ OK';
-  btnOk.style.cssText = `background:#0a0a0d;border:1px solid ${FDATA[fk].color};color:${FDATA[fk].color};
+  btnOk.textContent='✓ OK';
+  btnOk.style.cssText=`background:#0a0a0d;border:1px solid ${FDATA[fk].color};color:${FDATA[fk].color};
     padding:5px 12px;font-family:Orbitron,sans-serif;font-size:10px;cursor:pointer;flex:1;`;
-
   const btnX = document.createElement('button');
-  btnX.textContent = '✕';
-  btnX.style.cssText = 'background:#0a0a0d;border:1px solid #333;color:#888;padding:5px 8px;cursor:pointer;font-size:10px;';
+  btnX.textContent='✕';
+  btnX.style.cssText='background:#0a0a0d;border:1px solid #333;color:#888;padding:5px 8px;cursor:pointer;font-size:10px;';
 
-  btnMinus.onclick = (e) => { e.stopPropagation(); if(qty>1){qty--; qtyEl.textContent=qty;} };
-  btnPlus.onclick  = (e) => { e.stopPropagation(); if(qty<maxAdd){qty++; qtyEl.textContent=qty;} };
-  btnX.onclick     = (e) => { e.stopPropagation(); popup.remove(); };
-  btnOk.onclick    = (e) => { e.stopPropagation(); popup.remove(); doPlaceSoldier(fk, id, qty); };
+  btnMinus.onclick=(e)=>{e.stopPropagation();if(qty>1){qty--;qtyEl.textContent=qty;}};
+  btnPlus.onclick =(e)=>{e.stopPropagation();if(qty<maxAdd){qty++;qtyEl.textContent=qty;}};
+  btnX.onclick    =(e)=>{e.stopPropagation();popup.remove();};
+  btnOk.onclick   =(e)=>{
+    e.stopPropagation();
+    popup.remove();
+    // Publish before applying (so remote gets it)
+    if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+      ONLINE.pushAction('SETUP_SOLDIER', { fk, terId: id, qty });
+    }
+    doPlaceSoldier(fk, id, qty);
+  };
 
   row.appendChild(btnMinus); row.appendChild(qtyEl); row.appendChild(btnPlus);
   btnRow.appendChild(btnOk); btnRow.appendChild(btnX);
@@ -501,12 +646,11 @@ function doPlaceSoldier(fk, id, qty) {
   const existing2 = document.getElementById('soldier-counter-popup');
   if(existing2) existing2.remove();
   qty = Math.min(qty, G.setup.soldiersLeft[fk]||0);
-  G.territories[id].soldiers += qty;
-  G.setup.soldiersLeft[fk] = Math.max(0,(G.setup.soldiersLeft[fk]||0)-qty);
-  G.factions[fk].soldiers = Math.max(0, G.factions[fk].soldiers-qty);
+  G.territories[id].soldiers     += qty;
+  G.setup.soldiersLeft[fk]        = Math.max(0,(G.setup.soldiersLeft[fk]||0)-qty);
+  G.factions[fk].soldiers         = Math.max(0, G.factions[fk].soldiers-qty);
   setupLog(`${FDATA[fk].name} +${qty} sol → ${id} (${G.setup.soldiersLeft[fk]} left)`);
   updateMap();
-  // Clear highlights
   Object.values(G.territories).filter(t=>t.owner===fk).forEach(t2=>{
     const ring=document.getElementById('tr-'+t2.id);
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
@@ -523,16 +667,17 @@ function autoDistributeAll() {
   G.setup.claimCallback=null;
   G.setup.order.forEach(fk2=>{
     const n=G.setup.soldiersLeft[fk2]||0;
-    const vt=Object.values(G.territories).filter(t=>t.owner===fk2&&t.hasNuclear);
-    const vt2=vt.length>0?vt:Object.values(G.territories).filter(t=>t.owner===fk2);
-    for(let s=0;s<n;s++){const p=vt2[s%vt2.length];if(p)p.soldiers++;}
+    const vt=Object.values(G.territories).filter(t=>t.owner===fk2);
+    for(let s=0;s<n;s++){const p=vt[s%vt.length];if(p)p.soldiers++;}
     G.setup.soldiersLeft[fk2]=0;
     G.factions[fk2].soldiers=0;
   });
   updateMap(); nextSetupStep();
 }
 
-// ── STEP: Place Nuclear Complexes ─────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  STEP: PLACE NUCLEAR COMPLEXES
+// ════════════════════════════════════════════════════════════════
 function setupStep_PlaceNuclears() {
   G.setup.orderIdx = 0;
   setupStep_Nuclear_Next();
@@ -551,15 +696,17 @@ function setupStep_Nuclear_Next() {
 }
 
 function setupStep_Nuclear_ForFaction(fk) {
-  const fd=FDATA[fk];
-  const left=G.setup.nukesLeft[fk]||0;
-  const myTers=Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+  const fd      = FDATA[fk];
+  const left    = G.setup.nukesLeft[fk]||0;
+  const myTers  = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+  const isMe    = isMyFaction(fk);
+  const isHuman = isHumanFaction(fk);
 
-  showSetupPanel('PLACE NUCLEAR COMPLEXES',
-    `<span style="color:${fd.color}">${fd.name}</span> — place <b>${left}</b> Nuclear Complex(es) · Click your territory`,
+  showSetupPanel('COLOCAR NUCLEAR COMPLEXES',
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':''} — coloca <b>${left}</b> Nuclear Complex(es)`,
     'bar');
 
-  if(fk===G.pf){
+  if(isMe){
     myTers.forEach(t=>{
       const ring=document.getElementById('tr-'+t.id);
       if(ring){ring.setAttribute('stroke','#ffff00');ring.setAttribute('stroke-width','2.5');}
@@ -567,11 +714,25 @@ function setupStep_Nuclear_ForFaction(fk) {
     G.setup.claimCallback=(id)=>{
       const t=G.territories[id];
       if(t.owner!==fk||t.hasNuclear) return false;
+      // Publish before applying
+      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+        ONLINE.pushAction('SETUP_NUCLEAR', { fk, terId: id });
+      }
       doPlaceNuclear(fk,id); return true;
     };
     const acts=getSetupActionsDiv();
     acts.innerHTML='';
-    acts.appendChild(setupBtn('AUTO-PLACE ALL NUKES', autoPlaceNukes, '#444'));
+    acts.appendChild(setupBtn('AUTO-COLOCAR NUKES', ()=>{
+      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+        ONLINE.pushAction('SETUP_AUTONUKES', {});
+      }
+      autoPlaceNukes();
+    }, '#444'));
+  } else if(isHuman){
+    G.setup.claimCallback = null;
+    const acts = getSetupActionsDiv();
+    acts.innerHTML='';
+    setupBarLog(`Esperando a ${fd.name}...`);
   } else {
     const pick=myTers[Math.floor(Math.random()*myTers.length)];
     if(pick) setTimeout(()=>doPlaceNuclear(fk,pick.id),300);
@@ -581,7 +742,9 @@ function setupStep_Nuclear_ForFaction(fk) {
 
 function doPlaceNuclear(fk,id){
   G.setup.claimCallback=null;
-  G.territories[id].hasNuclear=true;
+  const t = G.territories[id];
+  if(!t || t.hasNuclear) return;
+  t.hasNuclear=true;
   G.setup.nukesLeft[fk]--;
   setupLog(`${FDATA[fk].name} ☢ → ${id}`);
   updateMap();
@@ -589,7 +752,6 @@ function doPlaceNuclear(fk,id){
     const ring=document.getElementById('tr-'+t2.id);
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
   });
-  G.setup.claimCallback=null;
   if(G.setup.nukesLeft[fk]>0){
     setTimeout(()=>setupStep_Nuclear_ForFaction(fk),100);
   } else {
@@ -609,7 +771,9 @@ function autoPlaceNukes(){
   updateMap(); nextSetupStep();
 }
 
-// ── END SETUP ─────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  END SETUP
+// ════════════════════════════════════════════════════════════════
 function endSetupPhase(){
   hideSetupPanel();
   G.setup.claimCallback=null;
@@ -620,31 +784,26 @@ function endSetupPhase(){
   startPhaseProgress();
   updateMap();
 
-  // Big "GAME START" announcement overlay
   const overlay = document.createElement('div');
-  overlay.style.cssText = `position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.85);
+  overlay.style.cssText=`position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.85);
     display:flex;align-items:center;justify-content:center;`;
-  overlay.innerHTML = `
+  overlay.innerHTML=`
     <div style="text-align:center;">
       <div style="font-family:Orbitron,sans-serif;font-size:48px;letter-spacing:12px;
-        color:#C8A800;text-shadow:0 0 40px #C8A800aa;margin-bottom:20px;">
-        GAME START
-      </div>
+        color:#C8A800;text-shadow:0 0 40px #C8A800aa;margin-bottom:20px;">GAME START</div>
       <div style="font-size:14px;color:#888;letter-spacing:4px;margin-bottom:30px;">
-        ARMAGEDDON PROTOCOL INITIATED
-      </div>
-      <div style="font-size:11px;color:#888;margin-bottom:8px;">Turn order:</div>
+        ARMAGEDDON PROTOCOL INITIATED</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">Orden de turno:</div>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:30px;">
         ${G.setup.order.map((fk,i)=>
           `<span style="font-family:Orbitron,sans-serif;color:${FDATA[fk].color};font-size:11px;">
-            ${i+1}. ${FDATA[fk].name}
-          </span>`
+            ${i+1}. ${FDATA[fk].name}</span>`
         ).join('')}
       </div>
-      <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ Game begins!','sys');refreshCards();updateFactionPanel();"
+      <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ ¡Comienza el juego!','sys');refreshCards();updateFactionPanel();"
         style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:12px 32px;
         font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
-        BEGIN ▶
+        COMENZAR ▶
       </button>
     </div>`;
   document.body.appendChild(overlay);
@@ -652,5 +811,3 @@ function endSetupPhase(){
   refreshCards();
   updateFactionPanel();
 }
-
-
