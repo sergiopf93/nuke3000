@@ -579,9 +579,13 @@ function _renderWaitingRoom(meta) {
 
 // ── Create room ─────────────────────────────────────────────
 function onlineCreateRoom() {
+  if (!selF) {
+    _setOnlineStatus('⚠ ELIGE UNA FACCIÓN PRIMERO', 'error');
+    return;
+  }
   const name = document.getElementById('pname').value.trim() || 'COMANDANTE';
   G.pname = name;
-  G.pf = selF || null; // host can pick faction in lobby or in waiting room
+  G.pf = selF;
   _setOnlineStatus('CREANDO SALA...', '');
   ONLINE.createRoom().then(() => {
     _setOnlineStatus('SALA ' + ONLINE.getRoomCode() + ' · ESPERANDO JUGADORES', 'connected');
