@@ -357,9 +357,10 @@ const ONLINE = (() => {
         if (typeof refreshCards === 'function') refreshCards();
 
         if (sub === 'CLAIM') {
-          // Small delay so map renders before next prompt
           setTimeout(() => {
             if (typeof setupStep_Claim_Next === 'function') setupStep_Claim_Next();
+            // Force map redraw after panel updates
+            setTimeout(() => { if (typeof updateMap === 'function') updateMap(); }, 50);
           }, 100);
         } else if (sub === 'AUTOCLAIM') {
           if (typeof nextSetupStep === 'function') nextSetupStep();

@@ -445,6 +445,7 @@ function doClaimTerritory(fk, id) {
     if(ring){ ring.setAttribute('stroke','#1a1a20'); ring.setAttribute('stroke-width','1.5'); }
   });
   updateMap();
+  refreshCards();
 
   // Advance order BEFORE sync so G carries the updated orderIdx
   G.setup.orderIdx++;
