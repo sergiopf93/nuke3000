@@ -1,6 +1,6 @@
 // ============================================================
 //  NUKE 3000 — Online Multiplayer via Firebase
-//  js/online.js  ·  v2.0
+//  js/online.js  ·  v2.1
 // ============================================================
 
 const ONLINE = (() => {
@@ -15,7 +15,6 @@ const ONLINE = (() => {
   let _isHost = false;
   let _ready = false;
   let _roomUpdateCb = null;
-  let _lastActionSeq = -1; // track processed actions
 
   // ── Init ──────────────────────────────────────────────────
   function init(firebaseConfig) {
@@ -33,15 +32,133 @@ const ONLINE = (() => {
       localStorage.setItem('nuke_userId', _userId);
       _ready = true;
       console.log('[ONLINE] Auth OK uid:', _userId);
+
+      // Reconnect if same user was in a room
       if (savedRoom && savedCode && savedUserId === _userId) {
         _roomId   = savedRoom;
         _roomCode = savedCode;
-        _subscribeToRoom();
+        console.log('[ONLINE] Reconnecting to room:', savedCode);
+        _reconnectToRoom();
       }
     }).catch(err => {
       console.error('[ONLINE] Auth error:', err);
       if (typeof addLog === 'function') addLog('⚠ Firebase: ' + err.message, 'sys');
     });
+  }
+
+  // ── Reconnect: restore full game state from Firestore ─────
+  async function _reconnectToRoom() {
+    try {
+      const snap = await _db.collection('rooms').doc(_roomId).get();
+      if (!snap.exists) {
+        console.warn('[ONLINE] Room no longer exists');
+        _cleanup();
+        return;
+      }
+      const data = snap.data();
+      const meta = data.meta || {};
+
+      // Determine if we're host
+      _isHost = meta.host === _userId;
+
+      // Find our player entry to restore G.pf and G.pname
+      const myEntry = meta.players && meta.players[_userId];
+      if (!myEntry) {
+        console.warn('[ONLINE] Player not found in room');
+        _cleanup();
+        return;
+      }
+
+      // Restore G from saved state
+      if (data.state) {
+        const view = { vx: G.vx, vy: G.vy, vscale: G.vscale };
+        Object.assign(G, data.state);
+        Object.assign(G, view);
+      }
+
+      // Restore player identity
+      G.pf    = myEntry.faction;
+      G.pname = myEntry.name || 'COMANDANTE';
+      G.playerCount = Object.keys(meta.players || {}).length;
+
+      // Restore _onlinePlayerFactions
+      if (typeof _onlinePlayerFactions !== 'undefined') {
+        _onlinePlayerFactions = new Set(
+          Object.values(meta.players || {}).map(p => p.faction).filter(Boolean)
+        );
+      }
+
+      // Subscribe to future actions
+      _subscribeToRoom();
+
+      // Restore UI based on game status
+      if (meta.status === 'playing' || meta.status === 'setup') {
+        _restoreGameUI(meta, data.state);
+      } else {
+        // Still in lobby/waiting — go back to lobby
+        _cleanup();
+      }
+    } catch(e) {
+      console.error('[ONLINE] Reconnect error:', e);
+      _cleanup();
+    }
+  }
+
+  // ── Restore game UI after reconnect ──────────────────────
+  function _restoreGameUI(meta, state) {
+    if (!state || !G.pf) {
+      console.warn('[ONLINE] Cannot restore — missing state or faction');
+      return;
+    }
+
+    // Hide lobby, show game
+    const lobby = document.getElementById('lobby');
+    const hdr   = document.getElementById('hdr');
+    const main  = document.getElementById('main');
+    if (lobby) lobby.style.display = 'none';
+    if (hdr)   hdr.style.display   = 'flex';
+    if (main)  main.style.display  = 'grid';
+
+    // Update room bar
+    const rcode = document.getElementById('rcode');
+    if (rcode) rcode.textContent = _roomCode;
+
+    // Reinitialize map and UI
+    if (typeof buildMap === 'function') buildMap();
+    if (typeof updateMap === 'function') updateMap();
+    if (typeof refreshCards === 'function') refreshCards();
+    if (typeof setupPanZoom === 'function') setupPanZoom();
+
+    // Restore step engine state
+    if (state.phase && state.setup && state.setup.order) {
+      if (typeof G_step !== 'undefined') {
+        G_step.phase     = state.phase;
+        G_step.idx       = 0;
+        G_step.currentFk = state.currentFaction || state.setup.order[0];
+        G_step.isMyTurn  = G_step.currentFk === G.pf;
+      }
+
+      // If still in setup
+      if (state.setup._inSetup) {
+        if (typeof showSetupPanel === 'function') {
+          // Resume setup from current step
+          if (typeof runSetupStep === 'function') {
+            runSetupStep(state.setup._stepIdx || 0);
+          }
+        }
+      } else {
+        // Game in progress — resume phase
+        if (typeof startPhase === 'function') {
+          startPhase(state.phase || 'prep', G_step.currentFk);
+        }
+        if (typeof updatePhaseBanner === 'function') {
+          updatePhaseBanner(G_step.currentFk);
+        }
+      }
+    }
+
+    if (typeof addLog === 'function') addLog('🔄 Reconectado a la sala ' + _roomCode, 'sys');
+    if (typeof updateFactionPanel === 'function') updateFactionPanel();
   }
 
   // ── Create Room ───────────────────────────────────────────
@@ -130,7 +247,6 @@ const ONLINE = (() => {
       'meta.status': 'playing',
       'meta.players': players || {},
     });
-    // Push GAME_START action
     await _pushActionRaw('GAME_START', { playerCount: Object.keys(players || {}).length });
   }
 
@@ -140,28 +256,31 @@ const ONLINE = (() => {
     await _db.collection('rooms').doc(_roomId).update({ 'meta.status': 'finished' });
   }
 
-  // ── Push action (public) ──────────────────────────────────
+  // ── Push action ───────────────────────────────────────────
   async function pushAction(type, payload = {}) {
     if (!_roomId) return;
     await _pushActionRaw(type, payload);
   }
 
-  // ── Push action + sync state ──────────────────────────────
+  // ── Push action + full G state ────────────────────────────
   async function pushActionWithState(type, payload = {}) {
     if (!_roomId) return;
-    payload._G = _serializeG();
+    const serialized = _serializeG();
+    if (serialized) payload._G = serialized;
+    // Also save state to room doc for reconnects
+    try {
+      await _db.collection('rooms').doc(_roomId).update({ state: serialized });
+    } catch(e) { /* non-critical */ }
     await _pushActionRaw(type, payload);
   }
 
   async function _pushActionRaw(type, payload = {}) {
     try {
-      const seq = Date.now(); // use timestamp as seq
       await _db.collection('rooms').doc(_roomId)
         .collection('actions').add({
           type,
           payload,
           playerId: _userId,
-          seq,
           ts: firebase.firestore.FieldValue.serverTimestamp(),
         });
     } catch(e) {
@@ -174,7 +293,6 @@ const ONLINE = (() => {
     if (_unsubRoom)    { _unsubRoom();    _unsubRoom    = null; }
     if (_unsubActions) { _unsubActions(); _unsubActions = null; }
 
-    // Listen to room doc (meta + state)
     _unsubRoom = _db.collection('rooms').doc(_roomId)
       .onSnapshot(snap => {
         if (!snap.exists) { _handleRoomDeleted(); return; }
@@ -182,7 +300,6 @@ const ONLINE = (() => {
         if (_roomUpdateCb && data.meta) _roomUpdateCb(data.meta);
       }, err => console.error('[ONLINE] room listener:', err));
 
-    // Listen to actions ordered by seq
     _unsubActions = _db.collection('rooms').doc(_roomId)
       .collection('actions')
       .orderBy('ts', 'asc')
@@ -190,7 +307,6 @@ const ONLINE = (() => {
         snap.docChanges().forEach(change => {
           if (change.type === 'added') {
             const action = change.doc.data();
-            // Only process actions from OTHER players
             if (action.playerId !== _userId) {
               _handleRemoteAction(action);
             }
@@ -204,14 +320,13 @@ const ONLINE = (() => {
     const { type, payload } = action;
     console.log('[ONLINE] Remote:', type);
 
-    // If action carries full G state, apply it first
+    // Apply full G state first if present
     if (payload && payload._G) {
       _applyRemoteG(payload._G);
     }
 
     switch(type) {
 
-      // ── Waiting room ──
       case 'GAME_START':
         if (typeof _launchOnlineGame === 'function') {
           _launchOnlineGame({ players: payload.players || {} });
@@ -229,49 +344,48 @@ const ONLINE = (() => {
         break;
 
       case 'SETUP_SYNC': {
-        // Full G already applied via payload._G — advance UI based on subtype
+        // G already applied — advance UI
         const sub = payload.subtype;
         if (typeof updateMap === 'function') updateMap();
         if (typeof refreshCards === 'function') refreshCards();
+
         if (sub === 'CLAIM') {
-          if (typeof setupStep_Claim_Next === 'function') setupStep_Claim_Next();
+          // Small delay so map renders before next prompt
+          setTimeout(() => {
+            if (typeof setupStep_Claim_Next === 'function') setupStep_Claim_Next();
+          }, 100);
         } else if (sub === 'AUTOCLAIM') {
           if (typeof nextSetupStep === 'function') nextSetupStep();
         } else if (sub === 'SOLDIER_PARTIAL') {
-          if (typeof setupStep_Soldiers_ForFaction === 'function') setupStep_Soldiers_ForFaction(payload.fk);
+          setTimeout(() => {
+            if (typeof setupStep_Soldiers_ForFaction === 'function') setupStep_Soldiers_ForFaction(payload.fk);
+          }, 100);
         } else if (sub === 'SOLDIER_DONE') {
-          if (typeof setupStep_Soldiers_Next === 'function') setupStep_Soldiers_Next();
+          setTimeout(() => {
+            if (typeof setupStep_Soldiers_Next === 'function') setupStep_Soldiers_Next();
+          }, 100);
         } else if (sub === 'NUCLEAR_PARTIAL') {
-          if (typeof setupStep_Nuclear_ForFaction === 'function') setupStep_Nuclear_ForFaction(payload.fk);
+          setTimeout(() => {
+            if (typeof setupStep_Nuclear_ForFaction === 'function') setupStep_Nuclear_ForFaction(payload.fk);
+          }, 100);
         } else if (sub === 'NUCLEAR_DONE') {
-          if (typeof setupStep_Nuclear_Next === 'function') setupStep_Nuclear_Next();
+          setTimeout(() => {
+            if (typeof setupStep_Nuclear_Next === 'function') setupStep_Nuclear_Next();
+          }, 100);
         }
         break;
       }
 
       // ── Game phase ──
       case 'END_PHASE':
-        // Remote player ended their phase — we just received their G state
-        // via payload._G already applied. Now advance our local engine.
         if (typeof endPhaseForFaction === 'function') endPhaseForFaction();
         break;
 
-      case 'PLACE_REINF':
-        if (G.territories[payload.terId]) {
-          G.territories[payload.terId].soldiers += payload.qty;
-          if (G.factions[payload.fk]) G.factions[payload.fk].pendingSoldiers -= payload.qty;
-        }
-        if (typeof updateMap === 'function') updateMap();
-        if (typeof refreshCards === 'function') refreshCards();
-        break;
-
       case 'NEXT_STEP':
-        // Remote player clicked "Siguiente"
         if (typeof nextStep === 'function') nextStep();
         break;
 
       case 'FULL_SYNC':
-        // Full state sync — already applied via payload._G above
         if (typeof updateMap === 'function') updateMap();
         if (typeof refreshCards === 'function') refreshCards();
         if (typeof addLog === 'function' && payload.logMsg) addLog(payload.logMsg, payload.logType || 'sys');
@@ -286,7 +400,6 @@ const ONLINE = (() => {
   function _applyRemoteG(remoteG) {
     if (!remoteG) return;
     const view = { vx: G.vx, vy: G.vy, vscale: G.vscale, dragging: false };
-    // Merge selectively — preserve view state
     Object.assign(G, remoteG);
     Object.assign(G, view);
     if (typeof updateMap === 'function') updateMap();
@@ -305,12 +418,13 @@ const ONLINE = (() => {
   function _serializeG() {
     try {
       return JSON.parse(JSON.stringify({
-        round:            G.round,
-        phase:            G.phase,
-        currentFaction:   G.currentFaction,
-        territories:      G.territories,
-        factions:         G.factions,
-        setup:            G.setup,
+        round:          G.round,
+        phase:          G.phase,
+        currentFaction: G.currentFaction,
+        territories:    G.territories,
+        factions:       G.factions,
+        setup:          G.setup,
+        playerCount:    G.playerCount,
         eliminatedArmies: G.eliminatedArmies,
       }));
     } catch(e) {
@@ -319,7 +433,6 @@ const ONLINE = (() => {
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────
   function _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
