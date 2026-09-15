@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
-<link rel="stylesheet" href="css/game.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
-
-
 <!-- LOBBY -->
 <div id="lobby">
   <div id="lin">
@@ -71,7 +69,6 @@
 </div>
 
 <!-- GAME -->
-
 <div id="hdr" style="display:none">
   <h1>NUKE 3000<small>ARMAGEDDON PROTOCOL · PLAYTESTER v0.3</small></h1>
   <div id="turn-ui">
@@ -205,43 +202,12 @@
 <div id="tip"></div>
 <div id="pflash"></div>
 
-
-<!-- Dice modal and other modals injected by JS -->
-
 <script src="js/assets.js"></script>
 <script src="js/data.js"></script>
-<script src="js/state.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/map.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>
-<script>
-  // Entry point — load assets then initialize
-  loadAssets().then(() => {
-    // Build faction grid in lobby
-    const grid = document.getElementById('faction-grid');
-    if(grid) {
-      const factions = Object.entries(FDATA).map(([f,fd])=>({f, ...fd}));
-      factions.forEach(faction => {
-        const div = document.createElement('div');
-        div.className = 'fp ' + faction.f;
-        div.dataset.f = faction.f;
-        div.onclick = () => pickF(div);
-        if(ASSETS[faction.f + '_portrait']) {
-          div.style.backgroundImage = 'url(' + ASSETS[faction.f + '_portrait'] + ')';
-        }
-        div.innerHTML = '<div class="fdot"></div><div class="fpn">' + faction.name + '</div>' +
-          '<div class="fpl">' + faction.leader + '</div>' +
-          '<div class="fpt">' + faction.ability + '</div>' +
-          '<div class="fgoal">' + faction.goal + '</div>';
-        grid.appendChild(div);
-      });
-    }
-  }).catch(e => {
-    console.warn('Asset load failed (file:// mode?), using inline fallback');
-    // Fallback: assets already embedded inline
-  });
-</script>
 </body>
 </html>

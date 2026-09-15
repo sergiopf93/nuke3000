@@ -1,3 +1,36 @@
+const SETUP_STEPS = ['roll', 'claim', 'soldiers', 'nuclear'];
+// Options: 'roll' | 'claim' | 'soldiers' | 'nuclear'
+
+function setupLog(msg) {
+  const el = document.getElementById('setup-log');
+  if(el){ el.innerHTML += msg + '<br>'; el.scrollTop=9999; }
+  const barEl = document.getElementById('setup-bar-log');
+  if(barEl && document.getElementById('setup-bar-mode').style.display !== 'none') {
+    barEl.textContent = msg;
+  }
+}
+
+function setupBtn(label, onclick, color) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = onclick;
+  b.style.cssText = `background:#0a0a0d;border:1px solid ${color||'#C8A800'};color:${color||'#C8A800'};
+    padding:6px 12px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;`;
+  return b;
+}
+
+function getSetupActionsDiv() {
+  const barMode = document.getElementById('setup-bar-mode');
+  if(barMode && barMode.style.display !== 'none') return document.getElementById('setup-bar-actions');
+  return document.getElementById('setup-actions');
+}
+
+function setupBarLog(msg) {
+  const el = document.getElementById('setup-bar-log');
+  if(el) el.textContent = msg;
+  setupLog(msg);
+}
+
 function showSetupPanel(title, info, mode) {
   const p = document.getElementById('setup-panel');
   p.style.display = 'block';

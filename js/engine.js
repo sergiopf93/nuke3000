@@ -1,3 +1,65 @@
+const STEPS = {
+  prep: [
+    { id:'income',   title:'1. RECIBIR INGRESOS',
+      detail:'Plutonio y refuerzos calculados automáticamente según tus Nucleares y territorios.',
+      isAuto: true },
+    { id:'reinf',    title:'2. COLOCAR REFUERZOS',
+      detail:'Haz clic en tus territorios resaltados para colocar soldados. Usa el botón cuando termines.',
+      isAuto: false },
+    { id:'upgrade',  title:'3. MEJORAS (opcional)',
+      detail:'Convierte soldados en unidades más potentes pagando Plutonio.',
+      isAuto: false },
+    { id:'move',     title:'4. MOVER UNIDADES (opcional)',
+      detail:'Selecciona un territorio tuyo, luego un destino. Terrestres: hasta 3 saltos. Aircraft: cualquier destino tuyo.',
+      isAuto: false },
+    { id:'missile',  title:'5. MISILES (opcional)',
+      detail:'Construye misiles (antes de disparar). Lanza a territorios enemigos.',
+      isAuto: false },
+    { id:'nuclear',  title:'6. CONSTRUIR NUCLEARES (opcional)',
+      detail:'Construye nuevos Nuclear Complexes en tus territorios (5 Pu cada uno).',
+      isAuto: false },
+  ],
+  combat: [
+    { id:'attack',   title:'1. ATACAR (opcional)',
+      detail:'Selecciona tu territorio, luego haz clic en uno enemigo adyacente. Puedes atacar varias veces.',
+      isAuto: false },
+    { id:'cmove',    title:'2. MOVER UNIDADES (opcional)',
+      detail:'Reposiciona unidades entre tus territorios antes de terminar el turno.',
+      isAuto: false },
+  ],
+  end: [
+    { id:'regroup',  title:'1. REAGRUPAR',
+      detail:'Mueve unidades entre tus territorios (mismas reglas que en preparación).',
+      isAuto: false },
+    { id:'maint',    title:'2. MANTENIMIENTO NUCLEAR',
+      detail:'D20 por cada Nuclear Complex. Si sale 1: explosión nuclear.',
+      isAuto: false },
+  ],
+};
+
+const VICTORY_DETAIL = {
+  imp: 'Controla <b>5 regiones completas</b> al inicio de tu turno.<br>O controla <b>30 territorios</b> al inicio de tu turno.',
+  lib: '<b>6 regiones sin Nuclear Complex</b> en el tablero.<br>O <b>4 regiones sin Nuclear</b> + eliminar ejército Erebus.',
+  clt: '<b>10 territorios conquistados</b> + eliminar 1 ejército en el mismo turno.<br>O <b>1 Nuclear por enemigo</b> conquistado en el mismo turno.',
+  erb: 'Eliminar <b>2 ejércitos</b> completos.<br>O <b>1 ejército</b> + más Pu que el resto juntos.',
+  prm: 'Nuclear en <b>7 regiones distintas</b>.<br>O <b>el doble de Nucleares</b> que el segundo.',
+  shn: 'Mayor ejército (AP) en <b>6 regiones</b>.<br>O <b>el doble de AP</b> que el segundo.',
+};
+
+// ── State ────────────────────────────────────────────────────────
+let G_step = { idx:0, phase:'prep', isMyTurn:true, cpuQueue:[] };
+
+// ── Start a new phase ────────────────────────────────────────────
+function startPhase(phase, fk) {
+  G_step.phase = phase;
+  G_step.idx = 0;
+  G_step.isMyTurn = (fk === G.pf);
+  G_step.currentFk = fk;
+  updatePhaseBanner(fk);
+  runCurrentStep();
+}
+
+
 function updateTurnOrderBar() {
   const header = document.getElementById('turn-header');
   const dots = document.getElementById('turn-dots');
@@ -815,10 +877,7 @@ function armyPoints(t) {
   return t.soldiers + t.mechs*3 + t.aircraft*3 + t.scorpions*6;
 }
 
-function totalArmyPoints(faction) {
-  return Object.values(G.territories).filter(t=>t.owner===faction)
-    .reduce((sum,t)=>sum+armyPoints(t),0);
-}
+
 
 
 function getMovableTargets(srcId, maxSteps) {
@@ -1128,6 +1187,3 @@ function updateMissilePips() {
 // ════════════════════════════════════════════════════════════════
 
 // State for current combat
-let G_combat = null;
-
-// Called when PLAYER attacks

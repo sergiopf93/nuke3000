@@ -212,4 +212,3 @@ let G = {
 // ════════════════════════════════════════════════════════════════
 
 // ── STEP ORDER: change sequence here ────────────────────────────
-const SETUP_STEPS = ['roll', 'claim', 'soldiers', 'nuclear'];

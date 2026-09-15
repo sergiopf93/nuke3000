@@ -1,3 +1,6 @@
+let G_combat = null;
+
+// Called when PLAYER attacks
 function openDice(targetId) {
   const srcId=G.sel;
   if(!srcId){addLog('Selecciona tu territorio origen primero','sys');return;}
