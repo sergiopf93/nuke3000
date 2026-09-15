@@ -290,13 +290,24 @@ function renderStepActions(step) {
 
   } else if(sid==='maint') {
     const nukes = Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length;
-    area.innerHTML = `
-      <div style="font-size:11px;color:#aaa;margin-bottom:10px;">
-        ${nukes} Nuclear Complex${nukes!==1?'es':''}. Mantenimiento automático (D20 por cada uno).
+    area.innerHTML = isMe ?
+      `<div style="font-size:11px;color:#aaa;margin-bottom:10px;">
+        Tienes <b>${nukes}</b> Nuclear Complex${nukes!==1?'es':''}.<br>
+        Lanza D${RULES.end.maintenanceDie} por cada uno. Si sale ${RULES.end.maintenanceExplosionOn} → explosión.
+      </div>
+      <button class="abtn" onclick="runMaintenanceRolls()" style="width:100%;margin-bottom:8px;" ${nukes===0?'disabled':''}>
+        🎲 LANZAR DADOS DE MANTENIMIENTO
+      </button>
+      ${nukes===0?nextBtn('SIGUIENTE (sin Nucleares)'):''}` :
+      `<div style="font-size:11px;color:#aaa;margin-bottom:10px;">
+        ${FDATA[fk]?.name||fk} tiene ${nukes} Nuclear Complex${nukes!==1?'es':''}. Mantenimiento automático.
       </div>
       <div id="maint-results" style="font-size:11px;color:#888;min-height:20px;"></div>`;
-    // Auto-run maintenance for current faction (no player interaction needed)
-    setTimeout(()=>runMaintenanceRolls(), 600);
+    if(!G_step.isMyTurn) {
+      // CPU: auto-run
+      setTimeout(()=>runMaintenanceRolls(), 600);
+    }
+    // Player: waits for button click (rendered above via nextBtn or LANZAR button)
   }
 }
 
@@ -614,6 +625,42 @@ function clearAttackFlash(tgtId) {
   if(G.pendingCpuAttack) delete G.pendingCpuAttack[tgtId];
   const b = document.getElementById('attack-banner');
   if(b) b.remove();
+}
+
+
+function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
+  // Resolve CPU vs CPU combat silently (player didn't watch)
+  const src = G.territories[srcId], tgt = G.territories[targetId];
+  if(!src || !tgt) { if(callback) callback(); return; }
+  const Rc = RULES.combat;
+  let round = 0;
+  const maxRounds = 10;
+  function doRound() {
+    if(round++ > maxRounds || armyPoints(src)<=1 || armyPoints(tgt)===0) {
+      if(armyPoints(tgt)===0) {
+        tgt.owner = cpuFk;
+        addLog('['+((FDATA[cpuFk]&&FDATA[cpuFk].name)||cpuFk)+'] conquista '+terName(targetId),'combat');
+        checkElimination(tgt.owner);
+      }
+      updateMap(); refreshCards();
+      if(callback) callback();
+      return;
+    }
+    const attP = buildPool(src); if(attP.length>0) attP.splice(attP.length-1,1);
+    const defP = buildPool(tgt);
+    const aN = Math.min(attP.length, Rc.maxAttackDice);
+    const dN = Math.min(aN, Rc.maxDefenseDice, defP.length);
+    const aR = attP.slice(0,aN).map(d=>Math.floor(Math.random()*d.sides)+1);
+    const dR = defP.slice(0,dN).map(d=>Math.floor(Math.random()*d.sides)+1);
+    if(cpuFk==='clt'){const mi=aR.indexOf(Math.min(...aR));if(mi>=0)aR[mi]++;}
+    const aS=[...aR].sort((a,b)=>b-a), dS=[...dR].sort((a,b)=>b-a);
+    for(let i=0;i<Math.min(aS.length,dS.length);i++){
+      if(Rc.tieBreakerDefender?aS[i]>dS[i]:aS[i]>=dS[i]) applyLoss(tgt);
+      else applyLoss(src);
+    }
+    doRound();
+  }
+  doRound();
 }
 
 function executeCpuAttack(fk, descEl) {
@@ -1159,7 +1206,12 @@ function onTerritoryClick(id, event) {
   if(G.pendingCpuAttack && G.pendingCpuAttack[id]) {
     const pending = G.pendingCpuAttack[id];
     if(pending.spectator) {
-      openCombatModal('cpu-att-cpu-def'); // spectator view
+      // Cancel auto-resolve timer
+      if(pending._timer) clearTimeout(pending._timer);
+      delete G.pendingCpuAttack[id];
+      clearAttackFlash(id);
+      // Show spectator modal - resolves round by round
+      openCombatModal('cpu-att-cpu-def');
     } else {
       openCombatModal('cpu-att-player-def'); // player defends
     }

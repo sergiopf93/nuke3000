@@ -24,11 +24,9 @@ function openDiceCpu(srcId, targetId, cpuFk, callback) {
     // Player defends — wait for click on hex
     // G_combat stored, flashAttackedTerritory already called
   } else {
-    // CPU vs CPU — flash hex, player can click to watch as spectator
-    // Store pending so onTerritoryClick can open spectator modal
+    // CPU vs CPU — flash hex, player can click to watch, auto-resolves after delay
     if(!G.pendingCpuAttack) G.pendingCpuAttack = {};
-    G.pendingCpuAttack[targetId] = { srcId, attFk: cpuFk, spectator: true };
-    // Also show banner for CPU vs CPU
+    G.pendingCpuAttack[targetId] = { srcId, attFk: cpuFk, spectator: true, callback };
     const attFd = FDATA[cpuFk]||{name:cpuFk,color:'#888'};
     const defFd = FDATA[tgt.owner]||{name:tgt.owner,color:'#888'};
     const ex = document.getElementById('attack-banner');
@@ -37,13 +35,24 @@ function openDiceCpu(srcId, targetId, cpuFk, callback) {
     banner.id = 'attack-banner';
     banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:800;'+
       'background:#0a0010;border:2px solid #6644aa;padding:8px 20px;font-family:Orbitron,sans-serif;'+
-      'text-align:center;box-shadow:0 0 16px #6644aa88;';
+      'text-align:center;box-shadow:0 0 16px #6644aa88;cursor:pointer;';
     banner.innerHTML = '<div style="font-size:10px;color:#9966cc;letter-spacing:2px;">COMBATE RIVAL</div>'+
       '<div style="font-size:9px;color:#aaa;margin-top:3px;">'+
       '<span style="color:'+attFd.color+'">'+attFd.name+'</span> ataca <span style="color:'+defFd.color+'">'+defFd.name+'</span> en '+terName(targetId)+
-      '</div><div style="font-size:8px;color:#666;margin-top:2px;">Pulsa el hexágono para observar</div>';
+      '</div><div style="font-size:8px;color:#666;margin-top:2px;">Pulsa el hexágono para ver — auto-resuelve en 5s</div>';
+    banner.onclick = () => { banner.remove(); };
     document.body.appendChild(banner);
-    setTimeout(()=>{ const b=document.getElementById('attack-banner');if(b)b.remove(); }, 6000);
+    // Auto-resolve after 5s if player didn't open spectator view
+    const autoTimer = setTimeout(()=>{
+      const b=document.getElementById('attack-banner');if(b)b.remove();
+      if(G.pendingCpuAttack && G.pendingCpuAttack[targetId]) {
+        // Player didn't watch — resolve silently
+        delete G.pendingCpuAttack[targetId];
+        clearAttackFlash(targetId);
+        resolveCpuCpuSilent(srcId, targetId, cpuFk, callback);
+      }
+    }, 5000);
+    G.pendingCpuAttack[targetId]._timer = autoTimer;
   }
 }
 
@@ -53,12 +62,18 @@ function openCombatModal(mode) {
   const af=FDATA[ctx.attFk]||{name:ctx.attFk,color:'#C8A800'};
   const df=FDATA[ctx.defFk]||{name:ctx.defFk,color:'#4488ff'};
 
-  // Auto-pick best units up to max (no popup selector)
-  const attFull=buildPool(src); const defFull=buildPool(tgt);
-  const attN=Math.min(attFull.length,Rc.maxAttackDice);
+  // Build attack pool: must leave 1 unit in origin (cheapest stays behind)
+  const attFull=buildPool(src);
+  // Remove 1 cheapest unit from the attack pool (it stays in origin)
+  const attAvail = attFull.slice(); // copy
+  // Cheapest = last in pool (buildPool adds: scorp, mech, air, sol — sol is last)
+  const leaveIdx = attAvail.length - 1; // remove last (cheapest = soldier)
+  if(leaveIdx >= 0) attAvail.splice(leaveIdx, 1);
+  const defFull=buildPool(tgt);
+  const attN=Math.min(attAvail.length,Rc.maxAttackDice);
   const defN=Math.min(attN,Rc.maxDefenseDice,defFull.length); // Risk-style
-  ctx.attPool=attFull; ctx.defPool=defFull;
-  ctx.attSelected=attFull.slice(0,attN);
+  ctx.attPool=attAvail; ctx.defPool=defFull;
+  ctx.attSelected=attAvail.slice(0,attN);
   ctx.defSelected=defFull.slice(0,defN);
 
   document.querySelector('#dmodal h2').innerHTML='⚔ COMBATE — Ronda '+ctx.round;
@@ -316,14 +331,17 @@ function applyBattleResult(aR,dR) {
     const ap1=armyPoints(src),ap2=armyPoints(tgt);
     res.innerHTML='<div style="color:#C8A800;">R'+(ctx.round-1)+': Atq-'+aL+' Def-'+dL+'</div><div style="font-size:10px;color:#888;">AP Atq:'+ap1+' Def:'+ap2+'</div>';
     addLog('⚔ R'+(ctx.round-1)+': Atq-'+aL+' Def-'+dL+'. AP:'+ap1+' vs '+ap2,'combat');
-    ctx.attPool=buildPool(src);ctx.defPool=buildPool(tgt);
+    // Rebuild pools - always leave 1 unit in origin
+    const attRebuild=buildPool(src);
+    if(attRebuild.length>0) attRebuild.splice(attRebuild.length-1,1); // remove cheapest
+    ctx.attPool=attRebuild; ctx.defPool=buildPool(tgt);
     const aN=Math.min(ctx.attPool.length,Rc.maxAttackDice);
     const dN=Math.min(aN,Rc.maxDefenseDice,ctx.defPool.length);
     ctx.attSelected=ctx.attPool.slice(0,aN);ctx.defSelected=ctx.defPool.slice(0,dN);
     renderDicePools();
     if(ctx.isPlayerAtt){
       // Can only continue if attacker has >1 unit (1 must stay in origin)
-      const canContinue = armyPoints(src) > 1;
+      const canContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
       if(rollBtn){rollBtn.textContent= canContinue ? '⚄ CONTINUAR ATAQUE' : '⚠ Sin unidades para continuar';rollBtn.style.display='inline-block';rollBtn.disabled=!canContinue;rollBtn.onclick=canContinue?()=>resolveCombatRound(false):null;}
       if(retreatBtn){retreatBtn.style.display='inline-block';retreatBtn.onclick=()=>retreatCombat();}
       if(cancelBtn){cancelBtn.textContent='TERMINAR COMBATE';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};}
