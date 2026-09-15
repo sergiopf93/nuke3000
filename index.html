@@ -625,7 +625,11 @@ function wrLeave() {
 }
 
 // ── Launch game ─────────────────────────────────────────────
+let _gameAlreadyLaunched = false;
+
 function _launchOnlineGame(meta) {
+  if (_gameAlreadyLaunched) return;
+  _gameAlreadyLaunched = true;
   document.getElementById('waiting-room').style.display = 'none';
   const players = meta.players || {};
   const humanCount = Object.keys(players).length;
