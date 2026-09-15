@@ -1,5 +1,6 @@
 const SETUP_STEPS = ['roll', 'claim', 'soldiers', 'nuclear'];
 
+// ── Helpers ───────────────────────────────────────────────────
 function setupLog(msg) {
   const el = document.getElementById('setup-log');
   if(el){ el.innerHTML += msg + '<br>'; el.scrollTop=9999; }
@@ -22,12 +23,6 @@ function getSetupActionsDiv() {
   const barMode = document.getElementById('setup-bar-mode');
   if(barMode && barMode.style.display !== 'none') return document.getElementById('setup-bar-actions');
   return document.getElementById('setup-actions');
-}
-
-function setupBarLog(msg) {
-  const el = document.getElementById('setup-bar-log');
-  if(el) el.textContent = msg;
-  setupLog(msg);
 }
 
 function showSetupPanel(title, info, mode) {
@@ -56,41 +51,42 @@ function hideSetupPanel() {
   document.getElementById('setup-panel').style.display = 'none';
 }
 
-// ── Determine which factions are human players ───────────────
-// In online mode: factions that have a userId in meta.players
-// In local mode: only G.pf is human
-let _onlinePlayerFactions = null; // set when game starts online
-
+// ── Online helpers ────────────────────────────────────────────
+// _onlinePlayerFactions: Set of human faction keys (set by index.html)
 function isHumanFaction(fk) {
-  if (_onlinePlayerFactions) return _onlinePlayerFactions.has(fk);
+  if (typeof _onlinePlayerFactions !== 'undefined' && _onlinePlayerFactions) {
+    return _onlinePlayerFactions.has(fk);
+  }
   return fk === G.pf;
 }
+function isMyFaction(fk) { return fk === G.pf; }
+function _amHost() {
+  return typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
+}
+function _isOnline() {
+  return typeof ONLINE !== 'undefined' && ONLINE.isOnline();
+}
 
-function isMyFaction(fk) {
-  return fk === G.pf;
+// ── Sync helper: push full G + trigger remote UI advance ──────
+function _syncSetup(type, extra) {
+  if (!_isOnline()) return;
+  ONLINE.pushActionWithState('SETUP_SYNC', { subtype: type, ...extra });
 }
 
 // ── Start setup ───────────────────────────────────────────────
 function startSetupPhase() {
   const allFkeys = Object.keys(FDATA);
-
-  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-    // Online: human factions first, then CPU fillers to reach playerCount
-    const humanFks = _onlinePlayerFactions
-      ? [..._onlinePlayerFactions]
-      : [G.pf];
+  if (_isOnline()) {
+    const humanFks = (typeof _onlinePlayerFactions !== 'undefined' && _onlinePlayerFactions)
+      ? [..._onlinePlayerFactions] : [G.pf];
     const cpuCount = Math.max(0, G.playerCount - humanFks.length);
-    const cpuFks = allFkeys
-      .filter(k => !humanFks.includes(k))
-      .slice(0, cpuCount);
-    G.setup.order = [...humanFks, ...cpuFks];
+    const cpuFks   = allFkeys.filter(k => !humanFks.includes(k)).slice(0, cpuCount);
+    G.setup.order  = [...humanFks, ...cpuFks];
   } else {
-    // Local: player first, then CPUs
     const cpuFkeys = allFkeys.filter(k => k !== G.pf).slice(0, G.playerCount - 1);
-    G.setup.order = [G.pf, ...cpuFkeys];
+    G.setup.order  = [G.pf, ...cpuFkeys];
   }
-
-  G.setup.orderIdx   = 0;
+  G.setup.orderIdx    = 0;
   G.setup.rollResults = {};
   G.setup.claimRound  = 0;
   G.setup._tieGroups  = null;
@@ -98,7 +94,6 @@ function startSetupPhase() {
   G.setup._inSetup    = true;
   G.setup.soldiersLeft = {};
   G.setup.nukesLeft    = {};
-
   G.setup.order.forEach(fk => {
     G.setup.soldiersLeft[fk] = G.factions[fk].soldiers;
     G.setup.nukesLeft[fk]    = fk === 'lib' ? 0 : G.factions[fk].nukes;
@@ -110,7 +105,7 @@ function runSetupStep(stepIdx) {
   if(stepIdx >= SETUP_STEPS.length) { endSetupPhase(); return; }
   G.setup._stepIdx = stepIdx;
   const step = SETUP_STEPS[stepIdx];
-  if(step === 'roll')     setupStep_Roll();
+  if(step === 'roll')          setupStep_Roll();
   else if(step === 'claim')    setupStep_Claim();
   else if(step === 'soldiers') setupStep_PlaceSoldiers();
   else if(step === 'nuclear')  setupStep_PlaceNuclears();
@@ -122,34 +117,26 @@ function nextSetupStep() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  STEP: ROLL D6
-//  Online: each human player sees ONLY their own die.
-//          When all humans have rolled, results appear for all.
-//  Local:  same as before.
+//  STEP 1: ROLL D6
 // ════════════════════════════════════════════════════════════════
 function setupStep_Roll() {
   G.setup.rollResults = {};
-  const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
-
-  if (isOnline) {
+  if (_isOnline()) {
     _setupRoll_Online();
   } else {
     _setupRoll_Local();
   }
 }
 
-// ── Online roll UI ────────────────────────────────────────────
 function _setupRoll_Online() {
-  showSetupPanel('ROLL D6 — DETERMINA EL ORDEN',
-    'Tira tu dado para determinar el orden de turno.');
-
+  showSetupPanel('ROLL D6 — DETERMINA EL ORDEN', 'Tira tu dado para determinar el orden de turno.');
   const rollsDiv = document.getElementById('setup-rolls');
   rollsDiv.innerHTML = '';
 
-  // Show ONLY player's own die
+  // Show ONLY my die
+  const fd = FDATA[G.pf];
   const myCard = document.createElement('div');
   myCard.id = 'roll-card-' + G.pf;
-  const fd = FDATA[G.pf];
   myCard.style.cssText = `border:1px solid #333;padding:20px 30px;cursor:pointer;
     text-align:center;transition:border-color 0.3s;min-width:120px;`;
   myCard.innerHTML = `
@@ -160,25 +147,22 @@ function _setupRoll_Online() {
   myCard.onclick = () => rollFor(G.pf);
   rollsDiv.appendChild(myCard);
 
-  // Waiting indicators for other human players
-  const otherHumans = G.setup.order.filter(fk => isHumanFaction(fk) && fk !== G.pf);
-  if (otherHumans.length) {
+  // Waiting indicators for other humans
+  const others = G.setup.order.filter(fk => isHumanFaction(fk) && fk !== G.pf);
+  if (others.length) {
     const waitDiv = document.createElement('div');
     waitDiv.id = 'roll-waiting';
     waitDiv.style.cssText = 'margin-top:16px;font-size:10px;color:#555;letter-spacing:2px;';
-    waitDiv.innerHTML = 'ESPERANDO: ' + otherHumans.map(fk =>
-      `<span id="roll-wait-${fk}" style="color:${FDATA[fk].color};margin-right:10px;">
-        ${FDATA[fk].name} ⏳</span>`
+    waitDiv.innerHTML = 'ESPERANDO: ' + others.map(fk =>
+      `<span id="roll-wait-${fk}" style="color:${FDATA[fk].color};margin-right:10px;">${FDATA[fk].name} ⏳</span>`
     ).join('');
     rollsDiv.appendChild(waitDiv);
   }
 }
 
-// ── Local roll UI (original) ──────────────────────────────────
 function _setupRoll_Local() {
   showSetupPanel('ROLL D6 — DETERMINA EL ORDEN',
     'Cada facción tira un D6. El mayor va primero. Empates repiten.');
-
   const rollsDiv = document.getElementById('setup-rolls');
   G.setup.order.forEach(fk => {
     const fd = FDATA[fk];
@@ -193,114 +177,82 @@ function _setupRoll_Local() {
     card.onclick = () => rollFor(fk);
     rollsDiv.appendChild(card);
   });
-
   const acts = document.getElementById('setup-actions');
-  const rollAllBtn = setupBtn('TIRAR TODOS', () => {
+  const btn = setupBtn('TIRAR TODOS', () => {
     G.setup.order.forEach(fk => { if(G.setup.rollResults[fk]===undefined) rollFor(fk); });
   }, '#555');
-  rollAllBtn.id = 'roll-all-btn';
-  acts.appendChild(rollAllBtn);
+  btn.id = 'roll-all-btn';
+  acts.appendChild(btn);
 }
 
-// ── Roll for a faction ────────────────────────────────────────
 function rollFor(fk) {
   if(G.setup.rollResults[fk] !== undefined) return;
-  // Only allow rolling your own faction online
-  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && fk !== G.pf) return;
-
+  if (_isOnline() && fk !== G.pf && isHumanFaction(fk)) return; // only roll your own
   const roll = Math.floor(Math.random()*6)+1;
   _applyRoll(fk, roll);
-
-  // Publish online
-  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+  if (_isOnline() && (fk === G.pf || !isHumanFaction(fk))) {
     ONLINE.pushAction('SETUP_ROLL', { fk, roll });
   }
 }
 
-// ── Apply a roll result (local + remote) ──────────────────────
 function _applyRoll(fk, roll) {
   if(G.setup.rollResults[fk] !== undefined) return;
   G.setup.rollResults[fk] = roll;
   setupLog(`${FDATA[fk].name}: ${roll}`);
 
-  const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
-
-  if (isOnline) {
-    // Update waiting indicator
+  if (_isOnline()) {
     const waitEl = document.getElementById('roll-wait-' + fk);
-    if (waitEl) {
-      waitEl.innerHTML = `${FDATA[fk].name} ✓ <span style="color:#fff;">${roll}</span>`;
-    }
-    // Update own card if it's mine
+    if (waitEl) waitEl.innerHTML = `${FDATA[fk].name} ✓ <span style="color:#fff;">${roll}</span>`;
     if (fk === G.pf) {
-      const el = document.getElementById('roll-result-' + fk);
-      if (el) { el.textContent = roll; el.style.color = '#fff'; }
+      const el   = document.getElementById('roll-result-' + fk);
       const card = document.getElementById('roll-card-' + fk);
+      if (el)   { el.textContent = roll; el.style.color = '#fff'; }
       if (card) { card.style.borderColor = FDATA[fk].color; card.style.cursor = 'default'; }
     }
   } else {
-    const el = document.getElementById('roll-result-'+fk);
-    if(el){ el.textContent = roll; el.style.color = '#fff'; }
+    const el   = document.getElementById('roll-result-'+fk);
     const card = document.getElementById('roll-card-'+fk);
-    if(card) card.style.borderColor = FDATA[fk].color;
-    // Hide ROLL ALL btn
+    if (el)   { el.textContent = roll; el.style.color = '#fff'; }
+    if (card) { card.style.borderColor = FDATA[fk].color; }
     const b = document.getElementById('roll-all-btn');
-    if(b) b.style.display='none';
+    if (b) b.style.display = 'none';
   }
 
-  // Auto-roll CPU factions — only host does this to avoid duplicate rolls
-  const amHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
-  if (amHost) {
+  // Host auto-rolls CPUs
+  if (_amHost()) {
     G.setup.order.forEach(fk2 => {
       if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
         setTimeout(() => {
-          const cpuRoll = Math.floor(Math.random()*6)+1;
-          _applyRoll(fk2, cpuRoll);
-          // Publish CPU roll so guests see it too
-          if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-            ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: cpuRoll });
-          }
+          const r = Math.floor(Math.random()*6)+1;
+          _applyRoll(fk2, r);
+          if (_isOnline()) ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: r });
         }, 300 + Math.random()*400);
       }
     });
   }
 
-  // Check if all have rolled
   const allRolled = G.setup.order.every(fk2 => G.setup.rollResults[fk2] !== undefined);
-  if (allRolled) {
-    setTimeout(resolveRollOrder, 800);
-  }
+  if (allRolled) setTimeout(resolveRollOrder, 800);
 }
 
-// ── Remote roll handler (called by online.js) ─────────────────
-function _onRemoteRoll(fk, roll) {
-  _applyRoll(fk, roll);
-}
+function _onRemoteRoll(fk, roll) { _applyRoll(fk, roll); }
 
 function resolveRollOrder() {
   const results = G.setup.rollResults;
-
   if(!G.setup._tieGroups) {
     G.setup._tieGroups = [G.setup.order.slice()];
     G.setup._posStart  = {};
     G.setup.order.forEach((fk,i) => G.setup._posStart[fk] = i+1);
   }
-
   const groupColors = ['#ffdd00','#ff8800','#ff44ff','#44ffff','#ff4444','#44ff88'];
   let anyPending = false;
   const newTieGroups = [];
 
-  G.setup._tieGroups.forEach((grp, gi) => {
+  G.setup._tieGroups.forEach((grp) => {
     const rolledInGrp = grp.filter(fk => results[fk] !== undefined);
-    if(rolledInGrp.length < grp.length) {
-      newTieGroups.push(grp); anyPending = true; return;
-    }
+    if(rolledInGrp.length < grp.length) { newTieGroups.push(grp); anyPending = true; return; }
     const byValGrp = {};
-    grp.forEach(fk => {
-      const v = results[fk];
-      if(!byValGrp[v]) byValGrp[v] = [];
-      byValGrp[v].push(fk);
-    });
+    grp.forEach(fk => { const v=results[fk]; if(!byValGrp[v]) byValGrp[v]=[]; byValGrp[v].push(fk); });
     const subTies = Object.values(byValGrp).filter(g => g.length > 1);
     if(subTies.length > 0) {
       const vals = Object.keys(byValGrp).map(Number).sort((a,b)=>b-a);
@@ -308,10 +260,7 @@ function resolveRollOrder() {
       vals.forEach(v => {
         const subGrp = byValGrp[v];
         subGrp.forEach(fk => G.setup._posStart[fk] = pos);
-        if(subGrp.length > 1) {
-          subGrp.forEach(fk => { delete results[fk]; });
-          newTieGroups.push(subGrp); anyPending = true;
-        }
+        if(subGrp.length > 1) { subGrp.forEach(fk => { delete results[fk]; }); newTieGroups.push(subGrp); anyPending = true; }
         pos += subGrp.length;
       });
     } else {
@@ -325,17 +274,14 @@ function resolveRollOrder() {
 
   if(anyPending) {
     // Auto-roll CPUs in pending groups (host only)
-    const amHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
-    if (amHost) {
+    if (_amHost()) {
       newTieGroups.forEach(grp => {
         grp.forEach(fk2 => {
           if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
             setTimeout(() => {
-              const cpuRoll = Math.floor(Math.random()*6)+1;
-              _applyRoll(fk2, cpuRoll);
-              if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-                ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: cpuRoll });
-              }
+              const r = Math.floor(Math.random()*6)+1;
+              _applyRoll(fk2, r);
+              if (_isOnline()) ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: r });
             }, 600 + Math.random()*400);
           }
         });
@@ -343,7 +289,6 @@ function resolveRollOrder() {
     }
 
     // Show re-roll UI
-    const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
     let infoHtml = '<div style="margin-bottom:8px;color:#888;font-size:10px;">Re-roll requerido:</div>';
     newTieGroups.forEach((grp, gi) => {
       const col = groupColors[gi % groupColors.length];
@@ -352,30 +297,26 @@ function resolveRollOrder() {
       const posLabel = startPos === endPos ? `Posición ${startPos}` : `Posiciones ${startPos}-${endPos}`;
       infoHtml += `<div style="margin:6px 0;padding:6px 10px;border-left:3px solid ${col};">
         <span style="color:${col};font-family:Orbitron,sans-serif;font-size:11px;">🎲 ${posLabel}</span><br>
-        ${grp.map(fk=>`<span style="color:${FDATA[fk].color};margin-right:8px;">${FDATA[fk].name}</span>`).join('')}
-        </div>`;
+        ${grp.map(fk=>`<span style="color:${FDATA[fk].color};margin-right:8px;">${FDATA[fk].name}</span>`).join('')}</div>`;
     });
     document.getElementById('setup-info').innerHTML = infoHtml;
 
-    if (isOnline) {
-      // Online: show only own die if in pending group
+    if (_isOnline()) {
       const rollsDiv = document.getElementById('setup-rolls');
       rollsDiv.innerHTML = '';
       const myGroup = newTieGroups.find(g => g.includes(G.pf));
       if (myGroup) {
         const fd = FDATA[G.pf];
+        const col = groupColors[newTieGroups.indexOf(myGroup) % groupColors.length];
         const card = document.createElement('div');
         card.id = 'roll-card-' + G.pf;
-        card.style.cssText = `border:1px solid ${groupColors[newTieGroups.indexOf(myGroup)%groupColors.length]};
-          padding:20px 30px;cursor:pointer;text-align:center;min-width:120px;`;
+        card.style.cssText = `border:1px solid ${col};padding:20px 30px;cursor:pointer;text-align:center;min-width:120px;`;
         card.innerHTML = `
           <div style="font-family:Orbitron,sans-serif;font-size:11px;color:${fd.color};margin-bottom:12px;">${fd.name}</div>
           <div id="roll-result-${G.pf}" style="font-size:48px;font-family:Orbitron,sans-serif;color:#333;">?</div>
           <div style="font-size:9px;color:#555;margin-top:8px;letter-spacing:2px;">CLICK PARA RE-TIRAR</div>`;
         card.onclick = () => rollFor(G.pf);
         rollsDiv.appendChild(card);
-
-        // Waiting for others in same group
         myGroup.filter(fk => fk !== G.pf && isHumanFaction(fk)).forEach(fk => {
           const w = document.createElement('span');
           w.id = 'roll-wait-' + fk;
@@ -384,8 +325,7 @@ function resolveRollOrder() {
           rollsDiv.appendChild(w);
         });
       } else {
-        rollsDiv.innerHTML = `<div style="color:#888;font-size:11px;letter-spacing:2px;">
-          Esperando re-tirada de otros jugadores...</div>`;
+        rollsDiv.innerHTML = `<div style="color:#888;font-size:11px;letter-spacing:2px;">Esperando re-tirada...</div>`;
       }
     } else {
       G.setup.order.forEach(fk => {
@@ -393,11 +333,8 @@ function resolveRollOrder() {
         const el   = document.getElementById('roll-result-'+fk);
         const grpIdx = newTieGroups.findIndex(g => g.includes(fk));
         if(grpIdx >= 0) {
-          if(el){ el.textContent='?'; el.style.color='#333'; }
-          if(card){
-            const col = groupColors[grpIdx%groupColors.length];
-            card.style.borderColor=col; card.style.cursor='pointer'; card.style.opacity='1';
-          }
+          if(el)  { el.textContent='?'; el.style.color='#333'; }
+          if(card){ card.style.borderColor=groupColors[grpIdx%groupColors.length]; card.style.cursor='pointer'; card.style.opacity='1'; }
         } else {
           if(card){ card.style.opacity='0.35'; card.style.cursor='default'; }
         }
@@ -406,7 +343,7 @@ function resolveRollOrder() {
     return;
   }
 
-  // All resolved — build final order
+  // All resolved
   const sorted = G.setup.order.slice().sort((a,b) => G.setup._posStart[a]-G.setup._posStart[b]);
   G.setup.order    = sorted;
   G.setup.orderIdx = 0;
@@ -425,8 +362,7 @@ function resolveRollOrder() {
   const acts2 = document.getElementById('setup-actions');
   acts2.innerHTML = '';
   acts2.appendChild(setupBtn('CONTINUAR ▶', () => {
-    // Publish final order so guests advance too
-    if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && ONLINE.isHost()) {
+    if (_isOnline() && _amHost()) {
       ONLINE.pushAction('SETUP_NEXT_STEP', { order: G.setup.order });
     }
     nextSetupStep();
@@ -434,7 +370,7 @@ function resolveRollOrder() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  STEP: CLAIM TERRITORIES
+//  STEP 2: CLAIM TERRITORIES (1 territorio por facción rotando)
 // ════════════════════════════════════════════════════════════════
 function setupStep_Claim() {
   G.setup.orderIdx = 0;
@@ -445,13 +381,13 @@ function setupStep_Claim_Next() {
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(unclaimed.length === 0) { nextSetupStep(); return; }
 
-  const fk       = G.setup.order[G.setup.orderIdx % G.setup.order.length];
-  const fd       = FDATA[fk];
-  const isMe     = isMyFaction(fk);
-  const isHuman  = isHumanFaction(fk);
+  const fk      = G.setup.order[G.setup.orderIdx % G.setup.order.length];
+  const fd      = FDATA[fk];
+  const isMe    = isMyFaction(fk);
+  const isHuman = isHumanFaction(fk);
 
   showSetupPanel('RECLAMAR TERRITORIOS',
-    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':' (CPU)'} — Sin reclamar: <b>${unclaimed.length}</b>`,
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — Sin reclamar: <b>${unclaimed.length}</b>`,
     'bar');
 
   // Highlight unclaimed
@@ -461,46 +397,45 @@ function setupStep_Claim_Next() {
   });
 
   if(isMe) {
-    // It's my turn to claim
     G.setup.claimCallback = (id) => {
       const t = G.territories[id];
       if(t.owner) return false;
       doClaimTerritory(fk, id);
-      // Publish online
-      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-        ONLINE.pushAction('SETUP_CLAIM', { fk, terId: id });
-      }
       return true;
     };
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
     acts.appendChild(setupBtn('AUTO-RECLAMAR TODO', () => {
-      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-        ONLINE.pushAction('SETUP_AUTOCLAIM', {});
-      }
       autoClaimAll();
+      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'AUTOCLAIM' });
     }, '#444'));
   } else if(isHuman) {
-    // Another human player's turn — wait for their action
+    // Another human's turn — block and wait
     G.setup.claimCallback = null;
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
-    setupBarLog(`Esperando a ${fd.name}...`);
+    document.getElementById('setup-bar-log').textContent = `Esperando a ${fd.name}...`;
   } else {
-    // CPU
+    // CPU — host acts, publishes sync
     G.setup.claimCallback = null;
-    const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
-    setTimeout(() => doClaimTerritory(fk, pick.id), 350);
+    if (_amHost()) {
+      const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
+      setTimeout(() => {
+        doClaimTerritory(fk, pick.id);
+        // Sync published inside doClaimTerritory for host
+      }, 350);
+    }
+    // Guest just waits for SETUP_SYNC
   }
 }
 
 function doClaimTerritory(fk, id) {
   G.setup.claimCallback = null;
   const t = G.territories[id];
-  if(!t || t.owner) return; // already claimed
+  if(!t || t.owner) return;
   t.owner = fk; t.soldiers = 1;
-  G.factions[fk].soldiers   = Math.max(0, G.factions[fk].soldiers-1);
-  G.setup.soldiersLeft[fk]  = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
+  G.factions[fk].soldiers  = Math.max(0, G.factions[fk].soldiers-1);
+  G.setup.soldiersLeft[fk] = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
   setupLog(`${FDATA[fk].name} → ${id}`);
 
   // Clear highlights
@@ -510,6 +445,12 @@ function doClaimTerritory(fk, id) {
   });
   updateMap();
   G.setup.orderIdx++;
+
+  // Sync to all — host always syncs (covers own turns + CPU turns)
+  if (_isOnline() && (_amHost() || fk === G.pf)) {
+    _syncSetup('CLAIM', { fk, terId: id });
+  }
+
   setTimeout(setupStep_Claim_Next, 150);
 }
 
@@ -530,7 +471,7 @@ function autoClaimAll() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  STEP: PLACE SOLDIERS
+//  STEP 3: PLACE SOLDIERS (toda la facción de golpe, en orden)
 // ════════════════════════════════════════════════════════════════
 function setupStep_PlaceSoldiers() {
   G.setup.orderIdx = 0;
@@ -538,6 +479,7 @@ function setupStep_PlaceSoldiers() {
 }
 
 function setupStep_Soldiers_Next() {
+  // Find next faction with soldiers remaining, in turn order
   for(let i=0; i<G.setup.order.length; i++){
     const idx = (G.setup.orderIdx + i) % G.setup.order.length;
     const fk  = G.setup.order[idx];
@@ -551,14 +493,14 @@ function setupStep_Soldiers_Next() {
 }
 
 function setupStep_Soldiers_ForFaction(fk) {
-  const fd       = FDATA[fk];
-  const left     = G.setup.soldiersLeft[fk]||0;
-  const myTers   = Object.values(G.territories).filter(t=>t.owner===fk);
-  const isMe     = isMyFaction(fk);
-  const isHuman  = isHumanFaction(fk);
+  const fd      = FDATA[fk];
+  const left    = G.setup.soldiersLeft[fk]||0;
+  const myTers  = Object.values(G.territories).filter(t=>t.owner===fk);
+  const isMe    = isMyFaction(fk);
+  const isHuman = isHumanFaction(fk);
 
   showSetupPanel('DISTRIBUIR SOLDADOS',
-    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':''} — coloca <b>${left}</b> soldado(s)`,
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — coloca <b>${left}</b> soldado(s) restantes`,
     'bar');
 
   if(isMe) {
@@ -574,29 +516,38 @@ function setupStep_Soldiers_ForFaction(fk) {
     };
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
-    acts.appendChild(setupBtn('AUTO-DISTRIBUIR TODO', () => {
-      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-        ONLINE.pushAction('SETUP_AUTODISTRIBUTE', {});
-      }
-      autoDistributeAll();
+    acts.appendChild(setupBtn('AUTO-DISTRIBUIR', () => {
+      _autoDistributeFaction(fk);
+      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'SOLDIER_DONE', fk });
+      G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
+      setTimeout(setupStep_Soldiers_Next, 200);
     }, '#444'));
   } else if(isHuman) {
     G.setup.claimCallback = null;
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
-    setupBarLog(`Esperando a ${fd.name}...`);
+    document.getElementById('setup-bar-log').textContent = `Esperando a ${fd.name}...`;
   } else {
     // CPU
-    const n = left;
-    for(let s=0;s<n;s++){
-      const pick = myTers[s%myTers.length]; if(pick) pick.soldiers++;
+    G.setup.claimCallback = null;
+    if (_amHost()) {
+      _autoDistributeFaction(fk);
+      updateMap();
+      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'SOLDIER_DONE', fk });
+      G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
+      setTimeout(setupStep_Soldiers_Next, 200);
     }
-    G.setup.soldiersLeft[fk] = 0;
-    G.factions[fk].soldiers  = 0;
-    updateMap();
-    G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
-    setTimeout(setupStep_Soldiers_Next, 200);
+    // Guest waits for SETUP_SYNC
   }
+}
+
+function _autoDistributeFaction(fk) {
+  const n      = G.setup.soldiersLeft[fk]||0;
+  const myTers = Object.values(G.territories).filter(t=>t.owner===fk);
+  for(let s=0;s<n;s++){const p=myTers[s%myTers.length];if(p)p.soldiers++;}
+  G.setup.soldiersLeft[fk] = 0;
+  G.factions[fk].soldiers  = 0;
+  updateMap();
 }
 
 function showSoldierCounter(fk, id, validTers, evt) {
@@ -625,6 +576,9 @@ function showSoldierCounter(fk, id, validTers, evt) {
   const title = document.createElement('div');
   title.style.cssText = `font-size:10px;letter-spacing:2px;color:${FDATA[fk].color};margin-bottom:8px;`;
   title.textContent = 'COLOCAR SOLDADOS';
+  const maxEl = document.createElement('div');
+  maxEl.style.cssText = 'font-size:10px;color:#777;margin-bottom:10px;';
+  maxEl.textContent = `disponibles: ${maxAdd}`;
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;';
@@ -637,9 +591,6 @@ function showSoldierCounter(fk, id, validTers, evt) {
   const btnPlus = document.createElement('button');
   btnPlus.textContent='+';
   btnPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
-  const maxEl = document.createElement('div');
-  maxEl.style.cssText='font-size:10px;color:#777;margin-bottom:10px;';
-  maxEl.textContent=`disponibles: ${maxAdd}`;
 
   const btnRow = document.createElement('div');
   btnRow.style.cssText='display:flex;gap:6px;';
@@ -657,10 +608,6 @@ function showSoldierCounter(fk, id, validTers, evt) {
   btnOk.onclick   =(e)=>{
     e.stopPropagation();
     popup.remove();
-    // Publish before applying (so remote gets it)
-    if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-      ONLINE.pushAction('SETUP_SOLDIER', { fk, terId: id, qty });
-    }
     doPlaceSoldier(fk, id, qty);
   };
 
@@ -673,40 +620,34 @@ function showSoldierCounter(fk, id, validTers, evt) {
 
 function doPlaceSoldier(fk, id, qty) {
   G.setup.claimCallback = null;
-  const existing2 = document.getElementById('soldier-counter-popup');
-  if(existing2) existing2.remove();
+  const existing = document.getElementById('soldier-counter-popup');
+  if(existing) existing.remove();
   qty = Math.min(qty, G.setup.soldiersLeft[fk]||0);
-  G.territories[id].soldiers     += qty;
-  G.setup.soldiersLeft[fk]        = Math.max(0,(G.setup.soldiersLeft[fk]||0)-qty);
-  G.factions[fk].soldiers         = Math.max(0, G.factions[fk].soldiers-qty);
-  setupLog(`${FDATA[fk].name} +${qty} sol → ${id} (${G.setup.soldiersLeft[fk]} left)`);
+  G.territories[id].soldiers  += qty;
+  G.setup.soldiersLeft[fk]     = Math.max(0,(G.setup.soldiersLeft[fk]||0)-qty);
+  G.factions[fk].soldiers      = Math.max(0, G.factions[fk].soldiers-qty);
+  setupLog(`${FDATA[fk].name} +${qty} sol → ${id} (${G.setup.soldiersLeft[fk]} restantes)`);
   updateMap();
+  // Clear highlights
   Object.values(G.territories).filter(t=>t.owner===fk).forEach(t2=>{
     const ring=document.getElementById('tr-'+t2.id);
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
   });
-  if(G.setup.soldiersLeft[fk]>0){
-    setTimeout(()=>setupStep_Soldiers_ForFaction(fk),100);
+
+  if(G.setup.soldiersLeft[fk] > 0) {
+    // Still has soldiers — sync partial state and continue
+    if (_isOnline()) _syncSetup('SOLDIER_PARTIAL', { fk, terId: id, qty });
+    setTimeout(()=>setupStep_Soldiers_ForFaction(fk), 100);
   } else {
-    G.setup.orderIdx=(G.setup.orderIdx+1)%G.setup.order.length;
-    setTimeout(setupStep_Soldiers_Next,200);
+    // Done — sync and advance to next faction
+    if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'SOLDIER_DONE', fk });
+    G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
+    setTimeout(setupStep_Soldiers_Next, 200);
   }
 }
 
-function autoDistributeAll() {
-  G.setup.claimCallback=null;
-  G.setup.order.forEach(fk2=>{
-    const n=G.setup.soldiersLeft[fk2]||0;
-    const vt=Object.values(G.territories).filter(t=>t.owner===fk2);
-    for(let s=0;s<n;s++){const p=vt[s%vt.length];if(p)p.soldiers++;}
-    G.setup.soldiersLeft[fk2]=0;
-    G.factions[fk2].soldiers=0;
-  });
-  updateMap(); nextSetupStep();
-}
-
 // ════════════════════════════════════════════════════════════════
-//  STEP: PLACE NUCLEAR COMPLEXES
+//  STEP 4: PLACE NUCLEARS (toda la facción de golpe, en orden)
 // ════════════════════════════════════════════════════════════════
 function setupStep_PlaceNuclears() {
   G.setup.orderIdx = 0;
@@ -733,7 +674,7 @@ function setupStep_Nuclear_ForFaction(fk) {
   const isHuman = isHumanFaction(fk);
 
   showSetupPanel('COLOCAR NUCLEAR COMPLEXES',
-    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' (TÚ)':isHuman?' (jugador)':''} — coloca <b>${left}</b> Nuclear Complex(es)`,
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — coloca <b>${left}</b> Nuclear Complex(es)`,
     'bar');
 
   if(isMe){
@@ -744,36 +685,44 @@ function setupStep_Nuclear_ForFaction(fk) {
     G.setup.claimCallback=(id)=>{
       const t=G.territories[id];
       if(t.owner!==fk||t.hasNuclear) return false;
-      // Publish before applying
-      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-        ONLINE.pushAction('SETUP_NUCLEAR', { fk, terId: id });
-      }
       doPlaceNuclear(fk,id); return true;
     };
     const acts=getSetupActionsDiv();
     acts.innerHTML='';
-    acts.appendChild(setupBtn('AUTO-COLOCAR NUKES', ()=>{
-      if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-        ONLINE.pushAction('SETUP_AUTONUKES', {});
-      }
-      autoPlaceNukes();
+    acts.appendChild(setupBtn('AUTO-COLOCAR', ()=>{
+      _autoNukesFaction(fk);
+      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'NUCLEAR_DONE', fk });
+      G.setup.orderIdx=(G.setup.orderIdx+1)%G.setup.order.length;
+      setTimeout(setupStep_Nuclear_Next,200);
     }, '#444'));
   } else if(isHuman){
     G.setup.claimCallback = null;
-    const acts = getSetupActionsDiv();
+    const acts=getSetupActionsDiv();
     acts.innerHTML='';
-    setupBarLog(`Esperando a ${fd.name}...`);
+    document.getElementById('setup-bar-log').textContent = `Esperando a ${fd.name}...`;
   } else {
-    const pick=myTers[Math.floor(Math.random()*myTers.length)];
-    if(pick) setTimeout(()=>doPlaceNuclear(fk,pick.id),300);
-    else { G.setup.nukesLeft[fk]=0; G.setup.orderIdx++; setTimeout(setupStep_Nuclear_Next,100); }
+    G.setup.claimCallback = null;
+    if (_amHost()) {
+      _autoNukesFaction(fk);
+      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'NUCLEAR_DONE', fk });
+      G.setup.orderIdx=(G.setup.orderIdx+1)%G.setup.order.length;
+      setTimeout(setupStep_Nuclear_Next,200);
+    }
   }
+}
+
+function _autoNukesFaction(fk) {
+  const n     = G.setup.nukesLeft[fk]||0;
+  const myTers= Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+  myTers.slice(0,n).forEach(t=>{t.hasNuclear=true;});
+  G.setup.nukesLeft[fk]=0;
+  updateMap();
 }
 
 function doPlaceNuclear(fk,id){
   G.setup.claimCallback=null;
-  const t = G.territories[id];
-  if(!t || t.hasNuclear) return;
+  const t=G.territories[id];
+  if(!t||t.hasNuclear) return;
   t.hasNuclear=true;
   G.setup.nukesLeft[fk]--;
   setupLog(`${FDATA[fk].name} ☢ → ${id}`);
@@ -782,23 +731,15 @@ function doPlaceNuclear(fk,id){
     const ring=document.getElementById('tr-'+t2.id);
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
   });
+
   if(G.setup.nukesLeft[fk]>0){
+    if (_isOnline()) _syncSetup('NUCLEAR_PARTIAL', { fk, terId: id });
     setTimeout(()=>setupStep_Nuclear_ForFaction(fk),100);
   } else {
+    if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'NUCLEAR_DONE', fk });
     G.setup.orderIdx=(G.setup.orderIdx+1)%G.setup.order.length;
     setTimeout(setupStep_Nuclear_Next,200);
   }
-}
-
-function autoPlaceNukes(){
-  G.setup.claimCallback=null;
-  G.setup.order.forEach(fk2=>{
-    let n=G.setup.nukesLeft[fk2]||0;
-    const myT=Object.values(G.territories).filter(t=>t.owner===fk2&&!t.hasNuclear);
-    myT.slice(0,n).forEach(t=>{t.hasNuclear=true;});
-    G.setup.nukesLeft[fk2]=0;
-  });
-  updateMap(); nextSetupStep();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -821,14 +762,12 @@ function endSetupPhase(){
     <div style="text-align:center;">
       <div style="font-family:Orbitron,sans-serif;font-size:48px;letter-spacing:12px;
         color:#C8A800;text-shadow:0 0 40px #C8A800aa;margin-bottom:20px;">GAME START</div>
-      <div style="font-size:14px;color:#888;letter-spacing:4px;margin-bottom:30px;">
-        ARMAGEDDON PROTOCOL INITIATED</div>
+      <div style="font-size:14px;color:#888;letter-spacing:4px;margin-bottom:30px;">ARMAGEDDON PROTOCOL INITIATED</div>
       <div style="font-size:11px;color:#888;margin-bottom:8px;">Orden de turno:</div>
       <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:30px;">
         ${G.setup.order.map((fk,i)=>
           `<span style="font-family:Orbitron,sans-serif;color:${FDATA[fk].color};font-size:11px;">
-            ${i+1}. ${FDATA[fk].name}</span>`
-        ).join('')}
+            ${i+1}. ${FDATA[fk].name}</span>`).join('')}
       </div>
       <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ ¡Comienza el juego!','sys');refreshCards();updateFactionPanel();"
         style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:12px 32px;

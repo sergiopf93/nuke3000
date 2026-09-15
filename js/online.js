@@ -220,47 +220,34 @@ const ONLINE = (() => {
 
       // ── Setup phase ──
       case 'SETUP_ROLL':
-        // Another player rolled their die
-        if (typeof _onRemoteRoll === 'function') {
-          _onRemoteRoll(payload.fk, payload.roll);
-        }
-        break;
-
-      case 'SETUP_CLAIM':
-        if (typeof doClaimTerritory === 'function') {
-          doClaimTerritory(payload.fk, payload.terId);
-        }
-        break;
-
-      case 'SETUP_SOLDIER':
-        if (typeof doPlaceSoldier === 'function') {
-          doPlaceSoldier(payload.fk, payload.terId, payload.qty);
-        }
-        break;
-
-      case 'SETUP_NUCLEAR':
-        if (typeof doPlaceNuclear === 'function') {
-          doPlaceNuclear(payload.fk, payload.terId);
-        }
+        if (typeof _onRemoteRoll === 'function') _onRemoteRoll(payload.fk, payload.roll);
         break;
 
       case 'SETUP_NEXT_STEP':
-        // Host confirmed step (e.g. roll order) — guest advances
         if (payload.order) G.setup.order = payload.order;
         if (typeof nextSetupStep === 'function') nextSetupStep();
         break;
 
-      case 'SETUP_AUTOCLAIM':
-        if (typeof autoClaimAll === 'function') autoClaimAll();
+      case 'SETUP_SYNC': {
+        // Full G already applied via payload._G — advance UI based on subtype
+        const sub = payload.subtype;
+        if (typeof updateMap === 'function') updateMap();
+        if (typeof refreshCards === 'function') refreshCards();
+        if (sub === 'CLAIM') {
+          if (typeof setupStep_Claim_Next === 'function') setupStep_Claim_Next();
+        } else if (sub === 'AUTOCLAIM') {
+          if (typeof nextSetupStep === 'function') nextSetupStep();
+        } else if (sub === 'SOLDIER_PARTIAL') {
+          if (typeof setupStep_Soldiers_ForFaction === 'function') setupStep_Soldiers_ForFaction(payload.fk);
+        } else if (sub === 'SOLDIER_DONE') {
+          if (typeof setupStep_Soldiers_Next === 'function') setupStep_Soldiers_Next();
+        } else if (sub === 'NUCLEAR_PARTIAL') {
+          if (typeof setupStep_Nuclear_ForFaction === 'function') setupStep_Nuclear_ForFaction(payload.fk);
+        } else if (sub === 'NUCLEAR_DONE') {
+          if (typeof setupStep_Nuclear_Next === 'function') setupStep_Nuclear_Next();
+        }
         break;
-
-      case 'SETUP_AUTODISTRIBUTE':
-        if (typeof autoDistributeAll === 'function') autoDistributeAll();
-        break;
-
-      case 'SETUP_AUTONUKES':
-        if (typeof autoPlaceNukes === 'function') autoPlaceNukes();
-        break;
+      }
 
       // ── Game phase ──
       case 'END_PHASE':
