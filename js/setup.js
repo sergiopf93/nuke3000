@@ -75,15 +75,14 @@ function startSetupPhase() {
   const allFkeys = Object.keys(FDATA);
 
   if (typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-    // Online: use factions from the room players
-    // _onlinePlayerFactions populated by _launchOnlineGame
+    // Online: human factions first, then CPU fillers to reach playerCount
     const humanFks = _onlinePlayerFactions
       ? [..._onlinePlayerFactions]
       : [G.pf];
-    // Fill remaining slots with CPU factions
+    const cpuCount = Math.max(0, G.playerCount - humanFks.length);
     const cpuFks = allFkeys
       .filter(k => !humanFks.includes(k))
-      .slice(0, G.playerCount - humanFks.length);
+      .slice(0, cpuCount);
     G.setup.order = [...humanFks, ...cpuFks];
   } else {
     // Local: player first, then CPUs
