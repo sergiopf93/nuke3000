@@ -7,6 +7,7 @@ function openDice(targetId) {
   const src=G.territories[srcId], tgt=G.territories[targetId];
   if(!src||!tgt||src.owner!==G.pf){addLog('Selecciona tu territorio','sys');return;}
   if(armyPoints(src)===0){addLog('Sin unidades en origen','sys');return;}
+  if(armyPoints(src)<=1){addLog('Necesitas al menos 2 unidades para atacar (1 se queda en origen).','sys');return;}
   if(!tgt.owner||tgt.owner===G.pf){addLog('Selecciona territorio enemigo','sys');return;}
 
   G_combat={srcId,targetId,attFk:G.pf,defFk:tgt.owner,round:1,done:false,isPlayerAtt:true,isPlayerDef:false};
@@ -19,7 +20,13 @@ function openDiceCpu(srcId, targetId, cpuFk, callback) {
   const isPlayerDef=(tgt.owner===G.pf);
   G_combat={srcId,targetId,attFk:cpuFk,defFk:tgt.owner,round:1,done:false,
             isPlayerAtt:false,isPlayerDef,callback};
-  openCombatModal(isPlayerDef?'cpu-att-player-def':'cpu-att-cpu-def');
+  if(isPlayerDef) {
+    // Don't open modal yet — player must click the hex to open it
+    // G_combat is stored, flashAttackedTerritory already called
+  } else {
+    // CPU vs CPU — open spectator modal directly
+    openCombatModal('cpu-att-cpu-def');
+  }
 }
 
 function openCombatModal(mode) {
@@ -297,8 +304,9 @@ function applyBattleResult(aR,dR) {
     ctx.attSelected=ctx.attPool.slice(0,aN);ctx.defSelected=ctx.defPool.slice(0,dN);
     renderDicePools();
     if(ctx.isPlayerAtt){
-      // Player is attacker
-      if(rollBtn){rollBtn.textContent='⚄ CONTINUAR ATAQUE';rollBtn.style.display='inline-block';rollBtn.onclick=()=>resolveCombatRound(false);}
+      // Can only continue if attacker has >1 unit (1 must stay in origin)
+      const canContinue = armyPoints(src) > 1;
+      if(rollBtn){rollBtn.textContent= canContinue ? '⚄ CONTINUAR ATAQUE' : '⚠ Sin unidades para continuar';rollBtn.style.display='inline-block';rollBtn.disabled=!canContinue;rollBtn.onclick=canContinue?()=>resolveCombatRound(false):null;}
       if(retreatBtn){retreatBtn.style.display='inline-block';retreatBtn.onclick=()=>retreatCombat();}
       if(cancelBtn){cancelBtn.textContent='TERMINAR COMBATE';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};}
     } else if(ctx.isPlayerDef){
@@ -400,7 +408,7 @@ function mvConfirm(srcId,dstId){
   src.mechs-=(c.mechs||0);dst.mechs+=(c.mechs||0);
   src.aircraft-=(c.aircraft||0);dst.aircraft+=(c.aircraft||0);
   src.scorpions-=(c.scorpions||0);dst.scorpions+=(c.scorpions||0);
-  addLog('Movidos '+total+' uds: '+srcId+' → '+dstId,'move');
+  addLog('Movidos '+total+' uds: '+terName(srcId)+' → '+terName(dstId),'move');
   p.remove();window._mvPopup=null;
   G.moveSrc=null;G.moveMode=false;G.moveTargets=null;
   const mw=document.getElementById('map-wrap');if(mw)mw.classList.remove('moving');
@@ -417,10 +425,8 @@ function retreatCombat(){
 
 function closeDice(){
   document.getElementById('dmodal').classList.remove('open');
-  // Clear any combat highlights
   if(G_combat && G_combat.targetId){
-    const ring=document.getElementById('tr-'+G_combat.targetId);
-    if(ring){ring.setAttribute('stroke','');ring.setAttribute('stroke-width','1.5');ring.setAttribute('filter','');}
+    clearAttackFlash(G_combat.targetId);
   }
   G_combat=null;
 }
@@ -551,7 +557,7 @@ function placeReinforcements(id, qty) {
   t.soldiers += qty;
   G.reinforcementMode.left -= qty;
   G.factions[G.pf].pendingSoldiers = Math.max(0,(G.factions[G.pf].pendingSoldiers||0)-qty);
-  addLog(`+${qty} soldados → ${id}. Restantes: ${G.reinforcementMode.left}`, 'res');
+  addLog(`+${qty} soldados → ${terName(id)}. Restantes: ${G.reinforcementMode.left}`, 'res');
   updateMap();
 
   if(G.reinforcementMode.left <= 0) {

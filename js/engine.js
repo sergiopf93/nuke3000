@@ -411,6 +411,83 @@ function executePlayerStep(step) {
 }
 
 // ── CPU Attack ────────────────────────────────────────────────────
+
+function flashAttackedTerritory(tgtId, srcId, attFk) {
+  // Store pending attack so clicking the hex opens the combat modal
+  if(!G.pendingCpuAttack) G.pendingCpuAttack = {};
+  G.pendingCpuAttack[tgtId] = { srcId, attFk };
+
+  // Red pulsing ring on the hex
+  const ring = document.getElementById('tr-'+tgtId);
+  if(ring) {
+    ring.setAttribute('stroke','#ff2222');
+    ring.setAttribute('stroke-width','4');
+    ring.setAttribute('filter','url(#fx-glow)');
+  }
+
+  // Add "BAJO ATAQUE" SVG label centered on the hex
+  const td = TERRITORIES_DEF.find(x=>x.id===tgtId);
+  if(td) {
+    const oldLbl = document.getElementById('atk-lbl-'+tgtId);
+    if(oldLbl) oldLbl.remove();
+
+    const bg = document.createElementNS(NS,'rect');
+    bg.setAttribute('x', td.cx-28); bg.setAttribute('y', td.cy-8);
+    bg.setAttribute('width','56'); bg.setAttribute('height','14');
+    bg.setAttribute('rx','2'); bg.setAttribute('fill','rgba(180,0,0,0.85)');
+    bg.setAttribute('pointer-events','none');
+
+    const lbl = document.createElementNS(NS,'text');
+    lbl.setAttribute('x', td.cx); lbl.setAttribute('y', td.cy+3);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('font-size','7'); lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('font-family','Orbitron,monospace');
+    lbl.setAttribute('fill','#ffffff'); lbl.setAttribute('pointer-events','none');
+    lbl.textContent = 'BAJO ATAQUE';
+
+    const grp = document.createElementNS(NS,'g');
+    grp.setAttribute('id','atk-lbl-'+tgtId);
+    grp.appendChild(bg); grp.appendChild(lbl);
+    svgG.appendChild(grp);
+  }
+
+  const tgt = G.territories[tgtId];
+  if(tgt && tgt.owner === G.pf) {
+    const fd = FDATA[attFk]||{name:attFk,color:'#888'};
+    // Small top banner with instruction
+    const ex = document.getElementById('attack-banner');
+    if(ex) ex.remove();
+    const banner = document.createElement('div');
+    banner.id = 'attack-banner';
+    banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:800;'+
+      'background:#1a0000;border:2px solid #ff2222;padding:8px 20px;font-family:Orbitron,sans-serif;'+
+      'text-align:center;box-shadow:0 0 20px #ff222288;';
+    banner.innerHTML = '<div style="font-size:10px;color:#ff4444;letter-spacing:2px;">'+
+      fd.name+' ATACA '+terName(tgtId)+
+      '</div><div style="font-size:9px;color:#888;margin-top:3px;">Pulsa el hexágono para defender</div>';
+    document.body.appendChild(banner);
+    // Auto-remove after 8s
+    setTimeout(()=>{ const b=document.getElementById('attack-banner');if(b)b.remove(); }, 8000);
+  }
+
+  updateMap();
+}
+
+function clearAttackFlash(tgtId) {
+  // Remove visual attack markers
+  const ring = document.getElementById('tr-'+tgtId);
+  if(ring) {
+    ring.setAttribute('stroke','');
+    ring.setAttribute('stroke-width','1.5');
+    ring.setAttribute('filter','');
+  }
+  const lbl = document.getElementById('atk-lbl-'+tgtId);
+  if(lbl) lbl.remove();
+  if(G.pendingCpuAttack) delete G.pendingCpuAttack[tgtId];
+  const b = document.getElementById('attack-banner');
+  if(b) b.remove();
+}
+
 function executeCpuAttack(fk, descEl) {
   // Find a valid attack target
   const myTers = Object.values(G.territories).filter(t=>t.owner===fk&&armyPoints(t)>1);
@@ -421,8 +498,8 @@ function executeCpuAttack(fk, descEl) {
       const tgt = adjEnemies[Math.floor(Math.random()*adjEnemies.length)];
       attacked=true;
       addLog(`[${FDATA[fk]?.name||fk}] ⚔ Ataca ${tgt.id} desde ${src.id}`,'combat');
-      if(descEl) descEl.innerHTML=`Atacando <b>${tgt.id}</b>...`;
-      // Open dice modal for CPU attack (player defends!)
+      if(descEl) descEl.innerHTML='Atacando <b>'+terName(tgt.id)+'</b>...';
+      flashAttackedTerritory(tgt.id, src.id, fk);
       openDiceCpu(src.id, tgt.id, fk, ()=>setTimeout(()=>nextStep(), 1000));
       return;
     }
@@ -685,6 +762,18 @@ function markStepDone(id) {
 function setStepActive(id) { }
 function guideStepClick(id, action) { }
 
+
+function terName(id) {
+  if(!id) return id;
+  const td = TERRITORIES_DEF.find(x=>x.id===id);
+  if(!td) return id;
+  const reg = REGIONS.find(r=>r.id===td.region);
+  const regName = reg ? reg.name : td.region;
+  const regTers = TERRITORIES_DEF.filter(x=>x.region===td.region);
+  const pos = regTers.findIndex(x=>x.id===id) + 1;
+  return regName + ' ' + pos;
+}
+
 function updateMap() {
   Object.keys(G.territories).forEach(id => {
     const t = G.territories[id];
@@ -942,6 +1031,12 @@ function onTerritoryClick(id, event) {
     if(handled) return;
     return;
   }
+
+  // Pending CPU attack — player clicks attacked hex to open defense modal
+  if(G.pendingCpuAttack && G.pendingCpuAttack[id]) {
+    openCombatModal('cpu-att-player-def');
+    return;
+  }
   // During setup, block all territory interaction
   if(G.setup && G.setup._inSetup) { return; }
 
@@ -991,7 +1086,7 @@ function onTerritoryClick(id, event) {
   if(G.moveMode && G.territories[id]?.owner === G.pf && armyPoints(G.territories[id]) > 0) {
     G.moveSrc = id; G.moveTargets = getMovableTargets(id, 3);
     document.getElementById('map-wrap').classList.add('moving');
-    addLog(`Origen: ${id}. Ahora clic en territorio destino adyacente.`,'move');
+    addLog(`Origen: ${terName(id)}. Ahora clic en territorio destino adyacente.`,'move');
     updateMap();
     return;
   }
@@ -1024,7 +1119,7 @@ function onTerritoryClick(id, event) {
       const btn = document.getElementById('ba-attack');
       if(btn) { btn.disabled=true; btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO'; }
       selectTerritory(id);
-      addLog(`Origen: ${id}. Ahora clic en territorio enemigo adyacente (rojo).`,'sys');
+      addLog(`Origen: ${terName(id)}. Ahora clic en territorio enemigo adyacente (rojo).`,'sys');
       return;
     }
   }
@@ -1146,21 +1241,12 @@ function doAct(action) {
 }
 
 function doUpgrade(type) {
-  // Use selected territory, or auto-pick one with enough units
-  let id = G.sel;
+  const id = G.sel;
   const myF = G.factions[G.pf];
-  const myTers = Object.values(G.territories).filter(t=>t.owner===G.pf);
-  if(!id || G.territories[id]?.owner !== G.pf) {
-    // Auto-pick best territory for this upgrade
-    if(type==='mech'||type==='air') {
-      const best = myTers.filter(t=>t.soldiers>=3).sort((a,b)=>b.soldiers-a.soldiers)[0];
-      id = best?.id;
-    } else if(type==='sco') {
-      const best = myTers.filter(t=>t.mechs>=2).sort((a,b)=>b.mechs-a.mechs)[0];
-      id = best?.id;
-    }
+  if(!id || !G.territories[id] || G.territories[id].owner !== G.pf) {
+    addLog('Selecciona primero un territorio TUYO en el mapa.','sys');
+    return;
   }
-  if(!id) { addLog('Selecciona un territorio primero.','sys'); return; }
   const t = G.territories[id];
   if(type==='mech'){
     if(t.soldiers<3 || myF.plutonium<1) return;
@@ -1198,4 +1284,7 @@ function updateMissilePips() {
 // ════════════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════════════
-// COMBAT DI
+// COMBAT DICE — interactive for both player and CPU attacks
+// ════════════════════════════════════════════════════════════════
+
+// State for current combat
