@@ -628,10 +628,28 @@ function wrLeave() {
 function _launchOnlineGame(meta) {
   document.getElementById('waiting-room').style.display = 'none';
   const players = meta.players || {};
-  G.playerCount = Object.keys(players).length;
-  // Ensure G.pf is set from our player entry
+  const count = Object.keys(players).length;
+
+  // Set playerCount — must be 3-6, default to 4 if wrong
+  G.playerCount = (count >= 3 && count <= 6) ? count : 4;
+  document.getElementById('pcount').value = G.playerCount;
+
+  // Set faction from our player entry in Firebase
   const myEntry = players[ONLINE.getUserId()];
-  if (myEntry && myEntry.faction) G.pf = myEntry.faction;
+  if (myEntry && myEntry.faction) {
+    G.pf = myEntry.faction;
+    // Also set selF so startGame() doesn't block
+    selF = myEntry.faction;
+  }
+
+  // Set name
+  if (myEntry && myEntry.name) G.pname = myEntry.name;
+
+  if (!G.pf) {
+    alert('Error: no tienes facción asignada. Vuelve a unirte a la sala.');
+    return;
+  }
+
   startGame();
 }
 
