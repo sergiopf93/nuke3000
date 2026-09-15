@@ -241,13 +241,17 @@ const ONLINE = (() => {
   function onRoomUpdate(cb) { _roomUpdateCb = cb; }
 
   // ── Signal game start ─────────────────────────────────────
-  async function signalGameStart(players) {
+  async function signalGameStart(players, totalPlayerCount) {
     if (!_isHost || !_roomId) return;
     await _db.collection('rooms').doc(_roomId).update({
       'meta.status': 'playing',
       'meta.players': players || {},
+      'meta.totalPlayerCount': totalPlayerCount || Object.keys(players || {}).length,
     });
-    await _pushActionRaw('GAME_START', { playerCount: Object.keys(players || {}).length });
+    await _pushActionRaw('GAME_START', {
+      players: players || {},
+      totalPlayerCount: totalPlayerCount || Object.keys(players || {}).length,
+    });
   }
 
   // ── Signal game end ───────────────────────────────────────
@@ -329,7 +333,10 @@ const ONLINE = (() => {
 
       case 'GAME_START':
         if (typeof _launchOnlineGame === 'function') {
-          _launchOnlineGame({ players: payload.players || {} });
+          _launchOnlineGame({
+            players: payload.players || {},
+            totalPlayerCount: payload.totalPlayerCount,
+          });
         }
         break;
 
