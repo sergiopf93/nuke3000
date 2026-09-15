@@ -8,9 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
 
-  <!-- ═══════════════════════════════════════════════════════
-       FIREBASE (compat SDK — no bundler needed)
-       ═══════════════════════════════════════════════════════ -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -70,9 +67,157 @@
     }
     #online-status.connected { color: #4a8840; }
     #online-status.error { color: #8B1A1A; }
+
+    /* ── Waiting room overlay ─────────────────────────────── */
+    #waiting-room {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 800;
+      background: rgba(4,4,8,0.97);
+      align-items: center;
+      justify-content: center;
+    }
+    #waiting-room.show { display: flex; }
+    #wr-box {
+      width: 520px;
+      max-width: 95vw;
+      border: 1px solid #1a1a20;
+      background: #050508;
+      padding: 32px;
+    }
+    #wr-title {
+      font-family: Orbitron, sans-serif;
+      font-size: 11px;
+      letter-spacing: 5px;
+      color: #C8A800;
+      margin-bottom: 6px;
+    }
+    #wr-code {
+      font-family: Orbitron, sans-serif;
+      font-size: 38px;
+      letter-spacing: 10px;
+      color: #C8A800;
+      text-shadow: 0 0 20px #C8A800aa;
+      margin-bottom: 20px;
+    }
+    #wr-hint {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    #wr-players {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+      min-height: 60px;
+    }
+    .wr-player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid #1a1a20;
+      background: #08080c;
+    }
+    .wr-player-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .wr-player-name {
+      font-family: Orbitron, sans-serif;
+      font-size: 11px;
+      color: #ccc;
+      flex: 1;
+    }
+    .wr-player-faction {
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 2px;
+    }
+    .wr-player-host {
+      font-size: 9px;
+      color: #C8A800;
+      letter-spacing: 2px;
+    }
+    #wr-start {
+      width: 100%;
+      padding: 12px;
+      font-family: Orbitron, sans-serif;
+      font-size: 12px;
+      letter-spacing: 4px;
+      background: #0a0a0d;
+      border: 1px solid #C8A800;
+      color: #C8A800;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    #wr-start:disabled {
+      border-color: #333;
+      color: #333;
+      cursor: not-allowed;
+    }
+    #wr-leave {
+      width: 100%;
+      padding: 8px;
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      background: transparent;
+      border: 1px solid #333;
+      color: #555;
+      cursor: pointer;
+    }
+    #wr-status {
+      font-size: 10px;
+      color: #888;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* ── Faction card locked state ────────────────────────── */
+    .fp.locked {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+      position: relative;
+    }
+    .fp.locked::after {
+      content: 'OCUPADA';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #fff;
+      background: rgba(0,0,0,0.7);
+      padding: 4px 8px;
+    }
   </style>
 </head>
 <body>
+
+<!-- ══════════════════════════════════════════════════════════
+     WAITING ROOM OVERLAY
+     ══════════════════════════════════════════════════════════ -->
+<div id="waiting-room">
+  <div id="wr-box">
+    <div id="wr-title">SALA DE ESPERA</div>
+    <div id="wr-code">——————</div>
+    <div id="wr-hint">Comparte este código con los otros jugadores</div>
+    <div id="wr-players"></div>
+    <div id="wr-status">ESPERANDO JUGADORES...</div>
+    <button id="wr-start" disabled onclick="wrStartGame()">☢ INICIAR PARTIDA</button>
+    <button id="wr-leave" onclick="wrLeave()">← SALIR DE LA SALA</button>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════
      LOBBY
@@ -140,7 +285,7 @@
           padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
           ⚙ EDITAR REGLAS
         </button>
-        <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA</button>
+        <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA LOCAL</button>
       </div>
       <div class="lquote">"Now I am become death, the destroyer of worlds" — Oppenheimer, 1945</div>
     </div>
@@ -273,9 +418,7 @@
 <div id="tip"></div>
 <div id="pflash"></div>
 
-<!-- ══════════════════════════════════════════════════════════
-     SCRIPTS — order matters
-     ══════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS -->
 <script src="js/assets.js"></script>
 <script src="js/data.js"></script>
 <script src="js/setup.js"></script>
@@ -283,14 +426,20 @@
 <script src="js/engine.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>
-
-<!-- Online module (depends on all above) -->
 <script src="js/online.js"></script>
-<!-- ⚠️ firebase-config.js is gitignored — add your own credentials -->
 <script src="js/firebase-config.js"></script>
 
 <script>
-// ── Online lobby helpers ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+//  ONLINE LOBBY — faction locking + waiting room
+// ═══════════════════════════════════════════════════════════
+
+const FACTION_COLORS = {
+  imp:'#C8A800', lib:'#4A7C3F', clt:'#8B1A1A',
+  erb:'#5555aa', prm:'#1B4F8A', shn:'#b0b0b0'
+};
+
+// ── Status bar ──────────────────────────────────────────────
 function _setOnlineStatus(msg, cls) {
   const el = document.getElementById('online-status');
   if (!el) return;
@@ -298,41 +447,158 @@ function _setOnlineStatus(msg, cls) {
   el.className = cls || '';
 }
 
+// ── Create room ─────────────────────────────────────────────
 function onlineCreateRoom() {
-  if (!ONLINE.isOnline()) {
-    // Update lobby faction/name before creating
-    if (typeof selF !== 'undefined' && selF) G.pf = selF;
-    G.pname = document.getElementById('pname').value.trim() || 'COMANDANTE';
-  }
+  if (!selF) { alert('Elige una facción primero.'); return; }
+  const name = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  G.pf = selF;
+  G.pname = name;
   _setOnlineStatus('CREANDO SALA...', '');
   ONLINE.createRoom().then(() => {
     if (ONLINE.isOnline()) {
       _setOnlineStatus('SALA ' + ONLINE.getRoomCode() + ' · ESPERANDO JUGADORES', 'connected');
+      _showWaitingRoom();
     }
   }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
 }
 
+// ── Join room ───────────────────────────────────────────────
 function onlineJoinRoom() {
+  if (!selF) { alert('Elige una facción primero.'); return; }
   const code = document.getElementById('join-code').value.trim().toUpperCase();
   if (!code) { _setOnlineStatus('INTRODUCE UN CÓDIGO', 'error'); return; }
+  const name = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  G.pf = selF;
+  G.pname = name;
   _setOnlineStatus('CONECTANDO...', '');
   ONLINE.joinRoom(code).then(() => {
     if (ONLINE.isOnline()) {
       _setOnlineStatus('CONECTADO · SALA ' + code, 'connected');
+      _showWaitingRoom();
     }
   }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
 }
 
-// ── Patch startGame() to signal Firebase when online ───────
-const _origStartGame = typeof startGame === 'function' ? startGame : null;
-function startGame() {
-  if (_origStartGame) _origStartGame();
-  if (ONLINE.isOnline() && ONLINE.isHost()) {
-    ONLINE.signalGameStart();
+// ── Waiting room UI ─────────────────────────────────────────
+function _showWaitingRoom() {
+  const wr = document.getElementById('waiting-room');
+  wr.classList.add('show');
+  document.getElementById('wr-code').textContent = ONLINE.getRoomCode();
+
+  // Only host sees the start button active
+  const startBtn = document.getElementById('wr-start');
+  if (!ONLINE.isHost()) {
+    startBtn.textContent = 'ESPERANDO AL HOST...';
+    startBtn.disabled = true;
+  }
+
+  // Subscribe to room meta updates for player list
+  ONLINE.onRoomUpdate(_renderWaitingRoom);
+}
+
+function _renderWaitingRoom(meta) {
+  if (!meta) return;
+  const players = meta.players || {};
+  const host = meta.host;
+  const container = document.getElementById('wr-players');
+  const startBtn = document.getElementById('wr-start');
+  const status = document.getElementById('wr-status');
+
+  // Render player list
+  container.innerHTML = Object.entries(players).map(([uid, p]) => {
+    const color = FACTION_COLORS[p.faction] || '#888';
+    const isHost = uid === host;
+    const isMe = uid === ONLINE.getUserId();
+    return `<div class="wr-player">
+      <div class="wr-player-dot" style="background:${color};box-shadow:0 0 6px ${color}66;"></div>
+      <div class="wr-player-name">${p.name || 'COMANDANTE'}${isMe ? ' <span style="color:#C8A800;font-size:9px;">★ TÚ</span>' : ''}</div>
+      <div class="wr-player-faction">${(p.faction || '—').toUpperCase()}</div>
+      ${isHost ? '<div class="wr-player-host">HOST</div>' : ''}
+    </div>`;
+  }).join('');
+
+  // Lock taken factions in lobby grid
+  const takenFactions = Object.values(players)
+    .filter(p => p.faction && p.faction !== G.pf)
+    .map(p => p.faction);
+  document.querySelectorAll('.fp').forEach(el => {
+    const f = el.dataset.f;
+    if (takenFactions.includes(f)) {
+      el.classList.add('locked');
+    } else {
+      el.classList.remove('locked');
+    }
+  });
+
+  const count = Object.keys(players).length;
+  status.textContent = `${count} JUGADOR${count !== 1 ? 'ES' : ''} EN LA SALA`;
+
+  // Host can start with 2+ players
+  if (ONLINE.isHost()) {
+    startBtn.disabled = count < 2;
+    startBtn.textContent = count < 2
+      ? 'ESPERANDO MÁS JUGADORES...'
+      : `☢ INICIAR PARTIDA (${count}J)`;
+  }
+
+  // Guest: if status changed to 'playing', start game
+  if (!ONLINE.isHost() && meta.status === 'playing') {
+    _launchOnlineGame(meta);
   }
 }
 
-// ── Patch declareVictory() to signal game end ──────────────
+function wrStartGame() {
+  // Update playerCount to match actual players in room
+  ONLINE.getPlayersInRoom().then(players => {
+    G.playerCount = Object.keys(players).length;
+    document.getElementById('pcount').value = G.playerCount;
+    ONLINE.signalGameStart(players).then(() => {
+      _launchOnlineGame({ players });
+    });
+  });
+}
+
+function wrLeave() {
+  ONLINE.leaveRoom();
+  document.getElementById('waiting-room').classList.remove('show');
+  _setOnlineStatus('OFFLINE · MODO LOCAL', '');
+  // Re-enable all factions
+  document.querySelectorAll('.fp').forEach(el => el.classList.remove('locked'));
+}
+
+function _launchOnlineGame(meta) {
+  // Hide waiting room
+  document.getElementById('waiting-room').classList.remove('show');
+  // Set playerCount from room
+  const players = meta.players || {};
+  G.playerCount = Object.keys(players).length;
+  // Launch game normally
+  startGame();
+}
+
+// ── startGame override ──────────────────────────────────────
+const _origStartGame = typeof startGame === 'function' ? startGame : null;
+function startGame() {
+  if (!selF && !ONLINE.isOnline()) { alert('Elige una facción.'); return; }
+  if (selF) G.pf = selF;
+  G.pname = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  G.playerCount = parseInt(document.getElementById('pcount').value);
+
+  initGame();
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('hdr').style.display = 'flex';
+  document.getElementById('main').style.display = 'grid';
+  document.getElementById('rcode').textContent = ONLINE.isOnline()
+    ? ONLINE.getRoomCode()
+    : Math.random().toString(36).slice(2,8).toUpperCase();
+  buildMap();
+  updateUI();
+  addLog(`${G.pname} comanda ${FDATA[G.pf].name}.`, 'sys');
+  setupPanZoom();
+  startSetupPhase();
+}
+
+// ── declareVictory override ─────────────────────────────────
 const _origDeclareVictory = typeof declareVictory === 'function' ? declareVictory : null;
 function declareVictory(goal) {
   if (_origDeclareVictory) _origDeclareVictory(goal);
