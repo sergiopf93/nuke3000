@@ -78,6 +78,11 @@ const HEX_R = 44; // territory circle radius
 
 function buildMap() {
   svgEl = document.getElementById('map-svg');
+
+  // Clear any previous content to prevent duplicates on re-call
+  while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+  pathEls = {}; unitEls = {};
+
   svgEl.setAttribute('viewBox','0 0 1400 787');
   svgEl.setAttribute('width','1400');
   svgEl.setAttribute('height','787');
