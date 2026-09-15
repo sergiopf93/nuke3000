@@ -49,8 +49,8 @@ function openCombatModal(mode) {
 
   renderDicePools();
 
-  const rollBtn=document.querySelector('#dmodal .dbtns .dbtn:not(.cx)');
-  const cancelBtn=document.querySelector('#dmodal .dbtns .dbtn.cx');
+  const rollBtn=document.getElementById('btn-roll');
+  const cancelBtn=document.getElementById('btn-cancel');
   const retreatBtn=document.getElementById('btn-retreat');
 
   if(mode==='player-att') {
@@ -220,7 +220,7 @@ function rollAttackerThenDefend() {
   att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   document.getElementById('dtot-a').textContent=aR.join(' · ');
   ctx._attRolls=aR;
-  const rollBtn=document.querySelector('#dmodal .dbtns .dbtn:not(.cx)');
+  const rollBtn=document.getElementById('btn-roll');
   setTimeout(()=>{
     document.getElementById('dres').innerHTML='<div style="color:#ff4444;">Atacante: '+aR.join(', ')+'</div><div style="font-size:10px;color:#C8A800;">Ahora TUS dados de defensa</div>';
     if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
@@ -247,9 +247,9 @@ function applyBattleResult(aR,dR) {
   for(let i=0;i<dL;i++) applyLoss(tgt);
   for(let i=0;i<aL;i++) applyLoss(src);
   const res=document.getElementById('dres');
-  const rollBtn=document.querySelector('#dmodal .dbtns .dbtn:not(.cx)');
+  const rollBtn=document.getElementById('btn-roll');
   const retreatBtn=document.getElementById('btn-retreat');
-  const cancelBtn=document.querySelector('#dmodal .dbtns .dbtn.cx');
+  const cancelBtn=document.getElementById('btn-cancel');
   const conquered=armyPoints(tgt)===0;
   if(conquered||armyPoints(src)===0){
     if(conquered){
@@ -731,3 +731,6 @@ function doMissileFire() {
 }
 
 
+function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
+
+function addLog(msg
