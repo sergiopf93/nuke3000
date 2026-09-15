@@ -482,7 +482,7 @@ function onlineJoinRoom() {
 // ── Waiting room UI ─────────────────────────────────────────
 function _showWaitingRoom() {
   const wr = document.getElementById('waiting-room');
-  wr.classList.add('show');
+  wr.style.display = 'flex';
   document.getElementById('wr-code').textContent = ONLINE.getRoomCode();
 
   // Only host sees the start button active
@@ -560,7 +560,7 @@ function wrStartGame() {
 
 function wrLeave() {
   ONLINE.leaveRoom();
-  document.getElementById('waiting-room').classList.remove('show');
+  document.getElementById('waiting-room').style.display = 'none';
   _setOnlineStatus('OFFLINE · MODO LOCAL', '');
   // Re-enable all factions
   document.querySelectorAll('.fp').forEach(el => el.classList.remove('locked'));
@@ -568,7 +568,7 @@ function wrLeave() {
 
 function _launchOnlineGame(meta) {
   // Hide waiting room
-  document.getElementById('waiting-room').classList.remove('show');
+  document.getElementById('waiting-room').style.display = 'none';
   // Set playerCount from room
   const players = meta.players || {};
   G.playerCount = Object.keys(players).length;
