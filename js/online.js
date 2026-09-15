@@ -313,11 +313,22 @@ const ONLINE = (() => {
     _roomUpdateCb = null;
   }
 
+  // ── Update my faction in room ───────────────────────────────
+  async function updateMyFaction(faction) {
+    if (!_roomId || !_userId) return;
+    G.pf = faction;
+    try {
+      await _db.collection('rooms').doc(_roomId).update({
+        [`meta.players.${_userId}.faction`]: faction,
+      });
+    } catch(e) { console.error('[ONLINE] updateMyFaction error:', e); }
+  }
+
   // ── Public API ───────────────────────────────────────────────
   return {
     init, createRoom, joinRoom, leaveRoom,
     pushAction, signalGameStart, signalGameEnd,
-    onRoomUpdate, getPlayersInRoom,
+    onRoomUpdate, getPlayersInRoom, updateMyFaction,
     syncState: _syncState,
     isOnline:    () => !!_roomId,
     isHost:      () => _isHost,
