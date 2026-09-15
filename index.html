@@ -609,10 +609,10 @@ function onlineJoinRoom() {
 
 // ── Host starts game ────────────────────────────────────────
 function wrStartGame() {
+  const totalPlayerCount = parseInt(document.getElementById('pcount').value) || 4;
   ONLINE.getPlayersInRoom().then(players => {
-    G.playerCount = Object.keys(players).length;
-    ONLINE.signalGameStart(players).then(() => {
-      _launchOnlineGame({ players });
+    ONLINE.signalGameStart(players, totalPlayerCount).then(() => {
+      _launchOnlineGame({ players, totalPlayerCount });
     });
   });
 }
@@ -628,13 +628,14 @@ function wrLeave() {
 function _launchOnlineGame(meta) {
   document.getElementById('waiting-room').style.display = 'none';
   const players = meta.players || {};
-  const count = Object.keys(players).length;
+  const humanCount = Object.keys(players).length;
 
-  // Set playerCount — must be 3-6
-  G.playerCount = (count >= 3 && count <= 6) ? count : 4;
+  // Use totalPlayerCount from host (includes CPUs), fallback to humanCount or 4
+  const totalPlayerCount = meta.totalPlayerCount || humanCount;
+  G.playerCount = (totalPlayerCount >= 3 && totalPlayerCount <= 6) ? totalPlayerCount : 4;
   document.getElementById('pcount').value = G.playerCount;
 
-  // Build set of human player factions for setup.js / engine.js
+  // Build set of human player factions — CRITICAL for isHumanFaction()
   _onlinePlayerFactions = new Set(
     Object.values(players).map(p => p.faction).filter(Boolean)
   );
