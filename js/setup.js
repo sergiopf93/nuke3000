@@ -378,6 +378,7 @@ function setupStep_Claim() {
 }
 
 function setupStep_Claim_Next() {
+  updateMap(); // force redraw before checking unclaimed
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(unclaimed.length === 0) { nextSetupStep(); return; }
 
@@ -444,6 +445,8 @@ function doClaimTerritory(fk, id) {
     if(ring){ ring.setAttribute('stroke','#1a1a20'); ring.setAttribute('stroke-width','1.5'); }
   });
   updateMap();
+
+  // Advance order BEFORE sync so G carries the updated orderIdx
   G.setup.orderIdx++;
 
   // Sync to all — host always syncs (covers own turns + CPU turns)
