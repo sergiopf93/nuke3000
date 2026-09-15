@@ -95,15 +95,40 @@ function openCombatModal(mode) {
 
   if(mode==='player-att') {
     document.getElementById('dres').innerHTML=
-      '<div style="color:#C8A800;font-size:12px;">TU ATAQUE — pulsa para lanzar</div>';
-    rollBtn.textContent='⚄ LANZAR DADOS'; rollBtn.style.display='inline-block';
-    rollBtn.onclick=()=>resolveCombatRound(false);
+      '<div style="color:#C8A800;font-size:12px;">TU ATAQUE — elige unidades</div>';
+    rollBtn.style.display='none'; // hidden until units selected
     cancelBtn.textContent='CANCELAR'; cancelBtn.style.display='inline-block';
     cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};
     if(ctx.round>1){
       retreatBtn.style.display='inline-block';
       retreatBtn.textContent='↩ RETIRAR';
       retreatBtn.onclick=()=>retreatCombat();
+    }
+    // Show unit selector for attacker
+    if(RULES.combat.allowUnitSelection && ctx.attPool.length>0) {
+      const attN = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
+      showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
+        ctx.attSelected = chosen;
+        // Now show defender selector (or go straight to roll)
+        const defN = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
+        if(RULES.combat.allowUnitSelection && ctx.defPool.length>0) {
+          showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
+            ctx.defSelected = defChosen;
+            rollBtn.textContent='⚄ LANZAR DADOS';
+            rollBtn.style.display='inline-block';
+            rollBtn.onclick=()=>resolveCombatRound(false);
+          });
+        } else {
+          ctx.defSelected = ctx.defPool.slice(0, defN);
+          rollBtn.textContent='⚄ LANZAR DADOS';
+          rollBtn.style.display='inline-block';
+          rollBtn.onclick=()=>resolveCombatRound(false);
+        }
+      });
+    } else {
+      rollBtn.textContent='⚄ LANZAR DADOS';
+      rollBtn.style.display='inline-block';
+      rollBtn.onclick=()=>resolveCombatRound(false);
     }
   } else if(mode==='cpu-att-player-def') {
     // Flash the attacked territory red
@@ -340,11 +365,44 @@ function applyBattleResult(aR,dR) {
     ctx.attSelected=ctx.attPool.slice(0,aN);ctx.defSelected=ctx.defPool.slice(0,dN);
     renderDicePools();
     if(ctx.isPlayerAtt){
-      // Can only continue if attacker has >1 unit (1 must stay in origin)
       const canContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
-      if(rollBtn){rollBtn.textContent= canContinue ? '⚄ CONTINUAR ATAQUE' : '⚠ Sin unidades para continuar';rollBtn.style.display='inline-block';rollBtn.disabled=!canContinue;rollBtn.onclick=canContinue?()=>resolveCombatRound(false):null;}
       if(retreatBtn){retreatBtn.style.display='inline-block';retreatBtn.onclick=()=>retreatCombat();}
       if(cancelBtn){cancelBtn.textContent='TERMINAR COMBATE';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};}
+      if(canContinue && rollBtn) {
+        rollBtn.style.display='none';
+        // Re-show unit selector for next round
+        if(RULES.combat.allowUnitSelection) {
+          const attN2 = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
+          showUnitSelectorInModal('att', ctx.attPool, attN2, (chosen)=>{
+            ctx.attSelected = chosen;
+            const defN2 = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
+            if(RULES.combat.allowUnitSelection) {
+              showUnitSelectorInModal('def', ctx.defPool, defN2, (defChosen)=>{
+                ctx.defSelected = defChosen;
+                rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+                rollBtn.style.display='inline-block';
+                rollBtn.disabled=false;
+                rollBtn.onclick=()=>resolveCombatRound(false);
+              });
+            } else {
+              ctx.defSelected = ctx.defPool.slice(0,defN2);
+              rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+              rollBtn.style.display='inline-block';
+              rollBtn.disabled=false;
+              rollBtn.onclick=()=>resolveCombatRound(false);
+            }
+          });
+        } else {
+          rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+          rollBtn.style.display='inline-block';
+          rollBtn.disabled=false;
+          rollBtn.onclick=()=>resolveCombatRound(false);
+        }
+      } else if(rollBtn) {
+        rollBtn.textContent='⚠ Sin unidades para continuar';
+        rollBtn.style.display='inline-block';
+        rollBtn.disabled=true;
+      }
     } else if(ctx.isPlayerDef){
       // Player is defender - see attacker roll then defend
       if(rollBtn){rollBtn.textContent='⚄ VER SIGUIENTE TIRADA ATACANTE';rollBtn.style.display='inline-block';rollBtn.onclick=()=>rollAttackerThenDefend();}
