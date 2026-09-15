@@ -877,7 +877,10 @@ function armyPoints(t) {
   return t.soldiers + t.mechs*3 + t.aircraft*3 + t.scorpions*6;
 }
 
-
+function totalArmyPoints(faction) {
+  return Object.values(G.territories).filter(t=>t.owner===faction)
+    .reduce((sum,t)=>sum+armyPoints(t),0);
+}
 
 
 function getMovableTargets(srcId, maxSteps) {
@@ -998,9 +1001,15 @@ function onTerritoryClick(id, event) {
     if(G.attackSrc && tgt && tgt.owner && tgt.owner!==G.pf) {
       const src = G.territories[G.attackSrc];
       if(src && src.adj && src.adj.includes(id)) {
-        // Launch attack
-        G.sel = G.attackSrc;
-        openDice(id);
+        // Enable ATACAR button with this enemy territory as target
+        const btn = document.getElementById('ba-attack');
+        if(btn) {
+          btn.disabled = false;
+          btn.onclick = () => { G.sel = G.attackSrc; openDice(id); };
+          btn.textContent = '⚔ ATACAR ' + id;
+        }
+        selectTerritory(id);
+        addLog(`Objetivo: ${id}. Pulsa ⚔ ATACAR o clic de nuevo para confirmar.`,'sys');
         return;
       } else {
         addLog('Territorio no adyacente al origen.','sys');
@@ -1008,7 +1017,11 @@ function onTerritoryClick(id, event) {
     }
     // Clicking own territory = set as attack source
     if(tgt && tgt.owner===G.pf && armyPoints(tgt)>1) {
-      G.attackSrc = id; G.moveTargets=null; selectTerritory(id);
+      G.attackSrc = id; G.moveTargets=null;
+      // Disable attack button until enemy is selected
+      const btn = document.getElementById('ba-attack');
+      if(btn) { btn.disabled=true; btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO'; }
+      selectTerritory(id);
       addLog(`Origen: ${id}. Ahora clic en territorio enemigo adyacente (rojo).`,'sys');
       return;
     }
@@ -1171,19 +1184,4 @@ function updateMissilePips() {
   cont.innerHTML = '';
   for(let i=0;i<5;i++){
     const p = document.createElement('div');
-    p.className = 'miss-pip' + (i < myF.missiles ? ' full' : '');
-    cont.appendChild(p);
-  }
-}
-
-// ── COMBAT / DICE ─────────────────────────────────────────────
-
-// ════════════════════════════════════════════════════════════════
-// COMBAT — iterative with unit selection and retreat
-// ════════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════════
-// COMBAT DICE — interactive for both player and CPU attacks
-// ════════════════════════════════════════════════════════════════
-
-// State for current combat
+    p.className = 'miss-pip' + (

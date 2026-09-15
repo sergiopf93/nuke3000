@@ -1,3 +1,19 @@
+i < myF.missiles ? ' full' : '');
+    cont.appendChild(p);
+  }
+}
+
+// ── COMBAT / DICE ─────────────────────────────────────────────
+
+// ════════════════════════════════════════════════════════════════
+// COMBAT — iterative with unit selection and retreat
+// ════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════
+// COMBAT DICE — interactive for both player and CPU attacks
+// ════════════════════════════════════════════════════════════════
+
+// State for current combat
 let G_combat = null;
 
 // Called when PLAYER attacks
@@ -713,24 +729,4 @@ function doMissileFire() {
         else resultMsg=`Aircraft resistió (D6=${r}<${MT.aircraft})`;
       } else if(t.scorpions>0) {
         const r=Math.floor(Math.random()*6)+1;
-        if(r>=MT.scorpion){t.scorpions--;resultMsg=`💀 IMPACTO — Scorpion eliminado (D6=${r})`;}
-        else resultMsg=`Scorpion resistió (D6=${r}<${MT.scorpion})`;
-      }
-    }
-
-    const res=document.getElementById('miss-result');
-    if(res){res.textContent=resultMsg;res.style.color=resultColor;}
-    updateMap();refreshCards();
-
-    // Re-render step
-    const step=(STEPS[G_step.phase]||[])[G_step.idx];
-    if(step) renderStepActions(step);
-
-    setTimeout(()=>{ modal.remove(); },2500);
-  };
-}
-
-
-function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
-
-function addLog(msg
+        if(r>=MT.scorpion){t.scorpions-
