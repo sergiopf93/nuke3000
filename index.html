@@ -630,19 +630,21 @@ function _launchOnlineGame(meta) {
   const players = meta.players || {};
   const count = Object.keys(players).length;
 
-  // Set playerCount — must be 3-6, default to 4 if wrong
+  // Set playerCount — must be 3-6
   G.playerCount = (count >= 3 && count <= 6) ? count : 4;
   document.getElementById('pcount').value = G.playerCount;
 
-  // Set faction from our player entry in Firebase
+  // Build set of human player factions for setup.js / engine.js
+  _onlinePlayerFactions = new Set(
+    Object.values(players).map(p => p.faction).filter(Boolean)
+  );
+
+  // Set my faction and name from Firebase entry
   const myEntry = players[ONLINE.getUserId()];
   if (myEntry && myEntry.faction) {
-    G.pf = myEntry.faction;
-    // Also set selF so startGame() doesn't block
-    selF = myEntry.faction;
+    G.pf   = myEntry.faction;
+    selF   = myEntry.faction;
   }
-
-  // Set name
   if (myEntry && myEntry.name) G.pname = myEntry.name;
 
   if (!G.pf) {
