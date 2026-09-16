@@ -759,7 +759,10 @@ function endSetupPhase(){
   startPhaseProgress();
   updateMap();
 
+  const _isHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
+
   const overlay = document.createElement('div');
+  overlay.id = 'game-start-overlay';
   overlay.style.cssText=`position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.85);
     display:flex;align-items:center;justify-content:center;`;
   overlay.innerHTML=`
@@ -773,13 +776,29 @@ function endSetupPhase(){
           `<span style="font-family:Orbitron,sans-serif;color:${FDATA[fk].color};font-size:11px;">
             ${i+1}. ${FDATA[fk].name}</span>`).join('')}
       </div>
-      <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ ¡Comienza el juego!','sys');refreshCards();"
-        style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:12px 32px;
-        font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
-        COMENZAR ▶
-      </button>
+      ${_isHost
+        ? `<button onclick="window._hostStartGame()"
+            style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:12px 32px;
+            font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
+            COMENZAR ▶
+          </button>`
+        : `<div style="font-family:Orbitron,sans-serif;font-size:11px;color:#555;
+            letter-spacing:3px;">ESPERANDO AL HOST...</div>`
+      }
     </div>`;
   document.body.appendChild(overlay);
+
+  // Host clicks COMENZAR → signals all guests then starts locally
+  window._hostStartGame = function() {
+    document.getElementById('game-start-overlay').remove();
+    if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && ONLINE.isHost()) {
+      ONLINE.pushActionWithState('GAME_PHASE_START', {});
+    }
+    runPrepPhase();
+    addLog('☢ ¡Comienza el juego!','sys');
+    refreshCards();
+  };
+
   startPhase('prep', G.setup.order[0]||G.pf);
   refreshCards();
   refreshCards();

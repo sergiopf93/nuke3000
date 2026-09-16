@@ -384,6 +384,15 @@ const ONLINE = (() => {
         break;
       }
 
+      case 'GAME_PHASE_START':
+        // Host started the game — guests close overlay and begin
+        const gso = document.getElementById('game-start-overlay');
+        if (gso) gso.remove();
+        if (typeof runPrepPhase === 'function') runPrepPhase();
+        if (typeof addLog === 'function') addLog('☢ ¡Comienza el juego!', 'sys');
+        if (typeof refreshCards === 'function') refreshCards();
+        break;
+
       // ── Game phase ──
       case 'END_PHASE':
         // Sync G_step from the payload before advancing
