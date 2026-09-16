@@ -314,12 +314,18 @@
 
       <div id="online-section">
         <h4>☁ MULTIJUGADOR ONLINE</h4>
-        <div class="online-row">
+        <div class="online-row" id="online-join-row">
           <button class="obtn primary" onclick="onlineCreateRoom()">⊕ CREAR SALA</button>
           <input id="join-code" placeholder="CÓDIGO" maxlength="6" style="text-align:center;"/>
           <button class="obtn" onclick="onlineJoinRoom()">→ UNIRSE</button>
         </div>
         <div id="online-status">OFFLINE · MODO LOCAL</div>
+        <button id="btn-disconnect" onclick="onlineDisconnect()"
+          style="display:none;width:100%;margin-top:6px;background:#0a0a0d;
+          border:1px solid #8B1A1A;color:#8B1A1A;padding:6px;
+          font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:3px;cursor:pointer;">
+          ✕ SALIR DE LA SALA
+        </button>
       </div>
 
       <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;margin-bottom:8px;">
@@ -368,7 +374,12 @@
       <div class="cb" onclick="zv(.87)" title="Zoom −">−</div>
       <div class="cb" onclick="resetV()" title="Centrar">⌖</div>
     </div>
-    <div id="roombar">SALA · <span id="rcode">LOCAL</span></div>
+    <div id="roombar">SALA · <span id="rcode">LOCAL</span>
+      <button id="roombar-disconnect" onclick="onlineDisconnect()"
+        style="display:none;margin-left:8px;background:transparent;border:1px solid #8B1A1A;
+        color:#8B1A1A;padding:1px 6px;font-family:Orbitron,sans-serif;font-size:8px;
+        letter-spacing:1px;cursor:pointer;" title="Salir de la sala">✕</button>
+    </div>
 
     <div id="setup-panel" style="display:none;position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(4,4,8,0.96);border-bottom:1px solid #1a1a20;">
       <div id="setup-roll-mode" style="display:flex;align-items:center;justify-content:center;padding:30px;">
@@ -492,6 +503,31 @@ function _setOnlineStatus(msg, cls) {
   if (!el) return;
   el.textContent = msg;
   el.className = cls || '';
+  // Show/hide disconnect buttons
+  const connected = cls === 'connected' || ONLINE.isOnline();
+  const btnLobby = document.getElementById('btn-disconnect');
+  const btnGame  = document.getElementById('roombar-disconnect');
+  if (btnLobby) btnLobby.style.display = connected ? 'block' : 'none';
+  if (btnGame)  btnGame.style.display  = connected ? 'inline-block' : 'none';
+}
+
+// ── Disconnect from room ─────────────────────────────────────
+function onlineDisconnect() {
+  if (!ONLINE.isOnline()) return;
+  if (!confirm('¿Salir de la sala?')) return;
+  ONLINE.leaveRoom().then(() => {
+    _setOnlineStatus('OFFLINE · MODO LOCAL', '');
+    _gameAlreadyLaunched = false;
+    // Close waiting room if open
+    const wr = document.getElementById('waiting-room');
+    if (wr) wr.style.display = 'none';
+    // If in game, reload to go back to lobby
+    const hdr = document.getElementById('hdr');
+    if (hdr && hdr.style.display !== 'none') {
+      localStorage.clear();
+      location.reload();
+    }
+  }).catch(() => { localStorage.clear(); location.reload(); });
 }
 
 // ── Build faction picker inside waiting room ────────────────
@@ -686,6 +722,9 @@ function startGame() {
   document.getElementById('rcode').textContent = ONLINE.isOnline()
     ? ONLINE.getRoomCode()
     : Math.random().toString(36).slice(2,8).toUpperCase();
+  // Show disconnect button in game if online
+  const btnGame = document.getElementById('roombar-disconnect');
+  if (btnGame) btnGame.style.display = ONLINE.isOnline() ? 'inline-block' : 'none';
   buildMap();
   updateUI();
   addLog(`${G.pname} comanda ${FDATA[G.pf].name}.`, 'sys');
