@@ -191,3 +191,191 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
   0%,100% { opacity:1; box-shadow:0 0 6px var(--led-color,#C8A800); }
   50% { opacity:0.6; box-shadow:0 0 12px var(--led-color,#C8A800); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE / TABLET — landscape only (min-width enforced via JS)
+   Target: iPhone landscape ~667px–932px wide
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Toggle button for left panel */
+#lp-toggle {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: -14px;
+  width: 14px;
+  height: 40px;
+  background: #0a0a0d;
+  border: 1px solid #1a1a1e;
+  border-left: none;
+  cursor: pointer;
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #555;
+  writing-mode: vertical-rl;
+}
+#lp-toggle:hover { color: #C8A800; border-color: #C8A800; }
+
+/* Toggle button for right panel */
+#rp-toggle {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: -14px;
+  width: 14px;
+  height: 40px;
+  background: #0a0a0d;
+  border: 1px solid #1a1a1e;
+  border-right: none;
+  cursor: pointer;
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #555;
+  writing-mode: vertical-rl;
+}
+#rp-toggle:hover { color: #C8A800; border-color: #C8A800; }
+
+@media (max-width: 900px) {
+
+  /* Prevent text scaling on iOS */
+  body { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+
+  /* Header: compact */
+  #hdr { padding: 4px 8px; gap: 6px; }
+  #hdr h1 { font-size: 12px; letter-spacing: 3px; }
+  #hdr h1 small { display: none; }
+  #phase-badge { font-size: 9px; padding: 2px 5px; }
+  #rnd-info { font-size: 9px; }
+  .hbtn { font-size: 9px; padding: 3px 7px; letter-spacing: 1px; }
+
+  /* Main grid: left panel collapsible */
+  #main {
+    grid-template-columns: 160px 1fr 200px;
+    transition: grid-template-columns 0.2s ease;
+  }
+  #main.lp-collapsed {
+    grid-template-columns: 0px 1fr 200px;
+  }
+  #main.rp-collapsed {
+    grid-template-columns: 160px 1fr 0px;
+  }
+  #main.lp-collapsed.rp-collapsed {
+    grid-template-columns: 0px 1fr 0px;
+  }
+
+  /* Left panel */
+  #lp {
+    position: relative;
+    overflow: hidden;
+    padding: 6px;
+    gap: 4px;
+    transition: width 0.2s ease;
+  }
+  #main.lp-collapsed #lp {
+    width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+  }
+
+  /* Show toggle buttons */
+  #lp-toggle { display: flex; }
+  #rp-toggle { display: flex; }
+
+  /* Left panel collapsed arrow */
+  #main.lp-collapsed #lp-toggle { right: -14px; }
+
+  /* Faction cards: more compact */
+  .fc { padding: 5px 5px 5px 8px; }
+  .fc-name { font-size: 9px; letter-spacing: 1px; }
+  .fc-lead { font-size: 9px; margin-bottom: 3px; }
+  .fc-grid { gap: 2px; }
+  .fsl { font-size: 8px; }
+  .fsv { font-size: 10px; }
+  .goal-badge { font-size: 9px; padding: 2px 4px; }
+
+  /* Right panel */
+  #rp {
+    position: relative;
+    overflow: hidden;
+    transition: width 0.2s ease;
+  }
+  #main.rp-collapsed #rp {
+    width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+  }
+
+  /* Right panel content: compact */
+  .rsec { padding: 6px 8px; }
+  #tinfo { min-height: 60px; }
+  #tinfo h3 { font-size: 9px; margin-bottom: 3px; }
+  #tdetail { font-size: 10px; }
+  #unit-display { gap: 3px; margin-top: 4px; }
+  .ubox { padding: 3px; }
+  .ubox-n { font-size: 10px; }
+  .ubox-l { font-size: 8px; }
+  .abtn { font-size: 11px; padding: 5px 7px; margin-bottom: 2px; }
+  #clog { font-size: 9px; }
+  #logwrap { min-height: 80px; }
+
+  /* Step instruction panel */
+  #phase-header { padding: 6px 8px; }
+  #pg-phase { font-size: 9px; }
+  #step-title { font-size: 9px; }
+  #step-detail { font-size: 9px; }
+  #step-actions { padding: 6px 8px; }
+  #step-dots { padding: 5px 8px; gap: 3px; }
+
+  /* Room bar */
+  #roombar { font-size: 8px; padding: 3px 6px; }
+
+  /* Board controls */
+  #bcontrols { top: 6px; left: 6px; gap: 3px; }
+  .cb { width: 20px; height: 20px; font-size: 10px; }
+
+  /* Dice modal: fit small screen */
+  #dbox { min-width: unset; width: 90vw; padding: 16px 12px; }
+  .die { width: 34px; height: 34px; font-size: 15px; }
+
+  /* Lobby: full width on mobile */
+  #lin { width: 95vw; max-height: 90vh; }
+  .fgrid { grid-template-columns: 1fr 1fr; gap: 4px; }
+  #lhdr h1 { font-size: 15px; letter-spacing: 3px; }
+
+  /* Setup panel bar mode: smaller */
+  #setup-bar-mode { padding: 6px 10px; font-size: 9px; }
+  #setup-bar-title { font-size: 9px; }
+
+  /* Waiting room */
+  #wr-box { padding: 16px 20px; }
+  #wr-code { font-size: 28px; letter-spacing: 6px; }
+  #wr-faction-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 680px) {
+  /* Very small landscape (older iPhones) */
+  #main { grid-template-columns: 140px 1fr 180px; }
+  #main.lp-collapsed { grid-template-columns: 0px 1fr 180px; }
+  #main.rp-collapsed { grid-template-columns: 140px 1fr 0px; }
+  #main.lp-collapsed.rp-collapsed { grid-template-columns: 0px 1fr 0px; }
+}
+
+/* ── iPhone safe areas (notch / Dynamic Island) ── */
+@supports (padding: max(0px)) {
+  #hdr {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
