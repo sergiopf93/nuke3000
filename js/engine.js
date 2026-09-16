@@ -137,16 +137,24 @@ function runCurrentStep() {
   const step=steps[G_step.idx];
   updateStepUI(step);
 
-  // Is this an online human opponent's turn?
-  const isOnlineOpponent = _isOnlineHumanTurn(G_step.currentFk) && !G_step.isMyTurn;
+  // Online: any non-my turn = spectate (covers both human opponents and CPU controlled by host)
+  // Offline: only CPU turns execute automatically
+  const isOnline = typeof ONLINE !== 'undefined' && ONLINE.isOnline();
+  const isOnlineOpponent = isOnline && !G_step.isMyTurn && _isOnlineHumanTurn(G_step.currentFk);
+  const isCpuTurn = !G_step.isMyTurn && !isOnlineOpponent;
 
   if(step.isAuto){
     executeAutoStep(step);
   } else if(isOnlineOpponent) {
     // Show spectator UI — wait for remote action
     _showSpectatorStep(step);
-  } else if(!G_step.isMyTurn){
-    executeCpuStep(step);
+  } else if(isCpuTurn){
+    // Only execute CPU if it's actually a CPU faction (not an online human)
+    if (!isOnline || !_isOnlineHumanTurn(G_step.currentFk)) {
+      executeCpuStep(step);
+    } else {
+      _showSpectatorStep(step);
+    }
   } else {
     executePlayerStep(step);
   }
