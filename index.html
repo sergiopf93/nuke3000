@@ -474,38 +474,14 @@
 <div id="pflash"></div>
 
 <!-- ── Session widget: always visible when in a room ─────── -->
-<div id="session-widget" style="
-  display:none;
-  position:fixed;
-  bottom:12px;
-  right:12px;
-  z-index:10000;
-  background:#08080c;
-  border:1px solid #8B1A1A;
-  padding:6px 10px 6px 12px;
-  font-family:Orbitron,sans-serif;
-  display:none;
-  align-items:center;
-  gap:8px;
-  box-shadow:0 0 12px rgba(139,26,26,0.3);
-">
+<div id="session-widget" style="display:none;position:fixed;bottom:max(12px, env(safe-area-inset-bottom, 12px));right:max(12px, env(safe-area-inset-right, 12px));z-index:99999;background:#08080c;border:1px solid #8B1A1A;padding:6px 10px 6px 12px;font-family:Orbitron,sans-serif;align-items:center;gap:8px;box-shadow:0 0 12px rgba(139,26,26,0.3);">
   <div style="display:flex;flex-direction:column;gap:1px;">
     <div style="font-size:8px;color:#555;letter-spacing:2px;">SALA</div>
     <div id="sw-code" style="font-size:12px;color:#C8A800;letter-spacing:3px;">——</div>
   </div>
   <div style="width:1px;height:28px;background:#1a1a20;"></div>
   <div id="sw-faction" style="font-size:9px;color:#888;letter-spacing:1px;"></div>
-  <button onclick="onlineDisconnect()" style="
-    background:transparent;
-    border:1px solid #8B1A1A;
-    color:#8B1A1A;
-    padding:3px 8px;
-    font-family:Orbitron,sans-serif;
-    font-size:9px;
-    letter-spacing:2px;
-    cursor:pointer;
-    transition:.2s;
-  " onmouseover="this.style.background='#8B1A1A22'" onmouseout="this.style.background='transparent'">
+  <button onclick="onlineDisconnect()" style="background:transparent;border:1px solid #8B1A1A;color:#8B1A1A;padding:3px 8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;" onmouseover="this.style.background='#8B1A1A22'" onmouseout="this.style.background='transparent'">
     ✕ SALIR
   </button>
 </div>
@@ -564,8 +540,8 @@ function _updateSessionWidget() {
   if (factionEl) factionEl.textContent = G.pf ? G.pf.toUpperCase() : '';
 }
 
-// Poll every 2s to keep widget in sync (covers all screens/overlays)
-setInterval(_updateSessionWidget, 2000);
+// Poll every second to keep widget in sync across all screens
+setInterval(_updateSessionWidget, 1000);
 
 // ── Disconnect from room ─────────────────────────────────────
 function onlineDisconnect() {
@@ -693,6 +669,7 @@ function onlineCreateRoom() {
   _setOnlineStatus('CREANDO SALA...', '');
   ONLINE.createRoom().then(() => {
     _setOnlineStatus('SALA ' + ONLINE.getRoomCode() + ' · ESPERANDO JUGADORES', 'connected');
+    _updateSessionWidget();
     _showWaitingRoom();
   }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
 }
@@ -707,6 +684,7 @@ function onlineJoinRoom() {
   _setOnlineStatus('CONECTANDO...', '');
   ONLINE.joinRoom(code).then(() => {
     _setOnlineStatus('CONECTADO · SALA ' + code, 'connected');
+    _updateSessionWidget();
     _showWaitingRoom();
   }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
 }
