@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -342,6 +342,7 @@
      ══════════════════════════════════════════════════════════ -->
 <div id="main" style="display:none">
   <div id="lp">
+    <button id="lp-toggle" onclick="togglePanel('lp')" title="Colapsar panel">◀</button>
     <div id="turn-header" style="display:none;padding:5px 8px;border-bottom:1px solid #0e0e12;">
       <div id="turn-phase-lbl" style="font-family:Orbitron,sans-serif;font-size:7px;letter-spacing:3px;color:#C8A800;margin-bottom:4px;">TURNO</div>
       <div id="turn-dots" style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;"></div>
@@ -386,6 +387,7 @@
   </div>
 
   <div id="rp">
+    <button id="rp-toggle" onclick="togglePanel('rp')" title="Colapsar panel">▶</button>
     <div id="phase-header" style="background:#050508;border-bottom:1px solid #1a1a20;padding:10px 12px;flex-shrink:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
         <div id="pg-phase" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;">PREPARACIÓN</div>
@@ -687,6 +689,41 @@ function declareVictory(goal) {
   if (_origDeclareVictory) _origDeclareVictory(goal);
   if (ONLINE.isOnline()) ONLINE.signalGameEnd();
 }
+
+// ── Panel toggle (mobile) ───────────────────────────────────
+function togglePanel(side) {
+  const main = document.getElementById('main');
+  const btn  = document.getElementById(side + '-toggle');
+  const cls  = side + '-collapsed';
+  const isCollapsed = main.classList.toggle(cls);
+
+  if (side === 'lp') {
+    btn.textContent = isCollapsed ? '▶' : '◀';
+    btn.title = isCollapsed ? 'Expandir facciones' : 'Colapsar facciones';
+  } else {
+    btn.textContent = isCollapsed ? '◀' : '▶';
+    btn.title = isCollapsed ? 'Expandir acciones' : 'Colapsar acciones';
+  }
+
+  // Recalculate map after layout change
+  setTimeout(() => {
+    if (typeof resetMapView === 'function') resetMapView();
+    else if (typeof updateMap === 'function') updateMap();
+  }, 250);
+}
+
+// ── Mobile: prevent double-tap zoom on map ──────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const mapWrap = document.getElementById('map-wrap');
+  if (mapWrap) {
+    let lastTap = 0;
+    mapWrap.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTap < 300) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
+  }
+});
 </script>
 
 </body>
