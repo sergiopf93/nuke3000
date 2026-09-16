@@ -386,10 +386,20 @@ const ONLINE = (() => {
 
       // ── Game phase ──
       case 'END_PHASE':
+        // Sync G_step from the payload before advancing
+        if (typeof G_step !== 'undefined' && payload.fk) {
+          G_step.currentFk = payload.fk;
+          G_step.phase     = payload.phase || G_step.phase;
+          G_step.isMyTurn  = false; // it was the remote player's turn
+        }
         if (typeof endPhaseForFaction === 'function') endPhaseForFaction();
         break;
 
       case 'NEXT_STEP':
+        // Sync G_step index if provided
+        if (typeof G_step !== 'undefined' && payload.idx !== undefined) {
+          G_step.idx = payload.idx;
+        }
         if (typeof nextStep === 'function') nextStep();
         break;
 

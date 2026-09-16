@@ -167,11 +167,11 @@ function _showSpectatorStep(step) {
 }
 
 function nextStep() {
-  // Online: if it's my turn, push NEXT_STEP so observers advance too
-  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && G_step.isMyTurn) {
-    ONLINE.pushActionWithState('NEXT_STEP', {});
-  }
   G_step.idx++;
+  // Online: if it's my turn, push NEXT_STEP with new idx so observers advance too
+  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && G_step.isMyTurn) {
+    ONLINE.pushActionWithState('NEXT_STEP', { idx: G_step.idx });
+  }
   runCurrentStep();
 }
 
