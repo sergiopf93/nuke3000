@@ -773,7 +773,7 @@ function endSetupPhase(){
           `<span style="font-family:Orbitron,sans-serif;color:${FDATA[fk].color};font-size:11px;">
             ${i+1}. ${FDATA[fk].name}</span>`).join('')}
       </div>
-      <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ ¡Comienza el juego!','sys');refreshCards();updateFactionPanel();"
+      <button onclick="this.parentElement.parentElement.remove();runPrepPhase();addLog('☢ ¡Comienza el juego!','sys');refreshCards();"
         style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:12px 32px;
         font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
         COMENZAR ▶
@@ -782,5 +782,5 @@ function endSetupPhase(){
   document.body.appendChild(overlay);
   startPhase('prep', G.setup.order[0]||G.pf);
   refreshCards();
-  updateFactionPanel();
+  refreshCards();
 }
