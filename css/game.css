@@ -379,3 +379,34 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  #lp {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #rp {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  #rp-top {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #rp-log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid #1a1a20;
+  }
+  #game-log {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+}
