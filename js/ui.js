@@ -17,73 +17,133 @@ function showRules(){
   const ex = document.getElementById('rules-modal');
   if(ex){ ex.remove(); return; }
 
+  const R = RULES;
   const modal = document.createElement('div');
   modal.id = 'rules-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;';
-  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:12px;';
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
 
-  const R = RULES;
-  const row = (label, key, path, type='number', min=0, max=999) => {
+  function inp(path, w='60px') {
     const val = path.split('.').reduce((o,k)=>o&&o[k], R);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #111;">
-      <span style="font-size:10px;color:#888;flex:1;">${label}</span>
-      <input type="${type}" value="${val}" min="${min}" max="${max}"
-        style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:60px;padding:3px 6px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;"
-        onchange="setRule('${path}',${type==='number'?'+this.value':'this.checked'},this)">
-    </div>`;
-  };
-  const chk = (label, path) => {
+    return `<input type="number" value="${val||0}"
+      style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:${w};padding:3px 6px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;"
+      onchange="setRule('${path}',+this.value)">`;
+  }
+  function chk(path) {
     const val = path.split('.').reduce((o,k)=>o&&o[k], R);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #111;">
-      <span style="font-size:10px;color:#888;flex:1;">${label}</span>
-      <input type="checkbox" ${val?'checked':''} style="width:16px;height:16px;cursor:pointer;"
-        onchange="setRule('${path}',this.checked,this)">
+    return `<input type="checkbox" ${val?'checked':''} style="width:16px;height:16px;cursor:pointer;" onchange="setRule('${path}',this.checked)">`;
+  }
+  function row(label, path, type='num') {
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #0e0e12;">
+      <span style="font-size:10px;color:#888;">${label}</span>
+      ${type==='chk' ? chk(path) : inp(path)}
     </div>`;
-  };
-  const sec = (title) => `<div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;color:#C8A800;margin:12px 0 4px;">${title}</div>`;
+  }
+  function sec(t) { return `<div style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:3px;color:#C8A800;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #C8A80033;">${t}</div>`; }
 
-  modal.innerHTML = `<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;">
-    <div style="padding:14px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">EDITOR DE REGLAS</div>
+  // Phase order editors - drag/text based
+  function phaseOrderEditor(phasesArr, idPrefix) {
+    return phasesArr.map((p,i)=>`
+      <div style="display:flex;align-items:center;gap:6px;margin:3px 0;">
+        <span style="font-family:Orbitron,sans-serif;font-size:8px;color:#555;width:14px;">${i+1}.</span>
+        <span style="font-size:10px;color:#888;flex:1;">${p.label||p}</span>
+      </div>`).join('');
+  }
+
+  // Build starting assets for each player count
+  const assetRows = [3,4,5,6].map(n => {
+    const a = R.setup.startingAssets[n];
+    return `<tr>
+      <td style="font-size:10px;color:#888;padding:3px 6px;">${n}J</td>
+      <td style="padding:2px;"><input type="number" value="${a.soldiers}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.soldiers',+this.value)"></td>
+      <td style="padding:2px;"><input type="number" value="${a.mechs||0}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.mechs',+this.value)"></td>
+      <td style="padding:2px;"><input type="number" value="${a.missiles}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.missiles',+this.value)"></td>
+      <td style="padding:2px;"><input type="number" value="${a.nukes}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.nukes',+this.value)"></td>
+      <td style="padding:2px;"><input type="number" value="${a.territories}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.territories',+this.value)"></td>
+    </tr>`;
+  }).join('');
+
+  modal.innerHTML = `<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;">
+    <div style="padding:12px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">⚙ EDITOR DE REGLAS</div>
       <button onclick="document.getElementById('rules-modal').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
     </div>
-    <div style="overflow-y:auto;padding:16px;flex:1;">
+    <div style="overflow-y:auto;padding:14px 16px;flex:1;font-size:10px;">
 
-      ${sec('── PREPARACIÓN')}
-      ${row('Plutonio por Nuclear / turno','prep.plutoniumPerNuclear','prep.plutoniumPerNuclear')}
-      ${row('Coste construir Nuclear (Pu)','prep.nuclearBuildCost','prep.nuclearBuildCost')}
-      ${row('Coste misil (Pu)','prep.missileBuildCost','prep.missileBuildCost')}
-      ${row('Máx misiles por jugador','prep.maxMissiles','prep.maxMissiles')}
-      ${row('Refuerzos: soldados por 2 territorios','prep.reinforcements.perTwoTerritories','prep.reinforcements.perTwoTerritories')}
-      ${row('Refuerzos: bonus por Nuclear','prep.reinforcements.bonusPerNuclear','prep.reinforcements.bonusPerNuclear')}
-      ${row('Movimiento: máx saltos','prep.movementRange','prep.movementRange')}
+      ${sec('GAME SETUP — ACTIVOS INICIALES')}
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="font-size:9px;color:#555;">
+          <th></th><th>Sol</th><th>Mech</th><th>Misil</th><th>Nuclear</th><th>Terr</th>
+        </tr>
+        ${assetRows}
+      </table>
+      ${row('Libertos: +Plutonio (en lugar de nucleares)','setup.libertosSwap.plutonium')}
+      ${row('Libertos: +Mechs adicionales','setup.libertosSwap.mechs')}
 
-      ${sec('── COMBATE')}
-      ${row('Máx dados atacante','combat.maxAttackDice','combat.maxAttackDice',undefined,1,10)}
-      ${row('Máx dados defensor','combat.maxDefenseDice','combat.maxDefenseDice',undefined,1,10)}
-      ${row('Dado Soldado (D?)','combat.unitDice.soldier','combat.unitDice.soldier',undefined,4,20)}
-      ${row('Dado Mech (D?)','combat.unitDice.mech','combat.unitDice.mech',undefined,4,20)}
-      ${row('Dado Aircraft (D?)','combat.unitDice.aircraft','combat.unitDice.aircraft',undefined,4,20)}
-      ${row('Dado Scorpion (D?)','combat.unitDice.scorpion','combat.unitDice.scorpion',undefined,4,20)}
-      ${chk('Empate: gana defensor','combat.tieBreakerDefender')}
+      ${sec('GAME SETUP — ORDEN DE FASES')}
+      <div style="font-size:9px;color:#555;margin-bottom:4px;">Fases de setup (el orden real se define aquí):</div>
+      <div style="background:#05050a;padding:8px;border:1px solid #1a1a20;">
+        ${sec('1. Reclamar territorio')} <div style="font-size:9px;color:#666;">Por turnos: cada jugador elige 1 territorio hasta que todos estén ocupados.</div>
+        ${sec('2. Colocar Nucleares + Soldados')} <div style="font-size:9px;color:#666;">Cada jugador coloca todos sus nucleares y luego todos sus soldados antes de pasar al siguiente.</div>
+        ${chk('setup.phases.0.combinedWith')} <span style="font-size:9px;color:#888;margin-left:6px;">Combinar nuclear+soldados en el mismo turno</span>
+      </div>
 
-      ${sec('── MISILES')}
-      ${row('Dado intercepción (D?)','combat.missileInterceptDie','combat.missileInterceptDie',undefined,4,20)}
-      ${row('Mínimo para interceptar','combat.missileInterceptThreshold','combat.missileInterceptThreshold',undefined,1,20)}
+      ${sec('PREPARACIÓN — INGRESOS')}
+      ${row('Plutonio por Nuclear Base / turno','prep.plutoniumPerNuclear')}
+      ${row('Refuerzo: soldados por 2 territorios','prep.reinforcements.perTwoTerritories')}
+      ${row('Refuerzo: soldados por 2 terr. en región completa','prep.reinforcements.perTwoTerritoriesFullRegion')}
+      ${row('Refuerzo: soldados por Nuclear Base','prep.reinforcements.perNuclear')}
 
-      ${sec('── MANTENIMIENTO')}
-      ${row('Dado mantenimiento (D?)','end.maintenanceDie','end.maintenanceDie',undefined,4,20)}
-      ${row('Resultado = explosión','end.maintenanceExplosionOn','end.maintenanceExplosionOn',undefined,1,20)}
+      ${sec('PREPARACIÓN — CONSTRUCCIÓN')}
+      ${row('Coste Nuclear Base (Pu)','prep.nuclearBuildCost')}
+      ${row('Coste misil (Pu)','prep.missileBuildCost')}
+      ${row('Máx misiles por jugador','prep.maxMissiles')}
+      ${row('Rango movimiento (territorios)','prep.movementRange')}
 
-      ${sec('── ACTIVOS INICIALES (4 jugadores)')}
-      ${row('Soldados iniciales','setup.startingAssets.4.soldiers','setup.startingAssets.4.soldiers')}
-      ${row('Misiles iniciales','setup.startingAssets.4.missiles','setup.startingAssets.4.missiles')}
-      ${row('Nucleares iniciales','setup.startingAssets.4.nukes','setup.startingAssets.4.nukes')}
+      ${sec('PREPARACIÓN — MEJORAS')}
+      ${row('Mech: coste soldados','prep.upgrades.mechCost.soldiers')}
+      ${row('Mech: coste Plutonio','prep.upgrades.mechCost.plutonium')}
+      ${row('Aircraft: coste soldados','prep.upgrades.aircraftCost.soldiers')}
+      ${row('Aircraft: coste Plutonio','prep.upgrades.aircraftCost.plutonium')}
+      ${row('Scorpion: coste Mechs','prep.upgrades.scorpionCost.mechs')}
+      ${row('Scorpion: coste Plutonio','prep.upgrades.scorpionCost.plutonium')}
+      ${row('Máx Aircraft en juego','prep.upgrades.maxAircraft')}
+
+      ${sec('COMBATE — DADOS')}
+      ${row('Máx dados atacante','combat.maxAttackDice')}
+      ${row('Máx dados defensor','combat.maxDefenseDice')}
+      ${row('Dado Soldado (D?)','combat.unitDice.soldier')}
+      ${row('Dado Mech (D?)','combat.unitDice.mech')}
+      ${row('Dado Aircraft (D?)','combat.unitDice.aircraft')}
+      ${row('Dado Scorpion (D?)','combat.unitDice.scorpion')}
+      ${row('Empate: gana defensor','combat.tieBreakerDefender','chk')}
+
+      ${sec('COMBATE — MISILES')}
+      ${row('Dado intercepción (D?)','combat.missileInterceptDie')}
+      ${row('Mínimo para interceptar','combat.missileInterceptThreshold')}
+      ${row('Derribar Mech: D6 mínimo','combat.missileTargets.mech')}
+      ${row('Derribar Aircraft: D6 mínimo','combat.missileTargets.aircraft')}
+      ${row('Derribar Scorpion: D6 mínimo','combat.missileTargets.scorpion')}
+
+      ${sec('FASE FINAL')}
+      ${row('Dado mantenimiento (D?)','end.maintenanceDie')}
+      ${row('Resultado = explosión','end.maintenanceExplosionOn')}
+      ${row('Explosiones: Aircraft sobreviven','end.explosionSpareAircraft','chk')}
+
+      ${sec('VICTORIAS — CONDICIONES NUMÉRICAS')}
+      ${row('IMP: regiones completas necesarias','victory.imp.fullRegions')}
+      ${row('CLT: ejércitos eliminados necesarios','victory.clt.armiesEliminated')}
+      ${row('ERB: regiones con Nuclear necesarias','victory.erb.nuclearRegions')}
+      ${row('SHN: regiones con mayor ejército','victory.shn.largestArmyRegions')}
+
+      ${sec('HABILIDADES — BONIFICACIONES')}
+      ${row('PRM: Pu extra por Nuclear Base / turno','prep.plutoniumPerNuclear')}
+      ${row('SHN: soldados extra por Nuclear Base','prep.reinforcements.perNuclear')}
 
     </div>
-    <div style="padding:12px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">
+    <div style="padding:10px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">
       <button onclick="resetRules()" style="flex:1;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RESTAURAR</button>
-      <button onclick="document.getElementById('rules-modal').remove()" style="flex:1;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>
+      <button onclick="document.getElementById('rules-modal').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
@@ -382,14 +442,13 @@ function cpuTurns() {
 
 
 const VICTORY_DETAIL_FULL = {
-  imp: 'PAX AUGUSTA:\n• Controla 5 regiones completas al inicio de tu turno\n• O controla 30 territorios al inicio de tu turno\nHabilidad: +1 al dado más bajo en defensa',
-  lib: 'TOTAL BLACKOUT:\n• 6 regiones sin Nuclear Complex en el tablero\n• O 4 regiones sin Nuclear + eliminar ejército Erebus\nHabilidad: al destruir Nuclear propio: +5 Pu +5 Soldados',
-  clt: 'THE GREAT OFFERING:\n• Conquista 10 territorios Y elimina 1 ejército en el mismo turno\n• O conquista 1 Nuclear de cada enemigo en el mismo turno\nHabilidad: +1 al dado más bajo en ataque',
-  erb: 'EQUATION ZERO:\n• Elimina 2 ejércitos completos\n• O elimina 1 ejército Y tienes más Pu que el resto juntos\nHabilidad: coloca refuerzos en cualquier territorio',
-  prm: 'TERRAFORMATION:\n• Nuclear en 7 regiones distintas\n• O el doble de Nucleares que el segundo jugador\nHabilidad: +1 Pu extra por cada 2 Nucleares',
-  shn: 'GENETIC SUPREMACY:\n• Mayor ejército (AP) en 6 regiones distintas\n• O el doble de AP que el segundo jugador\nHabilidad: +1 soldado extra por cada 2 Nucleares',
+  imp: 'PAX AUGUSTA\n• Controla 5 regiones COMPLETAS al inicio de tu turno\n\nHabilidad — IMPERIAL DEFENSE:\n+1 a todos los dados de defensa',
+  lib: 'TOTAL BLACKOUT\n• El número total de Nuclear Bases en el tablero es igual o menor al número de jugadores (fin de turno)\n\nHabilidad — SCORCHED EARTH:\nPor cada Nuclear Base destruida (propia o enemiga): gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca inmediatamente en ese territorio.',
+  clt: 'THE GREAT OFFERING\n• Elimina a DOS jugadores enemigos (fin de turno)\n\nHabilidad — HOLY WAR:\n+1 a todos los dados de ataque',
+  erb: 'EQUATION ZERO\n• Controla al menos 1 Nuclear Base en 7 regiones distintas (fin de turno)\n\nHabilidad — HIVE MIND:\nPuedes colocar tus refuerzos en cualquier territorio propio, aunque no tenga Nuclear Base',
+  prm: 'TERRAFORMATION\n• Controla la MITAD de todas las Nuclear Bases del tablero (fin de turno)\n\nHabilidad — ADVANCED REACTOR:\n+1 Plutonio extra por cada Nuclear Base que controlas cada turno',
+  shn: 'GENETIC SUPREMACY\n• Tienes el mayor ejército (en AP) en 7 regiones distintas (inicio de turno)\n\nHabilidad — MASS CLONING:\n+1 soldado extra por cada Nuclear Base que controlas en ingresos',
 };
-
 function showFactionObjective(fk) {
   const fd = FDATA[fk]||{name:fk,color:'#888'};
   const detail = VICTORY_DETAIL_FULL[fk]||fd.goal||'';

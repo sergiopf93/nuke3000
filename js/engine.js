@@ -335,25 +335,31 @@ function applyIncome(fk) {
   const R=RULES.prep, myF=G.factions[fk];
   const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
   const nukes=myTers.filter(t=>t.hasNuclear).length;
-  let plutIncome=nukes*R.plutoniumPerNuclear;
-  if(fk==='prm') plutIncome+=Math.floor(nukes/2);
+
+  // Plutonium: +2 per Nuclear Base (PDF)
+  let plutIncome=nukes*(R.plutoniumPerNuclear||2);
+  if(fk==='prm') plutIncome+=nukes; // Prometheus ability: +1 Pu per Nuclear Base
   myF.plutonium+=plutIncome;
+
+  // Reinforcements (PDF V3):
+  const rc = R.reinforcements||{};
   let reinf=0;
-  if(R.reinforcements.perTwoTerritories) reinf+=Math.floor(myTers.length/2);
-  if(R.reinforcements.perTwoTerritoriesInControlledRegion){
-    REGIONS.forEach(reg=>{
-      const rTs=TERRITORIES_DEF.filter(t=>t.region===reg.id);
-      const owned=rTs.filter(t=>G.territories[t.id].owner===fk);
-      if(owned.length===rTs.length) reinf+=Math.floor(owned.length/2);
-    });
-  }
-  if(R.reinforcements.perNuclear) reinf+=nukes;
-  if(fk==='shn') reinf+=Math.floor(nukes/2);
+  // +1 per 2 territories
+  reinf += Math.floor(myTers.length/2) * (typeof rc.perTwoTerritories==='number' ? rc.perTwoTerritories : 1);
+  // +1 per 2 territories in FULLY controlled regions
+  REGIONS.forEach(reg=>{
+    const rTs=TERRITORIES_DEF.filter(t=>t.region===reg.id);
+    const allOwned=rTs.every(t=>G.territories[t.id]&&G.territories[t.id].owner===fk);
+    if(allOwned) reinf += Math.floor(rTs.length/2) * (typeof rc.perTwoTerritoriesFullRegion==='number' ? rc.perTwoTerritoriesFullRegion : 1);
+  });
+  // +1 per Nuclear Base
+  reinf += nukes * (typeof rc.perNuclear==='number' ? rc.perNuclear : 1);
+  if(fk==='shn') reinf+=nukes; // Shinin ability: +1 soldier per Nuclear Base
+
   myF.pendingSoldiers=(myF.pendingSoldiers||0)+reinf;
   myF.missilesFiredThisTurn=0; myF.missilesBuiltThisTurn=0; myF._fireStarted=false;
-  myF._plutIncome = plutIncome;
-  myF._reinfIncome = reinf;
-  addLog(`[${FDATA[fk]?.name||fk}] +${plutIncome} Pu | +${reinf} refuerzos`,'res');
+  myF._plutIncome=plutIncome; myF._reinfIncome=reinf;
+  addLog('['+(FDATA[fk]?.name||fk)+'] +'+plutIncome+' Pu | +'+reinf+' refuerzos','res');
   refreshCards(); updateMap();
 }
 
@@ -426,6 +432,23 @@ function executePlayerStep(step) {
 // ── CPU Attack ────────────────────────────────────────────────────
 
 
+
+
+function applyLibertosScorchedEarth(terId) {
+  // Libertos ability: gain 1 Missile + 1 Mech + 2 Pu when any Nuclear is destroyed
+  // Mech placed in that territory
+  if(!G.factions['lib'] || G.factions['lib'].alive===false) return;
+  const libF = G.factions['lib'];
+  const R = RULES.prep;
+  libF.missiles = Math.min(R.maxMissiles||5, (libF.missiles||0)+1);
+  libF.mechs = (libF.mechs||0)+1;
+  libF.plutonium = (libF.plutonium||0)+2;
+  // Place mech in that territory if owned by anyone (or just add to lib pool)
+  const t = G.territories[terId];
+  if(t && t.owner==='lib') t.mechs=(t.mechs||0)+1;
+  addLog('⚡ SCORCHED EARTH: Libertos gana 1 Misil + 1 Mech + 2 Pu ('+terName(terId)+')', 'res');
+  refreshCards();
+}
 
 function applyExplosions(box, modal, fk, nucTers, rolls, R, explosionCount, isMyMaint, callback) {
   const fd = FDATA[fk]||{name:fk,color:'#888'};
@@ -842,37 +865,54 @@ function totalArmyPoints(fk) {
 }
 
 function checkWinCondition() {
-  const V=RULES.victory, myF=G.factions[G.pf];
-  const myTers=Object.values(G.territories).filter(t=>t.owner===G.pf);
-  const myNukes=myTers.filter(t=>t.hasNuclear).length;
-  let fullRegions=0, regionsNoNuke=0;
-  REGIONS.forEach(reg=>{
-    const rTs=TERRITORIES_DEF.filter(t=>t.region===reg.id);
-    if(rTs.every(t=>G.territories[t.id].owner===G.pf)) fullRegions++;
-    if(!rTs.some(t=>G.territories[t.id].hasNuclear)) regionsNoNuke++;
+  const order = G.setup.order || Object.keys(G.factions);
+  const alive = order.filter(fk=>G.factions[fk]?.alive!==false);
+  if(alive.length<=1){
+    declareWin(alive[0]||order[0],'Last faction standing'); return;
+  }
+  const totalNuclears = Object.values(G.territories).filter(t=>t.hasNuclear).length;
+
+  order.forEach(fk=>{
+    if(G.factions[fk]?.alive===false) return;
+    const V=RULES.victory[fk]; if(!V||!V.enabled) return;
+    const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
+    const myNucs=myTers.filter(t=>t.hasNuclear);
+
+    if(fk==='imp'){
+      // PAX AUGUSTA: Control 5 complete regions
+      let fullR=0;
+      REGIONS.forEach(r=>{ const rTs=TERRITORIES_DEF.filter(t=>t.region===r.id); if(rTs.every(t=>G.territories[t.id]?.owner===fk)) fullR++; });
+      if(fullR>=(V.fullRegions||5)) { declareWin(fk,'PAX AUGUSTA — '+fullR+' regiones completas'); return; }
+    }
+    if(fk==='lib'){
+      // TOTAL BLACKOUT: Nuclears on board <= player count
+      if(totalNuclears<=G.playerCount) { declareWin(fk,'TOTAL BLACKOUT — Solo '+totalNuclears+' Nucleares en tablero'); return; }
+    }
+    if(fk==='clt'){
+      // THE GREAT OFFERING: Eliminate 2 enemy players
+      if((G.factions[fk].eliminatedArmies||0)>=(V.armiesEliminated||2)) { declareWin(fk,'THE GREAT OFFERING — '+V.armiesEliminated+' jugadores eliminados'); return; }
+    }
+    if(fk==='erb'){
+      // EQUATION ZERO: Nuclear in 7 different regions
+      const nucReg=new Set(myNucs.map(t=>TERRITORIES_DEF.find(x=>x.id===t.id)?.region).filter(Boolean));
+      if(nucReg.size>=(V.nuclearRegions||7)) { declareWin(fk,'EQUATION ZERO — Nuclear en '+nucReg.size+' regiones'); return; }
+    }
+    if(fk==='prm'){
+      // TERRAFORMATION: Control half the nuclears
+      if(totalNuclears>0 && myNucs.length>=Math.ceil(totalNuclears/2)) { declareWin(fk,'TERRAFORMATION — '+myNucs.length+'/'+totalNuclears+' Nucleares'); return; }
+    }
+    if(fk==='shn'){
+      // GENETIC SUPREMACY: Largest army in 7 regions (checked at start of turn)
+      let regions7=0;
+      REGIONS.forEach(r=>{
+        const rTs=TERRITORIES_DEF.filter(t=>t.region===r.id);
+        const myAP=rTs.reduce((s,t)=>s+(G.territories[t.id]?.owner===fk?armyPoints(G.territories[t.id]):0),0);
+        const maxOther=Math.max(0,...order.filter(k=>k!==fk).map(k=>rTs.reduce((s,t)=>s+(G.territories[t.id]?.owner===k?armyPoints(G.territories[t.id]):0),0)));
+        if(myAP>0&&myAP>maxOther) regions7++;
+      });
+      if(regions7>=(V.largestArmyRegions||7)) { declareWin(fk,'GENETIC SUPREMACY — Mayor ejército en '+regions7+' regiones'); return; }
+    }
   });
-  let won=false, winGoal='';
-  if(G.pf==='imp'&&V.imp.enabled){
-    if(fullRegions>=V.imp.fullRegions){won=true;winGoal='PAX AUGUSTA: '+V.imp.fullRegions+' regiones';}
-    if(myTers.length>=V.imp.territories){won=true;winGoal='PAX AUGUSTA: '+V.imp.territories+' territorios';}
-  }
-  if(G.pf==='lib'&&V.lib.enabled){
-    if(regionsNoNuke>=V.lib.regionsNoNuclear){won=true;winGoal='TOTAL BLACKOUT';}
-  }
-  if(G.pf==='prm'&&V.prm.enabled){
-    const nukeRegs=new Set(myTers.filter(t=>t.hasNuclear).map(t=>t.region));
-    if(nukeRegs.size>=V.prm.nuclearRegions){won=true;winGoal='TERRAFORMATION: Nuclear en '+V.prm.nuclearRegions+' regiones';}
-  }
-  if(G.pf==='shn'&&V.shn.enabled){
-    const myAP=totalArmyPoints(G.pf);
-    const others=Object.keys(G.factions).filter(k=>k!==G.pf&&G.factions[k].alive).map(k=>totalArmyPoints(k));
-    if(myAP>=V.shn.apMultiplier*Math.max(0,...others)&&myAP>0){won=true;winGoal='GENETIC SUPREMACY';}
-  }
-  if(G.pf==='erb'&&V.erb.enabled){
-    const elim=myF.eliminatedArmies||0;
-    if(elim>=V.erb.armiesEliminated){won=true;winGoal='EQUATION ZERO: '+elim+' ejércitos eliminados';}
-  }
-  if(won) declareVictory(winGoal);
 }
 
 function declareVictory(goal) {
@@ -1290,7 +1330,7 @@ function onTerritoryClick(id, event) {
   }
   // If move mode is active and clicking own territory = set as origin
   if(G.moveMode && G.territories[id]?.owner === G.pf && armyPoints(G.territories[id]) > 0) {
-    G.moveSrc = id; G.moveTargets = getMovableTargets(id, 3);
+    G.moveSrc = id; G.moveTargets = getMovableTargets(id, RULES.prep.movementRange||2);
     document.getElementById('map-wrap').classList.add('moving');
     addLog(`Origen: ${terName(id)}. Ahora clic en territorio destino adyacente.`,'move');
     updateMap();
@@ -1439,7 +1479,7 @@ function doAct(action) {
     openDice(id);
   }
   if(action==='move-action'){
-    G.moveSrc = id; G.moveTargets = getMovableTargets(id, 3);
+    G.moveSrc = id; G.moveTargets = getMovableTargets(id, RULES.prep.movementRange||2);
     document.getElementById('map-wrap').classList.add('moving');
     markStepDone('mov2'); addLog(`Selecciona destino para mover desde ${t.name}. Haz click en el destino.`,'move');
     updateMap();

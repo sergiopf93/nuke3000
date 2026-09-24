@@ -82,12 +82,24 @@ const REGION_SIZES = { r01:6, r02:4, r03:5, r04:5, r05:6, r06:4, r07:5, r08:5, r
 
 // ── FACTION DATA ──────────────────────────────────────────────
 const FDATA = {
-  imp:{ name:'IMPERATORS',   color:'#C8A800', dimColor:'#3a3000', leader:'Augustus XXVII', ability:'IMPERIAL DEFENSE', abilityDesc:'+1 lowest defense die', goal:'PAX AUGUSTA', goalDesc:'Control 5 regions OR 30 territories (start of turn)' },
-  lib:{ name:'LIBERTOS',     color:'#4A7C3F', dimColor:'#0f2010', leader:'Vance Cruz',    ability:'SCORCHED EARTH',   abilityDesc:'+5 Pu +5 soldiers per Nuclear destroyed', goal:'TOTAL BLACKOUT', goalDesc:'6 regions w/o Nuclear Complex OR 4 w/o + eliminate Erebus' },
-  clt:{ name:'TAL-MAUT',     color:'#8B1A1A', dimColor:'#200505', leader:'Malak-Maut',    ability:'HOLY WAR',         abilityDesc:'+1 lowest attack die', goal:'THE GREAT OFFERING', goalDesc:'Conquer 10+eliminate army same turn OR 1 Nuclear from each enemy' },
-  erb:{ name:'EREBUS SWARM', color:'#5555aa', dimColor:'#0d0d2a', leader:'IA Colmena',    ability:'HIVE MIND',        abilityDesc:'Place reinforcements anywhere (no Nuclear needed)', goal:'EQUATION ZERO', goalDesc:'Eliminate 2 full armies OR 1 + own most Plutonium' },
-  prm:{ name:'PROMETHEUS',   color:'#1B4F8A', dimColor:'#050f20', leader:'Skye Apex',     ability:'ADVANCED REACTOR', abilityDesc:'+1 Plutonium per 2 Nuclear Complexes', goal:'TERRAFORMATION', goalDesc:'Nuclear Complex in 7 regions OR 2x the player with most' },
-  shn:{ name:'SHININ',       color:'#b0b0b0', dimColor:'#1e1e20', leader:'Shin Khang',    ability:'MASS CLONING',     abilityDesc:'+1 soldier per 2 Nuclear Complexes', goal:'GENETIC SUPREMACY', goalDesc:'Largest army (AP) in 6 regions OR 2x player with most AP' },
+  imp:{ name:'IMPERATORS',   color:'#C8A800', dimColor:'#3a3000', leader:'Augustus XXVII',
+    ability:'IMPERIAL DEFENSE', abilityDesc:'+1 a todos los dados de defensa',
+    goal:'PAX AUGUSTA', goalDesc:'Controla 5 regiones completas (fin de turno)' },
+  lib:{ name:'LIBERTOS',     color:'#4A7C3F', dimColor:'#0f2010', leader:'Vance Cruz',
+    ability:'SCORCHED EARTH', abilityDesc:'Por cada Nuclear destruido: gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca en ese territorio.',
+    goal:'TOTAL BLACKOUT', goalDesc:'Nucleares en el tablero ≤ número de jugadores (fin de turno)' },
+  clt:{ name:'TAL-MAUT',     color:'#8B1A1A', dimColor:'#200505', leader:'Malak-Maut',
+    ability:'HOLY WAR', abilityDesc:'+1 a todos los dados de ataque',
+    goal:'THE GREAT OFFERING', goalDesc:'Elimina a dos jugadores enemigos (fin de turno)' },
+  erb:{ name:'EREBUS SWARM', color:'#5555aa', dimColor:'#0d0d2a', leader:'IA Colmena',
+    ability:'HIVE MIND', abilityDesc:'Coloca refuerzos en cualquier territorio propio, aunque no tenga Nuclear Base',
+    goal:'EQUATION ZERO', goalDesc:'Controla al menos 1 Nuclear Base en 7 regiones distintas (fin de turno)' },
+  prm:{ name:'PROMETHEUS',   color:'#1B4F8A', dimColor:'#050f20', leader:'Skye Apex',
+    ability:'ADVANCED REACTOR', abilityDesc:'+1 Plutonio extra por cada Nuclear Base que controlas',
+    goal:'TERRAFORMATION', goalDesc:'Controla la mitad de los Nucleares del tablero (fin de turno)' },
+  shn:{ name:'SHININ',       color:'#b0b0b0', dimColor:'#1e1e20', leader:'Shin Khang',
+    ability:'MASS CLONING', abilityDesc:'+1 soldado extra por cada Nuclear Base que controlas',
+    goal:'GENETIC SUPREMACY', goalDesc:'Mayor ejército (AP) en 7 regiones distintas (inicio de turno)' },
 };
 
 // Starting assets by player count
@@ -98,28 +110,37 @@ const FDATA = {
 const DEFAULT_RULES = {
   // ── SETUP ─────────────────────────────────────────────────────
   setup: {
-    steps: ['roll','claim','soldiers','nuclear'], // reorderable
+    // Setup phases in order. Each has: id, perTurn (true=each player acts once before next), combinedWith (merge with next)
+    phases: [
+      { id:'claim',   label:'Reclamar Territorio', perTurn:true,  combinedWith:false },
+      { id:'nuclear', label:'Colocar Nucleares',   perTurn:false, combinedWith:true  }, // combined: same player does nuclear+soldiers
+      { id:'soldiers',label:'Distribuir Soldados', perTurn:false, combinedWith:false },
+    ],
     startingAssets: {
-      3: {soldiers:60, missiles:2, nukes:4, territories:20, plutonium:0},
-      4: {soldiers:45, missiles:2, nukes:3, territories:15, plutonium:0},
-      5: {soldiers:36, missiles:2, nukes:2, territories:12, plutonium:0},
-      6: {soldiers:30, missiles:2, nukes:2, territories:10, plutonium:0},
+      3: {soldiers:60, mechs:4, missiles:2, nukes:4, territories:20, plutonium:0},
+      4: {soldiers:45, mechs:3, missiles:2, nukes:3, territories:15, plutonium:0},
+      5: {soldiers:36, mechs:2, missiles:2, nukes:2, territories:12, plutonium:0},
+      6: {soldiers:30, mechs:2, missiles:2, nukes:2, territories:10, plutonium:0},
     },
-    libertosSwap: true,  // Libertos: swap nukes for +5Pu +5sol
+    // Libertos: swap starting nukes for +3Pu +2mechs (per reglamento V3)
+    libertosSwap: { enabled:true, plutonium:3, mechs:2 },
   },
   // ── PREPARATION ───────────────────────────────────────────────
   prep: {
-    phases: ['plutonium','reinforcements','upgrades','movement','missiles'], // reorderable
+    // Prep phases in order (reorderable)
+    phases: ['income','reinf','upgrade','move','miss','nuclear'],
+    phaseLabels: {income:'Plutonio y Refuerzos', reinf:'Colocación', upgrade:'Mejoras', move:'Movimiento', miss:'Misiles', nuclear:'Nucleares'},
     plutoniumPerNuclear: 2,
+    nuclearBuildCost: 4,   // PDF: 4 Pu (not 5)
     reinforcements: {
-      perTwoTerritories: true,
-      perTwoTerritoriesInControlledRegion: true,
-      perNuclear: true,
+      perTwoTerritories: 1,              // +1 soldier per 2 territories
+      perTwoTerritoriesFullRegion: 1,    // +1 soldier per 2 territories in fully controlled region
+      perNuclear: 1,                     // +1 soldier per Nuclear Base
     },
     placement: {
-      onlyInNuclearTerritories: true, // if false: anywhere
-      ereubsAnywhereOverride: true,   // Erebus ignores restriction
-      fallbackOnePerRegion: true,     // if no nuclears: 1 per region
+      onlyInNuclearTerritories: true,
+      ereubsAnywhereOverride: true,
+      fallbackOnePerRegion: true,
     },
     upgrades: {
       mechCost: {soldiers:3, plutonium:1},
@@ -127,10 +148,10 @@ const DEFAULT_RULES = {
       scorpionCost: {mechs:2, plutonium:1},
       maxAircraft: 5,
     },
-    nuclearBuildCost: 5,
+    movementRange: 2,       // PDF: up to 2 territories
     missileBuildCost: 1,
     maxMissiles: 5,
-    buildBeforeFire: true, // if true: can't build after firing this turn
+    buildBeforeFire: true,
   },
   // ── COMBAT ────────────────────────────────────────────────────
   combat: {
@@ -138,26 +159,32 @@ const DEFAULT_RULES = {
     maxDefenseDice: 4,
     tieBreakerDefender: true,
     unitDice: {soldier:6, mech:12, aircraft:12, scorpion:20},
-    allowUnitSelection: true,  // attacker/defender choose units
+    allowUnitSelection: true,
     allowRetreat: true,
     missileInterceptDie: 6,
-    missileInterceptThreshold: 4, // D6 >= 4 = intercept
-    missileTargets: {soldier:'auto', mech:5, aircraft:6, scorpion:6}, // D6 threshold
+    missileInterceptThreshold: 4,
+    // PDF: sol=auto, mech=D6≥5, aircraft=D6≥5, scorpion=D6=6
+    missileTargets: {soldier:'auto', mech:5, aircraft:5, scorpion:6},
   },
   // ── END PHASE ─────────────────────────────────────────────────
   end: {
-    maintenanceDie: 20,
-    maintenanceExplosionOn: 1,
+    phases: ['regroup','maint'],
+    phaseLabels: {regroup:'Reagrupamiento', maint:'Mantenimiento'},
+    maintenanceDie: 12,        // PDF: D12 (not D20)
+    maintenanceExplosionOn: 1, // PDF: result of 1 = explosion
     maintenanceEnabled: true,
+    // PDF: explosion destroys Nuclear + all ground units EXCEPT aircraft; if no aircraft, 1 unit of choice survives
+    explosionSpareAircraft: true,
+    explosionOneGroundSurvives: true,
   },
   // ── VICTORY ───────────────────────────────────────────────────
   victory: {
-    imp: {enabled:true, fullRegions:5, territories:30},
-    lib: {enabled:true, regionsNoNuclear:6, altRegions:4, altRequireErebusElim:true},
-    clt: {enabled:true, conqueredTerritories:10, nukePerEnemy:1},
-    erb: {enabled:true, armiesEliminated:2, altArmies:1, altMorePu:true},
-    prm: {enabled:true, nuclearRegions:7, nuclearMultiplier:2},
-    shn: {enabled:true, regionsLargest:6, apMultiplier:2},
+    imp: { enabled:true, fullRegions:5 },                        // Control 5 complete regions
+    lib: { enabled:true, nuclearOnBoardMax:'playerCount' },      // Nuclears on board <= player count
+    clt: { enabled:true, armiesEliminated:2 },                   // Eliminate 2 enemy players
+    erb: { enabled:true, nuclearRegions:7 },                     // Nuclear in 7 different regions
+    prm: { enabled:true, nuclearHalf:true },                     // Control half the nuclears on board
+    shn: { enabled:true, largestArmyRegions:7 },                 // Largest army in 7 regions (start of turn)
   },
 };
 
@@ -212,3 +239,4 @@ let G = {
 // ════════════════════════════════════════════════════════════════
 
 // ── STEP ORDER: change sequence here ────────────────────────────
+

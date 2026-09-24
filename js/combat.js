@@ -262,8 +262,8 @@ function resolveCombatRound(auto) {
   const def=ctx.defSelected||ctx.defPool.slice(0,Rc.maxDefenseDice);
   const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
   const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.attFk==='clt'){const mi=aR.indexOf(Math.min(...aR));if(mi>=0)aR[mi]++;}
-  if(ctx.defFk==='imp'){const mi=dR.indexOf(Math.min(...dR));if(mi>=0)dR[mi]++;}
+  if(ctx.attFk==='clt'){aR.forEach((_,i)=>aR[i]++);} // HOLY WAR: +1 to ALL attack dice
+  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 to ALL defense dice
   att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   def.forEach((_,i)=>{const el=document.getElementById('dd'+i);if(el){el.textContent=dR[i];el.className='die def spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   document.getElementById('dtot-a').textContent=aR.join(' · ');
