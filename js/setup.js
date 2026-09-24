@@ -495,11 +495,11 @@ function setupStep_PlaceSoldiers() {
 }
 
 function setupStep_Soldiers_Next() {
-  // Find next faction with soldiers remaining, in turn order
+  // Find next faction with soldiers OR mechs remaining
   for(let i=0; i<G.setup.order.length; i++){
     const idx = (G.setup.orderIdx + i) % G.setup.order.length;
     const fk  = G.setup.order[idx];
-    if((G.setup.soldiersLeft[fk]||0) > 0){
+    if((G.setup.soldiersLeft[fk]||0) > 0 || (G.factions[fk]&&(G.factions[fk].mechs||0)) > 0){
       G.setup.orderIdx = idx;
       setupStep_Soldiers_ForFaction(fk);
       return;
@@ -515,8 +515,10 @@ function setupStep_Soldiers_ForFaction(fk) {
   const isMe    = isMyFaction(fk);
   const isHuman = isHumanFaction(fk);
 
-  showSetupPanel('DISTRIBUIR SOLDADOS',
-    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — coloca <b>${left}</b> soldado(s) restantes`,
+  const mechLeft2 = G.factions[fk].mechs||0;
+  const unitSummary = left > 0 && mechLeft2 > 0 ? `${left} sol + ${mechLeft2} mech` : left > 0 ? `${left} sol` : `${mechLeft2} mech`;
+  showSetupPanel('DISTRIBUIR UNIDADES',
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — coloca <b>${unitSummary}</b>`,
     'bar');
 
   if(isMe) {
@@ -678,8 +680,10 @@ function doPlaceSoldier(fk, id, qty) {
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
   });
 
-  if(G.setup.soldiersLeft[fk] > 0) {
-    // Still has soldiers — sync partial state and continue
+  const solLeft = G.setup.soldiersLeft[fk]||0;
+  const mechLeft = G.factions[fk].mechs||0;
+  if(solLeft > 0 || mechLeft > 0) {
+    // Still has units to place — sync partial state and continue
     if (_isOnline()) _syncSetup('SOLDIER_PARTIAL', { fk, terId: id, qty });
     setTimeout(()=>setupStep_Soldiers_ForFaction(fk), 100);
   } else {
