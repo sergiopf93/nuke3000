@@ -14,7 +14,93 @@ function flashScreen(){
 }
 
 function showRules(){
-  alert('FASES:\n1. PREPARACIÓN: Recibe Plutonio (2/Nuclear), recibe soldados (⌊ter/2⌋+⌊ter_región/2⌋+nukes), upgrades (3sol+1PLU→Mech, 3sol+1PLU→Air, 2Mech+1PLU→Scorpion), misiles (1PLU=1misil, max5), construye Nucleares (5PLU)\n2. COMBATE: Ataca territorios adyacentes. Atacante max 5 dados, defensor max 4. Sol=D6, Mech/Air=D12, Scorpion=D20. Empate=defensor gana. Scorpion pierde→Mech, Mech pierde→Sol, Air/Sol pierden→eliminados.\n3. FIN: Reagrupar unidades, Mantenimiento D20 por Nuclear (1=explota)');
+  const ex = document.getElementById('rules-modal');
+  if(ex){ ex.remove(); return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'rules-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+  const R = RULES;
+  const row = (label, key, path, type='number', min=0, max=999) => {
+    const val = path.split('.').reduce((o,k)=>o&&o[k], R);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #111;">
+      <span style="font-size:10px;color:#888;flex:1;">${label}</span>
+      <input type="${type}" value="${val}" min="${min}" max="${max}"
+        style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:60px;padding:3px 6px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;"
+        onchange="setRule('${path}',${type==='number'?'+this.value':'this.checked'},this)">
+    </div>`;
+  };
+  const chk = (label, path) => {
+    const val = path.split('.').reduce((o,k)=>o&&o[k], R);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #111;">
+      <span style="font-size:10px;color:#888;flex:1;">${label}</span>
+      <input type="checkbox" ${val?'checked':''} style="width:16px;height:16px;cursor:pointer;"
+        onchange="setRule('${path}',this.checked,this)">
+    </div>`;
+  };
+  const sec = (title) => `<div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;color:#C8A800;margin:12px 0 4px;">${title}</div>`;
+
+  modal.innerHTML = `<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;">
+    <div style="padding:14px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">EDITOR DE REGLAS</div>
+      <button onclick="document.getElementById('rules-modal').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:16px;flex:1;">
+
+      ${sec('── PREPARACIÓN')}
+      ${row('Plutonio por Nuclear / turno','prep.plutoniumPerNuclear','prep.plutoniumPerNuclear')}
+      ${row('Coste construir Nuclear (Pu)','prep.nuclearBuildCost','prep.nuclearBuildCost')}
+      ${row('Coste misil (Pu)','prep.missileBuildCost','prep.missileBuildCost')}
+      ${row('Máx misiles por jugador','prep.maxMissiles','prep.maxMissiles')}
+      ${row('Refuerzos: soldados por 2 territorios','prep.reinforcements.perTwoTerritories','prep.reinforcements.perTwoTerritories')}
+      ${row('Refuerzos: bonus por Nuclear','prep.reinforcements.bonusPerNuclear','prep.reinforcements.bonusPerNuclear')}
+      ${row('Movimiento: máx saltos','prep.movementRange','prep.movementRange')}
+
+      ${sec('── COMBATE')}
+      ${row('Máx dados atacante','combat.maxAttackDice','combat.maxAttackDice',undefined,1,10)}
+      ${row('Máx dados defensor','combat.maxDefenseDice','combat.maxDefenseDice',undefined,1,10)}
+      ${row('Dado Soldado (D?)','combat.unitDice.soldier','combat.unitDice.soldier',undefined,4,20)}
+      ${row('Dado Mech (D?)','combat.unitDice.mech','combat.unitDice.mech',undefined,4,20)}
+      ${row('Dado Aircraft (D?)','combat.unitDice.aircraft','combat.unitDice.aircraft',undefined,4,20)}
+      ${row('Dado Scorpion (D?)','combat.unitDice.scorpion','combat.unitDice.scorpion',undefined,4,20)}
+      ${chk('Empate: gana defensor','combat.tieBreakerDefender')}
+
+      ${sec('── MISILES')}
+      ${row('Dado intercepción (D?)','combat.missileInterceptDie','combat.missileInterceptDie',undefined,4,20)}
+      ${row('Mínimo para interceptar','combat.missileInterceptThreshold','combat.missileInterceptThreshold',undefined,1,20)}
+
+      ${sec('── MANTENIMIENTO')}
+      ${row('Dado mantenimiento (D?)','end.maintenanceDie','end.maintenanceDie',undefined,4,20)}
+      ${row('Resultado = explosión','end.maintenanceExplosionOn','end.maintenanceExplosionOn',undefined,1,20)}
+
+      ${sec('── ACTIVOS INICIALES (4 jugadores)')}
+      ${row('Soldados iniciales','setup.startingAssets.4.soldiers','setup.startingAssets.4.soldiers')}
+      ${row('Misiles iniciales','setup.startingAssets.4.missiles','setup.startingAssets.4.missiles')}
+      ${row('Nucleares iniciales','setup.startingAssets.4.nukes','setup.startingAssets.4.nukes')}
+
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">
+      <button onclick="resetRules()" style="flex:1;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RESTAURAR</button>
+      <button onclick="document.getElementById('rules-modal').remove()" style="flex:1;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function setRule(path, value, el) {
+  const keys = path.split('.');
+  let obj = RULES;
+  for(let i=0;i<keys.length-1;i++) obj = obj[keys[i]];
+  obj[keys[keys.length-1]] = value;
+}
+
+function resetRules() {
+  // Deep copy DEFAULT_RULES back to RULES
+  Object.assign(RULES, JSON.parse(JSON.stringify(DEFAULT_RULES)));
+  document.getElementById('rules-modal').remove();
+  showRules();
 }
 
 function showTip(e,id){
