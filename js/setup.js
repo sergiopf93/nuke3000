@@ -560,9 +560,14 @@ function setupStep_Soldiers_ForFaction(fk) {
 function _autoDistributeFaction(fk) {
   const n      = G.setup.soldiersLeft[fk]||0;
   const myTers = Object.values(G.territories).filter(t=>t.owner===fk);
+  // Distribute soldiers
   for(let s=0;s<n;s++){const p=myTers[s%myTers.length];if(p)p.soldiers++;}
   G.setup.soldiersLeft[fk] = 0;
   G.factions[fk].soldiers  = 0;
+  // Distribute mechs (place 1 per territory, spread evenly)
+  let mechs = G.factions[fk].mechs||0;
+  for(let m=0;m<mechs;m++){const p=myTers[m%myTers.length];if(p)p.mechs++;}
+  G.factions[fk].mechs = 0;
   updateMap();
 }
 
@@ -591,10 +596,11 @@ function showSoldierCounter(fk, id, validTers, evt) {
   let qty = 1;
   const title = document.createElement('div');
   title.style.cssText = `font-size:10px;letter-spacing:2px;color:${FDATA[fk].color};margin-bottom:8px;`;
-  title.textContent = 'COLOCAR SOLDADOS';
+  const mechsAvail = G.factions[fk].mechs||0;
+  title.textContent = 'COLOCAR UNIDADES';
   const maxEl = document.createElement('div');
   maxEl.style.cssText = 'font-size:10px;color:#777;margin-bottom:10px;';
-  maxEl.textContent = `disponibles: ${maxAdd}`;
+  maxEl.textContent = `Sol: ${maxAdd}  Mech: ${mechsAvail}`;
 
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;';
@@ -607,6 +613,21 @@ function showSoldierCounter(fk, id, validTers, evt) {
   const btnPlus = document.createElement('button');
   btnPlus.textContent='+';
   btnPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
+
+  // Mech counter
+  let mechQty = 0;
+  const mechRow = document.createElement('div');
+  mechRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;';
+  if(mechsAvail > 0) {
+    const mLbl = document.createElement('span'); mLbl.textContent='🤖'; mLbl.style.cssText='font-size:12px;color:#888;';
+    const mMinus = document.createElement('button'); mMinus.textContent='−'; mMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:24px;height:24px;cursor:pointer;font-size:14px;';
+    const mQtyEl = document.createElement('span'); mQtyEl.style.cssText='font-size:18px;color:#fff;min-width:24px;text-align:center;'; mQtyEl.textContent='0';
+    const mPlus = document.createElement('button'); mPlus.textContent='+'; mPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:24px;height:24px;cursor:pointer;font-size:14px;';
+    mMinus.onclick=(e)=>{e.stopPropagation();if(mechQty>0){mechQty--;mQtyEl.textContent=mechQty;}};
+    mPlus.onclick=(e)=>{e.stopPropagation();if(mechQty<mechsAvail){mechQty++;mQtyEl.textContent=mechQty;}};
+    mechRow.appendChild(mLbl); mechRow.appendChild(mMinus); mechRow.appendChild(mQtyEl); mechRow.appendChild(mPlus);
+    popup.appendChild(mechRow);
+  }
 
   const btnRow = document.createElement('div');
   btnRow.style.cssText='display:flex;gap:6px;';
@@ -625,12 +646,19 @@ function showSoldierCounter(fk, id, validTers, evt) {
     e.stopPropagation();
     popup.remove();
     doPlaceSoldier(fk, id, qty);
+    if(mechQty > 0) {
+      const t = G.territories[id];
+      if(t) { t.mechs += mechQty; G.factions[fk].mechs = Math.max(0,(G.factions[fk].mechs||0)-mechQty); }
+      updateMap(); refreshCards();
+    }
   };
 
   row.appendChild(btnMinus); row.appendChild(qtyEl); row.appendChild(btnPlus);
   btnRow.appendChild(btnOk); btnRow.appendChild(btnX);
-  popup.appendChild(title); popup.appendChild(row);
-  popup.appendChild(maxEl); popup.appendChild(btnRow);
+  popup.appendChild(title); popup.appendChild(maxEl);
+  popup.appendChild(row);
+  // mechRow already appended above if mechs available
+  popup.appendChild(btnRow);
   document.body.appendChild(popup);
 }
 
