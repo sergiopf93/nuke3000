@@ -647,12 +647,13 @@ function showSoldierCounter(fk, id, validTers, evt) {
   btnOk.onclick   =(e)=>{
     e.stopPropagation();
     popup.remove();
-    doPlaceSoldier(fk, id, qty);
+    // Place mechs FIRST so doPlaceSoldier sees correct remaining count
     if(mechQty > 0) {
       const t = G.territories[id];
       if(t) { t.mechs += mechQty; G.factions[fk].mechs = Math.max(0,(G.factions[fk].mechs||0)-mechQty); }
-      updateMap(); refreshCards();
     }
+    // Then place soldiers (this triggers turn advance if both are 0)
+    doPlaceSoldier(fk, id, qty);
   };
 
   row.appendChild(btnMinus); row.appendChild(qtyEl); row.appendChild(btnPlus);
