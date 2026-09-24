@@ -459,19 +459,29 @@ function doClaimTerritory(fk, id) {
 }
 
 function autoClaimAll() {
+  // Only auto-claim for the PLAYER, respecting turn order for CPUs
   G.setup.claimCallback = null;
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
-  const shuffled  = [...unclaimed].sort(()=>Math.random()-.5);
-  let i = G.setup.orderIdx;
-  shuffled.forEach(t => {
-    const fk = G.setup.order[i % G.setup.order.length];
-    t.owner = fk; t.soldiers = 1;
-    G.factions[fk].soldiers  = Math.max(0, G.factions[fk].soldiers-1);
-    G.setup.soldiersLeft[fk] = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
-    i++;
-  });
+  const order = G.setup.order;
+  const totalTers = Object.values(G.territories).length;
+  const playerShare = Math.ceil(totalTers / order.length);
+
+  // Claim up to playerShare territories for the player
+  let claimed = 0;
+  const shuffled = [...unclaimed].sort(()=>Math.random()-.5);
+  for(const t of shuffled) {
+    if(claimed >= playerShare) break;
+    t.owner = G.pf; t.soldiers = 1;
+    G.factions[G.pf].soldiers = Math.max(0, G.factions[G.pf].soldiers-1);
+    G.setup.soldiersLeft[G.pf] = Math.max(0, (G.setup.soldiersLeft[G.pf]||0)-1);
+    claimed++;
+  }
   updateMap();
-  nextSetupStep();
+
+  // Advance to next player in turn order (CPUs continue normally)
+  const myIdx = order.indexOf(G.pf);
+  G.setup.orderIdx = (myIdx + 1) % order.length;
+  setupStep_Claim_Next();
 }
 
 // ════════════════════════════════════════════════════════════════

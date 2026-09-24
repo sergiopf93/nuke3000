@@ -218,8 +218,18 @@ function renderStepActions(step) {
   if(sid==='income') {
     const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
     const nukes =myTers.filter(t=>t.hasNuclear).length;
-    const reinfGained=myF._reinfIncome!==undefined?myF._reinfIncome:(myF.pendingSoldiers||0);
-    const plutGained =myF._plutIncome !==undefined?myF._plutIncome:0;
+    // Compute income preview (same formula as applyIncome) so render is accurate
+    const rc=RULES.prep.reinforcements||{};
+    let previewReinf=Math.floor(myTers.length/2)*(typeof rc.perTwoTerritories==='number'?rc.perTwoTerritories:1);
+    REGIONS.forEach(reg=>{
+      const rTs=TERRITORIES_DEF.filter(t=>t.region===reg.id);
+      if(rTs.every(t=>G.territories[t.id]&&G.territories[t.id].owner===fk))
+        previewReinf+=Math.floor(rTs.length/2)*(typeof rc.perTwoTerritoriesFullRegion==='number'?rc.perTwoTerritoriesFullRegion:1);
+    });
+    previewReinf+=nukes*(typeof rc.perNuclear==='number'?rc.perNuclear:1);
+    if(fk==='shn') previewReinf+=nukes;
+    const reinfGained=myF._reinfIncome!==undefined?myF._reinfIncome:previewReinf;
+    const plutGained =myF._plutIncome !==undefined?myF._plutIncome:(nukes*(RULES.prep.plutoniumPerNuclear||2));
     area.innerHTML=`
       <div style="background:#080810;border:1px solid #1a1a20;padding:12px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
@@ -443,6 +453,31 @@ function executePlayerStep(step) {
   }
 }
 
+
+function confirmNukeDestroy() {
+  const st=window._nukeDestroyState;
+  if(!st||st.chosen.size!==st.needed) return;
+  G.nukeDestroyMode=false;
+  const banner=document.getElementById('nuke-destroy-banner');
+  if(banner) banner.remove();
+  // Clear orange highlights
+  (st.validIds||new Set()).forEach(id=>{
+    const ring=document.getElementById('tr-'+id);
+    if(ring){ring.setAttribute('stroke','');ring.setAttribute('stroke-width','1.5');}
+  });
+  st.chosen.forEach(tid=>{
+    const t=G.territories[tid]; if(!t) return;
+    t.hasNuclear=false;
+    if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
+    else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
+    addLog('EXPLOSION: '+terName(tid)+' destruido','combat');
+    showNuclearExplosionBanner(tid, st.fd);
+  });
+  window._nukeDestroyState=null;
+  updateMap(); refreshCards();
+  if(st.callback) st.callback();
+}
+
 function applyExplosions(box, modal, fk, nucTers, rolls, R, explosionCount, isMyMaint, callback) {
   const fd=FDATA[fk]||{name:fk,color:'#888'};
   const explodedIndices=rolls.map((v,i)=>v===R.maintenanceExplosionOn?i:-1).filter(i=>i>=0);
@@ -458,46 +493,32 @@ function applyExplosions(box, modal, fk, nucTers, rolls, R, explosionCount, isMy
     setTimeout(()=>{modal.remove();if(callback)callback();},3000);
     return;
   }
+  // Close modal — player selects on MAP
+  modal.remove();
   const allMyNucs=Object.values(G.territories).filter(t=>t.owner===G.pf&&t.hasNuclear);
   const chosen=new Set();
-  const selDiv=document.createElement('div');
-  selDiv.style.cssText='margin-top:16px;text-align:left;';
-  selDiv.innerHTML='<div style="font-family:Orbitron,sans-serif;font-size:10px;color:#ff4444;letter-spacing:2px;margin-bottom:10px;text-align:center;">ELIGE '+explosionCount+' NUCLEAR A DESTRUIR</div>';
-  const grid=document.createElement('div');
-  grid.style.cssText='display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;';
-  const confirmBtn=document.createElement('button');
-  confirmBtn.textContent='CONFIRMAR DESTRUCCION';
-  confirmBtn.disabled=true;
-  confirmBtn.style.cssText='margin-top:14px;width:100%;background:#0a0a0d;border:1px solid #ff4444;color:#ff4444;padding:10px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;opacity:0.4;';
+
+  // Show instruction banner
+  const instrBanner=document.createElement('div');
+  instrBanner.id='nuke-destroy-banner';
+  instrBanner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:900;'+
+    'background:#1a0000;border:2px solid #ff4444;padding:10px 24px;font-family:Orbitron,sans-serif;text-align:center;';
+  instrBanner.innerHTML='<div style="font-size:11px;color:#ff4444;letter-spacing:2px;margin-bottom:4px;">ELIGE '+explosionCount+' NUCLEAR A DESTRUIR</div>'+
+    '<div style="font-size:9px;color:#888;">Pulsa los hexágonos naranjas en el mapa</div>'+
+    '<div id="nuke-destroy-count" style="font-size:10px;color:#ff8800;margin-top:4px;">Seleccionados: 0 / '+explosionCount+'</div>'+
+    '<button id="nuke-destroy-confirm" disabled onclick="confirmNukeDestroy()" '+
+    'style="margin-top:8px;background:#0a0a0d;border:1px solid #ff4444;color:#ff4444;padding:6px 18px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;opacity:0.4;">CONFIRMAR</button>';
+  document.body.appendChild(instrBanner);
+
+  // Highlight selectable nuclears orange on map
   allMyNucs.forEach(t=>{
-    const btn=document.createElement('button');
-    btn.dataset.tid=t.id;
-    btn.style.cssText='background:#0a0a0d;border:1px solid #333;color:#888;padding:8px 12px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;text-align:left;';
-    btn.textContent=terName(t.id);
-    btn.onclick=()=>{
-      if(chosen.has(t.id)){chosen.delete(t.id);btn.style.background='#0a0a0d';btn.style.borderColor='#333';btn.style.color='#888';}
-      else if(chosen.size<explosionCount){chosen.add(t.id);btn.style.background='#1a0000';btn.style.borderColor='#ff4444';btn.style.color='#ff4444';}
-      confirmBtn.disabled=(chosen.size!==explosionCount);
-      confirmBtn.style.opacity=chosen.size===explosionCount?'1':'0.4';
-    };
-    grid.appendChild(btn);
+    const ring=document.getElementById('tr-'+t.id);
+    if(ring){ring.setAttribute('stroke','#ff8800');ring.setAttribute('stroke-width','4');}
   });
-  confirmBtn.onclick=()=>{
-    chosen.forEach(tid=>{
-      const t=G.territories[tid]; if(!t) return;
-      t.hasNuclear=false;
-      if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
-      else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
-      addLog('EXPLOSION: '+terName(tid)+' destruido','combat');
-      showNuclearExplosionBanner(tid, fd);
-    });
-    updateMap(); refreshCards();
-    // Sync after explosion resolution
-    _syncNow('Mantenimiento nuclear resuelto', 'combat');
-    modal.remove(); if(callback) callback();
-  };
-  selDiv.appendChild(grid); selDiv.appendChild(confirmBtn);
-  box.appendChild(selDiv);
+
+  // Store state for click handler
+  window._nukeDestroyState={chosen,needed:explosionCount,validIds:new Set(allMyNucs.map(t=>t.id)),fd,callback};
+  G.nukeDestroyMode=true;
 }
 
 function showNuclearExplosionBanner(terId, fd) {
