@@ -818,39 +818,80 @@ function doMissileFire() {
     }
 
     if(!intercepted) {
-      const MT=Rc.missileTargets;
-      const total=armyPoints(t);
-      if(total<=1) {
-        resultMsg='⚠ Sin efecto — no puede eliminar la última unidad';
-        resultColor='#888';
-      } else if(t.soldiers>0) {
-        t.soldiers--;
-        resultMsg='💀 IMPACTO — 1 Soldado eliminado';
-        addLog(`Misil → ${id}: soldado eliminado`,'combat');
-      } else if(t.mechs>0) {
-        const r=Math.floor(Math.random()*6)+1;
-        if(r>=MT.mech){t.mechs--;resultMsg=`💀 IMPACTO — Mech eliminado (D6=${r})`;}
-        else resultMsg=`Mech resistió (D6=${r}<${MT.mech})`;
-        addLog(`Misil → ${id}: D6=${r}`,'combat');
-      } else if(t.aircraft>0) {
-        const r=Math.floor(Math.random()*6)+1;
-        if(r>=MT.aircraft){t.aircraft--;resultMsg=`💀 IMPACTO — Aircraft eliminado (D6=${r})`;}
-        else resultMsg=`Aircraft resistió (D6=${r}<${MT.aircraft})`;
-      } else if(t.scorpions>0) {
-        const r=Math.floor(Math.random()*6)+1;
-        if(r>=MT.scorpion){t.scorpions--;resultMsg=`💀 IMPACTO — Scorpion eliminado (D6=${r})`;}
-        else resultMsg=`Scorpion resistió (D6=${r}<${MT.scorpion})`;
+      const MT = Rc.missileTargets;
+      if(armyPoints(t) <= 1) {
+        const res=document.getElementById('miss-result');
+        if(res){res.textContent='⚠ Sin efecto — no puede eliminar la última unidad';res.style.color='#888';}
+        setTimeout(()=>{ modal.remove(); },2000);
+        return;
       }
+
+      // Roll dice for each armored unit type present, collect targetable units
+      const targetable = [];
+      if(t.soldiers > 0) {
+        targetable.push({ type:'soldiers', label:'🪖 Soldado' });
+      }
+      if(t.mechs > 0) {
+        const r=Math.floor(Math.random()*6)+1;
+        addLog('Dado Mech D6='+r+' (necesita ≥'+MT.mech+')', 'combat');
+        if(r >= MT.mech) targetable.push({ type:'mechs', label:'🤖 Mech (D6='+r+' ✓)' });
+        else addLog('Mech resistió (D6='+r+'<'+MT.mech+')', 'combat');
+      }
+      if(t.aircraft > 0) {
+        const r=Math.floor(Math.random()*6)+1;
+        addLog('Dado Aircraft D6='+r+' (necesita ≥'+MT.aircraft+')', 'combat');
+        if(r >= MT.aircraft) targetable.push({ type:'aircraft', label:'✈ Aircraft (D6='+r+' ✓)' });
+        else addLog('Aircraft resistió (D6='+r+'<'+MT.aircraft+')', 'combat');
+      }
+      if(t.scorpions > 0) {
+        const r=Math.floor(Math.random()*6)+1;
+        addLog('Dado Scorpion D6='+r+' (necesita ≥'+MT.scorpion+')', 'combat');
+        if(r >= MT.scorpion) targetable.push({ type:'scorpions', label:'🦂 Scorpion (D6='+r+' ✓)' });
+        else addLog('Scorpion resistió (D6='+r+'<'+MT.scorpion+')', 'combat');
+      }
+
+      if(targetable.length === 0) {
+        const res=document.getElementById('miss-result');
+        if(res){res.textContent='🛡 IMPACTO SIN EFECTO — todas las unidades resistieron';res.style.color='#888';}
+        updateMap(); refreshCards();
+        setTimeout(()=>{ modal.remove(); },2500);
+        return;
+      }
+
+      const applyKill = (unitType) => {
+        t[unitType]--;
+        const killed = targetable.find(u=>u.type===unitType);
+        addLog('Misil → '+terName(id)+': '+(killed?killed.label:'unidad')+' eliminada','combat');
+        updateMap(); refreshCards();
+        const step=(STEPS[G_step.phase]||[])[G_step.idx];
+        if(step) renderStepActions(step);
+        setTimeout(()=>{ modal.remove(); },1500);
+      };
+
+      if(targetable.length === 1) {
+        // Only one option — apply automatically
+        const res=document.getElementById('miss-result');
+        if(res){res.textContent='💀 IMPACTO — '+targetable[0].label+' eliminado';res.style.color='#cc4433';}
+        applyKill(targetable[0].type);
+        return;
+      }
+
+      // Multiple options — player chooses via global temp function
+      window._missileKillFn = applyKill;
+      const res=document.getElementById('miss-result');
+      if(res){
+        res.innerHTML='<div style="color:#cc4433;font-size:11px;margin-bottom:10px;">💀 IMPACTO — elige unidad a eliminar:</div>'+
+          targetable.map(u=>'<button onclick="window._missileKillFn(\'' + u.type + '\')" style="display:block;width:100%;margin-bottom:6px;background:#0a0a0d;border:1px solid #cc4433;color:#cc4433;padding:8px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;">' + u.label + '</button>').join('');
+      }
+      btn.style.display='none';
+      return;
     }
 
-    const res=document.getElementById('miss-result');
-    if(res){res.textContent=resultMsg;res.style.color=resultColor;}
+    const res2=document.getElementById('miss-result');
+    if(res2 && resultMsg){res2.textContent=resultMsg;res2.style.color=resultColor;}
     updateMap();refreshCards();
-
-    // Re-render step
-    const step=(STEPS[G_step.phase]||[])[G_step.idx];
-    if(step) renderStepActions(step);
-
+    const step2=(STEPS[G_step.phase]||[])[G_step.idx];
+    if(step2) renderStepActions(step2);
     setTimeout(()=>{ modal.remove(); },2500);
   };
 }
