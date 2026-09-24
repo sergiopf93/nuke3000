@@ -603,10 +603,38 @@ function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
   const src=G.territories[srcId], tgt=G.territories[targetId];
   if(!src||!tgt){if(callback)callback();return;}
   const Rc=RULES.combat;
+  const prevDefOwner=tgt.owner;
   let round=0;
   function doRound(){
     if(round++>10||armyPoints(src)<=1||armyPoints(tgt)===0){
-      if(armyPoints(tgt)===0){tgt.owner=cpuFk;addLog('['+((FDATA[cpuFk]&&FDATA[cpuFk].name)||cpuFk)+'] conquista '+terName(targetId),'combat');checkElimination(tgt.owner);}
+      if(armyPoints(tgt)===0){
+        // Conquest: move units from src to tgt, leave 1 in src
+        tgt.owner=cpuFk;
+        const apSrc=armyPoints(src);
+        if(apSrc>1){
+          // Move all units to tgt, put 1 cheapest back in src
+          const leaveUnit=src.soldiers>0?'soldiers':src.mechs>0?'mechs':src.aircraft>0?'aircraft':'scorpions';
+          tgt.soldiers+=src.soldiers; src.soldiers=0;
+          tgt.mechs+=src.mechs; src.mechs=0;
+          tgt.aircraft+=src.aircraft; src.aircraft=0;
+          tgt.scorpions+=src.scorpions; src.scorpions=0;
+          if(leaveUnit==='soldiers'&&tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
+          else if(leaveUnit==='mechs'&&tgt.mechs>0){src.mechs=1;tgt.mechs--;}
+          else if(leaveUnit==='aircraft'&&tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
+          else if(leaveUnit==='scorpions'&&tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
+        } else {
+          // Only 1 unit — stays in src, tgt gets 0 (attacker stays put)
+          addLog('⚠ Conquista sin refuerzos — origen mantiene su unidad','combat');
+        }
+        // Safety: src must never be empty
+        if(armyPoints(src)===0){
+          if(tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
+          else if(tgt.mechs>0){src.mechs=1;tgt.mechs--;}
+        }
+        addLog('['+(FDATA[cpuFk]?.name||cpuFk)+'] conquista '+terName(targetId),'combat');
+        checkElimination(prevDefOwner);
+        checkWinCondition();
+      }
       updateMap();refreshCards();if(callback)callback();return;
     }
     const attP=buildPool(src);if(attP.length>0)attP.splice(attP.length-1,1);
@@ -616,6 +644,7 @@ function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
     const aR=attP.slice(0,aN).map(d=>Math.floor(Math.random()*d.sides)+1);
     const dR=defP.slice(0,dN).map(d=>Math.floor(Math.random()*d.sides)+1);
     if(cpuFk==='clt'){aR.forEach((_,i)=>aR[i]++);} // HOLY WAR: +1 ALL attack dice
+    if(tgt.owner==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
     const aS=[...aR].sort((a,b)=>b-a),dS=[...dR].sort((a,b)=>b-a);
     for(let i=0;i<Math.min(aS.length,dS.length);i++){
       if(Rc.tieBreakerDefender?aS[i]>dS[i]:aS[i]>=dS[i])applyLoss(tgt);else applyLoss(src);
