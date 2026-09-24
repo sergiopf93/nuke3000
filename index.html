@@ -2,14 +2,270 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NUKE 3000">
+  <meta name="theme-color" content="#030305">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    #online-section {
+      margin-top: 16px;
+      border-top: 1px solid #1a1a20;
+      padding-top: 16px;
+    }
+    #online-section h4 {
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: #888;
+      margin: 0 0 10px;
+    }
+    .online-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .online-row input {
+      flex: 1;
+      background: #080810;
+      border: 1px solid #2a2a30;
+      color: #ccc;
+      padding: 8px 12px;
+      font-family: Orbitron, sans-serif;
+      font-size: 12px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+    .online-row input::placeholder { color: #444; letter-spacing: 2px; }
+    .obtn {
+      background: #0a0a0d;
+      border: 1px solid #555;
+      color: #aaa;
+      padding: 8px 16px;
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color .2s, color .2s;
+    }
+    .obtn:hover { border-color: #C8A800; color: #C8A800; }
+    .obtn.primary { border-color: #C8A800; color: #C8A800; }
+    #online-status {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 2px;
+      text-align: center;
+      padding: 4px 0;
+    }
+    #online-status.connected { color: #4a8840; }
+    #online-status.error { color: #8B1A1A; }
+
+    /* ── Waiting room ─────────────────────────────────────── */
+    #wr-box {
+      width: 580px;
+      max-width: 95vw;
+      border: 1px solid #1a1a20;
+      background: #050508;
+      padding: 28px 32px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #wr-title {
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 5px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    #wr-code {
+      font-family: Orbitron, sans-serif;
+      font-size: 38px;
+      letter-spacing: 10px;
+      color: #C8A800;
+      text-shadow: 0 0 20px #C8A800aa;
+      margin-bottom: 6px;
+    }
+    #wr-hint {
+      font-size: 10px;
+      color: #444;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    /* faction picker inside waiting room */
+    #wr-faction-section {
+      margin-bottom: 20px;
+    }
+    #wr-faction-section h5 {
+      font-family: Orbitron, sans-serif;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: #888;
+      margin: 0 0 10px;
+    }
+    #wr-faction-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .wr-fp {
+      border: 1px solid #1a1a20;
+      background: #08080c;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .wr-fp:hover:not(.wr-locked) { border-color: #555; background: #0d0d12; }
+    .wr-fp.wr-selected { border-color: #C8A800 !important; background: #0a0900 !important; }
+    .wr-fp.wr-locked {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .wr-fp.wr-locked::after {
+      content: 'OCUPADA';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      font-family: Orbitron, sans-serif;
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: #fff;
+      background: rgba(0,0,0,0.75);
+      padding: 3px 6px;
+      white-space: nowrap;
+    }
+    .wr-fp-name {
+      font-family: Orbitron, sans-serif;
+      font-size: 9px;
+      letter-spacing: 2px;
+      margin-bottom: 2px;
+    }
+    .wr-fp-who {
+      font-size: 9px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+
+    /* player list */
+    #wr-players-section h5 {
+      font-family: Orbitron, sans-serif;
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: #888;
+      margin: 0 0 10px;
+    }
+    #wr-players {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+      min-height: 40px;
+    }
+    .wr-player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border: 1px solid #1a1a20;
+      background: #08080c;
+    }
+    .wr-player-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .wr-player-name {
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      color: #ccc;
+      flex: 1;
+    }
+    .wr-player-faction { font-size: 10px; color: #888; letter-spacing: 2px; }
+    .wr-player-host { font-size: 9px; color: #C8A800; letter-spacing: 2px; margin-left: 6px; }
+
+    #wr-status {
+      font-size: 10px;
+      color: #666;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    #wr-start {
+      width: 100%;
+      padding: 12px;
+      font-family: Orbitron, sans-serif;
+      font-size: 12px;
+      letter-spacing: 4px;
+      background: #0a0a0d;
+      border: 1px solid #C8A800;
+      color: #C8A800;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    #wr-start:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+    #wr-leave {
+      width: 100%;
+      padding: 8px;
+      font-family: Orbitron, sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      background: transparent;
+      border: 1px solid #222;
+      color: #444;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-<!-- LOBBY -->
+
+<!-- ══════════════════════════════════════════════════════════
+     WAITING ROOM OVERLAY
+     ══════════════════════════════════════════════════════════ -->
+<div id="waiting-room" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(4,4,8,0.97);align-items:center;justify-content:center;">
+  <div id="wr-box">
+    <div id="wr-title">SALA DE ESPERA</div>
+    <div id="wr-code">——————</div>
+    <div id="wr-hint">Comparte este código con los otros jugadores</div>
+
+    <!-- Faction picker (visible to everyone) -->
+    <div id="wr-faction-section">
+      <h5>ELIGE TU FACCIÓN</h5>
+      <div id="wr-faction-grid"></div>
+    </div>
+
+    <!-- Player list -->
+    <div id="wr-players-section">
+      <h5>JUGADORES EN LA SALA</h5>
+      <div id="wr-players"></div>
+    </div>
+
+    <div id="wr-status">ESPERANDO JUGADORES...</div>
+    <button id="wr-start" disabled onclick="wrStartGame()">☢ INICIAR PARTIDA</button>
+    <button id="wr-leave" onclick="wrLeave()">← SALIR DE LA SALA</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOBBY
+     ══════════════════════════════════════════════════════════ -->
 <div id="lobby">
   <div id="lin">
     <div id="lhdr">
@@ -20,7 +276,6 @@
       <h3>ELIGE FACCIÓN</h3>
       <div class="fgrid" id="faction-grid"></div>
       <script>
-      // Build faction cards with portraits dynamically after ASSETS loads
       (function() {
         const factions = [
           {f:'imp',name:'IMPERATORS',leader:'Augustus XXVII · Europa',ability:'Imperial Defense: +1 lowest def die',goal:'PAX AUGUSTA: 5 regions OR 30 territories'},
@@ -38,15 +293,15 @@
           div.onclick = () => pickF(div);
           div.innerHTML = `
             <div class="fdot"></div>
-              <div class="fpn">${name}</div>
+            <div class="fpn">${name}</div>
             <div class="fpl">${leader}</div>
             <div class="fpt">${ability}</div>
             <div class="fgoal">${goal}</div>`;
           grid.appendChild(div);
         });
-
       })();
       </script>
+
       <div class="nrow"><label>NOMBRE</label><input id="pname" placeholder="COMANDANTE" maxlength="16"/></div>
       <div class="nrow"><label>JUGADORES</label>
         <select id="pcount">
@@ -56,26 +311,38 @@
           <option value="6">6 jugadores</option>
         </select>
       </div>
-      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;">
+
+      <div id="online-section">
+        <h4>☁ MULTIJUGADOR ONLINE</h4>
+        <div class="online-row" id="online-join-row">
+          <button class="obtn primary" onclick="onlineCreateRoom()">⊕ CREAR SALA</button>
+          <input id="join-code" placeholder="CÓDIGO" maxlength="6" style="text-align:center;"/>
+          <button class="obtn" onclick="onlineJoinRoom()">→ UNIRSE</button>
+        </div>
+        <div id="online-status">OFFLINE · MODO LOCAL</div>
+        <button id="btn-disconnect" onclick="onlineDisconnect()"
+          style="display:none;width:100%;margin-top:6px;background:#0a0a0d;
+          border:1px solid #8B1A1A;color:#8B1A1A;padding:6px;
+          font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:3px;cursor:pointer;">
+          ✕ SALIR DE LA SALA
+        </button>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;margin-bottom:8px;">
         <button onclick="showRules()" style="background:#0a0a0d;border:1px solid #555;color:#888;
           padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
           ⚙ EDITAR REGLAS
         </button>
-        <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA</button>
-        <button onclick="showCreateRoom()" style="flex:1;background:#0a0a0d;border:1px solid #4488bb;color:#4488bb;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">🌐 CREAR SALA</button>
-      </div>
-      <div id="room-join-bar" style="display:flex;gap:8px;margin-top:8px;">
-        <input id="room-code-input" placeholder="Código de sala (6 letras)" maxlength="6"
-          style="flex:1;background:#050508;border:1px solid #333;color:#C8A800;padding:10px 14px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;"
-          oninput="this.value=this.value.toUpperCase()">
-        <button onclick="joinRoom(document.getElementById('room-code-input').value)" style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 18px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;">UNIRSE ▶</button>
+        <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA LOCAL</button>
       </div>
       <div class="lquote">"Now I am become death, the destroyer of worlds" — Oppenheimer, 1945</div>
     </div>
   </div>
 </div>
 
-<!-- GAME -->
+<!-- ══════════════════════════════════════════════════════════
+     GAME HEADER
+     ══════════════════════════════════════════════════════════ -->
 <div id="hdr" style="display:none">
   <h1>NUKE 3000<small>ARMAGEDDON PROTOCOL · PLAYTESTER v0.3</small></h1>
   <div id="turn-ui">
@@ -85,11 +352,21 @@
     <button class="hbtn" id="btn-next" onclick="nextStep()">SIGUIENTE ▶</button>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════
+     GAME MAIN
+     ══════════════════════════════════════════════════════════ -->
 <div id="main" style="display:none">
   <div id="lp">
+    <button id="lp-toggle" onclick="togglePanel('lp')" title="Colapsar panel">◀</button>
+    <div id="turn-header" style="display:none;padding:5px 8px;border-bottom:1px solid #0e0e12;">
+      <div id="turn-phase-lbl" style="font-family:Orbitron,sans-serif;font-size:7px;letter-spacing:3px;color:#C8A800;margin-bottom:4px;">TURNO</div>
+      <div id="turn-dots" style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;"></div>
+    </div>
     <div class="ptitle">FACCIONES</div>
     <div id="fcards"></div>
   </div>
+
   <div id="board-area">
     <div id="bcontrols">
       <button onclick="resetMapView()" title="Resetear vista" style="background:#0a0a0d;border:1px solid #333;color:#888;width:28px;height:28px;cursor:pointer;font-size:14px;">⌂</button>
@@ -97,77 +374,67 @@
       <div class="cb" onclick="zv(.87)" title="Zoom −">−</div>
       <div class="cb" onclick="resetV()" title="Centrar">⌖</div>
     </div>
-    <div id="roombar">SALA · <span id="rcode">—</span></div>
+    <div id="roombar">SALA · <span id="rcode">LOCAL</span>
+      <button id="roombar-disconnect" onclick="onlineDisconnect()"
+        style="display:none;margin-left:8px;background:transparent;border:1px solid #8B1A1A;
+        color:#8B1A1A;padding:1px 6px;font-family:Orbitron,sans-serif;font-size:8px;
+        letter-spacing:1px;cursor:pointer;" title="Salir de la sala">✕</button>
+    </div>
+
     <div id="setup-panel" style="display:none;position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(4,4,8,0.96);border-bottom:1px solid #1a1a20;">
-  <!-- Roll phase: centered fullscreen -->
-  <div id="setup-roll-mode" style="display:flex;align-items:center;justify-content:center;padding:30px;">
-    <div style="width:560px;">
-      <div id="setup-title" style="font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:4px;color:#C8A800;margin-bottom:16px;"></div>
-      <div id="setup-info" style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.8;"></div>
-      <div id="setup-rolls" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
-      <div id="setup-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-      <div id="setup-log" style="margin-top:10px;font-size:11px;color:#999;max-height:60px;overflow-y:auto;"></div>
+      <div id="setup-roll-mode" style="display:flex;align-items:center;justify-content:center;padding:30px;">
+        <div style="width:560px;">
+          <div id="setup-title" style="font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:4px;color:#C8A800;margin-bottom:16px;"></div>
+          <div id="setup-info" style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.8;"></div>
+          <div id="setup-rolls" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+          <div id="setup-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+          <div id="setup-log" style="margin-top:10px;font-size:11px;color:#999;max-height:60px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div id="setup-bar-mode" style="display:none;padding:10px 16px;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:0 0 auto;">
+          <div id="setup-bar-title" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;"></div>
+          <div id="setup-bar-info" style="font-size:10px;color:#aaa;margin-top:2px;"></div>
+        </div>
+        <div id="setup-bar-actions" style="display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto;"></div>
+        <div id="setup-bar-log" style="font-size:11px;color:#999;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"></div>
+      </div>
     </div>
-  </div>
-  <!-- Claim/soldiers/nuclear phase: compact bar at top -->
-  <div id="setup-bar-mode" style="display:none;padding:10px 16px;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="flex:0 0 auto;">
-      <div id="setup-bar-title" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;"></div>
-      <div id="setup-bar-info" style="font-size:10px;color:#aaa;margin-top:2px;"></div>
-    </div>
-    <div id="setup-bar-actions" style="display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto;"></div>
-    <div id="setup-bar-log" style="font-size:11px;color:#999;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"></div>
-  </div>
-</div>
-<div id="map-wrap">
+
+    <div id="map-wrap">
       <svg id="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="region-legend"></div>
   </div>
+
   <div id="rp">
-
-  <!-- TOP: Phase header + current step instruction -->
-  <div id="phase-header" style="background:#050508;border-bottom:1px solid #1a1a20;padding:10px 12px;flex-shrink:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div id="pg-phase" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;">PREPARACIÓN</div>
-      <div id="pg-turn-owner" style="font-size:10px;color:#888;letter-spacing:1px;"></div>
+    <button id="rp-toggle" onclick="togglePanel('rp')" title="Colapsar panel">▶</button>
+    <div id="phase-header" style="background:#050508;border-bottom:1px solid #1a1a20;padding:10px 12px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div id="pg-phase" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;">PREPARACIÓN</div>
+        <div id="pg-turn-owner" style="font-size:10px;color:#888;letter-spacing:1px;"></div>
+      </div>
+      <div id="step-instruction" style="background:#08080c;border:1px solid #1a1a20;padding:8px 10px;border-radius:1px;">
+        <div id="step-title" style="font-family:Orbitron,sans-serif;font-size:11px;color:#C8A800;margin-bottom:4px;letter-spacing:2px;"></div>
+        <div id="step-detail" style="font-size:11px;color:#777;line-height:1.6;"></div>
+      </div>
     </div>
-    <!-- Current step instruction box -->
-    <div id="step-instruction" style="background:#08080c;border:1px solid #1a1a20;padding:8px 10px;border-radius:1px;">
-      <div id="step-title" style="font-family:Orbitron,sans-serif;font-size:11px;color:#C8A800;margin-bottom:4px;letter-spacing:2px;"></div>
-      <div id="step-detail" style="font-size:11px;color:#777;line-height:1.6;"></div>
+
+    <div id="actions-area" style="flex:1;overflow-y:auto;min-height:0;">
+      <div id="step-dots" style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid #0e0e12;flex-wrap:wrap;"></div>
+      <div id="step-actions" style="padding:10px 12px;"></div>
+      <div id="objective-section" style="display:none;margin:0;padding:10px 12px;border-top:1px solid #0e0e12;">
+        <div style="font-size:9px;letter-spacing:3px;color:#999;margin-bottom:6px;">OBJETIVO</div>
+        <div id="faction-objective" style="font-size:11px;color:#999;line-height:1.6;"></div>
+      </div>
+    </div>
+
+    <div id="logwrap" style="height:200px;min-height:200px;border-top:1px solid #1a1a20;display:flex;flex-direction:column;flex-shrink:0;">
+      <div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:3px;color:#999;padding:5px 10px;border-bottom:1px solid #0e0e12;flex-shrink:0;">REGISTRO</div>
+      <div id="clog" style="flex:1;overflow-y:auto;padding:6px 10px;font-size:11px;"></div>
     </div>
   </div>
-
-  <!-- MIDDLE: Actions area (scrollable) -->
-  <div id="actions-area" style="flex:1;overflow-y:auto;min-height:0;">
-
-    <!-- Step progress dots -->
-    <div id="step-dots" style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid #0e0e12;flex-wrap:wrap;"></div>
-
-    <!-- Main action panel (changes per step) -->
-    <div id="step-actions" style="padding:10px 12px;">
-      <!-- Content injected by JS -->
-    </div>
-
-    <!-- Faction objective -->
-    <div id="objective-section" style="display:none;margin:0;padding:10px 12px;border-top:1px solid #0e0e12;">
-      <div style="font-size:9px;letter-spacing:3px;color:#999;margin-bottom:6px;">OBJETIVO</div>
-      <div id="faction-objective" style="font-size:11px;color:#999;line-height:1.6;"></div>
-    </div>
-
-  </div>
-
-  <!-- BOTTOM: Log -->
-  <div id="logwrap" style="height:200px;min-height:200px;border-top:1px solid #1a1a20;display:flex;flex-direction:column;flex-shrink:0;">
-    <div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:3px;color:#999;padding:5px 10px;border-bottom:1px solid #0e0e12;flex-shrink:0;">REGISTRO</div>
-    <div id="clog" style="flex:1;overflow-y:auto;padding:6px 10px;font-size:11px;"></div>
-  </div>
-
 </div>
-
-
-
 
 <!-- DICE MODAL -->
 <div id="dmodal">
@@ -187,8 +454,9 @@
     </div>
     <div id="dres">Selecciona unidades y lanza los dados</div>
     <div class="dbtns">
-      <button id="btn-retreat" style="display:none;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px 16px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-right:8px;" onclick="retreatCombat()">↩ RETIRAR</button><button class="dbtn" onclick="rollCombat()">⚄ LANZAR DADOS</button>
-      <button class="dbtn cx" onclick="closeDice()">CANCELAR</button>
+      <button id="btn-retreat" style="display:none;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px 16px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-right:8px;" onclick="retreatCombat()">↩ RETIRAR</button>
+      <button id="btn-roll" class="dbtn" onclick="rollCombat()">⚄ LANZAR DADOS</button>
+      <button id="btn-cancel" class="dbtn cx" onclick="closeDice()">CANCELAR</button>
     </div>
   </div>
 </div>
@@ -204,6 +472,21 @@
 
 <div id="tip"></div>
 <div id="pflash"></div>
+
+<!-- ── Session widget: always visible when in a room ─────── -->
+<div id="session-widget" style="display:none;position:fixed;bottom:max(12px, env(safe-area-inset-bottom, 12px));right:max(12px, env(safe-area-inset-right, 12px));z-index:99999;background:#08080c;border:1px solid #8B1A1A;padding:6px 10px 6px 12px;font-family:Orbitron,sans-serif;align-items:center;gap:8px;box-shadow:0 0 12px rgba(139,26,26,0.3);">
+  <div style="display:flex;flex-direction:column;gap:1px;">
+    <div style="font-size:8px;color:#555;letter-spacing:2px;">SALA</div>
+    <div id="sw-code" style="font-size:12px;color:#C8A800;letter-spacing:3px;">——</div>
+  </div>
+  <div style="width:1px;height:28px;background:#1a1a20;"></div>
+  <div id="sw-faction" style="font-size:9px;color:#888;letter-spacing:1px;"></div>
+  <button onclick="onlineDisconnect()" style="background:transparent;border:1px solid #8B1A1A;color:#8B1A1A;padding:3px 8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;" onmouseover="this.style.background='#8B1A1A22'" onmouseout="this.style.background='transparent'">
+    ✕ SALIR
+  </button>
+</div>
+
+<!-- SCRIPTS -->
 <script src="js/assets.js"></script>
 <script src="js/data.js"></script>
 <script src="js/setup.js"></script>
@@ -211,5 +494,328 @@
 <script src="js/engine.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/online.js"></script>
+<script src="js/firebase-config.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  ONLINE LOBBY
+// ═══════════════════════════════════════════════════════════
+
+const FACTIONS_DEF = [
+  {f:'imp', name:'IMPERATORS',     color:'#C8A800'},
+  {f:'lib', name:'LIBERTOS',       color:'#4A7C3F'},
+  {f:'clt', name:'CULT TAL-MAUT',  color:'#8B1A1A'},
+  {f:'erb', name:'EREBUS SWARM',   color:'#5555aa'},
+  {f:'prm', name:'PROMETHEUS',     color:'#1B4F8A'},
+  {f:'shn', name:'SHININ',         color:'#b0b0b0'},
+];
+
+function _setOnlineStatus(msg, cls) {
+  const el = document.getElementById('online-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = cls || '';
+  // Show/hide disconnect buttons
+  const connected = cls === 'connected' || ONLINE.isOnline();
+  const btnLobby = document.getElementById('btn-disconnect');
+  const btnGame  = document.getElementById('roombar-disconnect');
+  if (btnLobby) btnLobby.style.display = connected ? 'block' : 'none';
+  if (btnGame)  btnGame.style.display  = connected ? 'inline-block' : 'none';
+  _updateSessionWidget();
+}
+
+// ── Session widget — always visible when in a room ──────────
+function _updateSessionWidget() {
+  const widget = document.getElementById('session-widget');
+  if (!widget) return;
+  if (!ONLINE.isOnline()) {
+    widget.style.display = 'none';
+    return;
+  }
+  widget.style.display = 'flex';
+  const codeEl    = document.getElementById('sw-code');
+  const factionEl = document.getElementById('sw-faction');
+  if (codeEl)    codeEl.textContent    = ONLINE.getRoomCode() || '——';
+  if (factionEl) factionEl.textContent = G.pf ? G.pf.toUpperCase() : '';
+}
+
+// Poll every second to keep widget in sync across all screens
+setInterval(_updateSessionWidget, 1000);
+
+// ── Disconnect from room ─────────────────────────────────────
+function onlineDisconnect() {
+  if (!ONLINE.isOnline()) return;
+  if (!confirm('¿Salir de la sala?')) return;
+  ONLINE.leaveRoom().then(() => {
+    _setOnlineStatus('OFFLINE · MODO LOCAL', '');
+    _gameAlreadyLaunched = false;
+    // Close waiting room if open
+    const wr = document.getElementById('waiting-room');
+    if (wr) wr.style.display = 'none';
+    // If in game, reload to go back to lobby
+    const hdr = document.getElementById('hdr');
+    if (hdr && hdr.style.display !== 'none') {
+      localStorage.clear();
+      location.reload();
+    }
+  }).catch(() => { localStorage.clear(); location.reload(); });
+}
+
+// ── Build faction picker inside waiting room ────────────────
+function _buildWrFactionGrid(takenFactions) {
+  const grid = document.getElementById('wr-faction-grid');
+  grid.innerHTML = '';
+  FACTIONS_DEF.forEach(({f, name, color}) => {
+    const taken = takenFactions[f]; // name of player who took it, or null
+    const isMe = G.pf === f;
+    const div = document.createElement('div');
+    div.className = 'wr-fp' + (isMe ? ' wr-selected' : '') + (taken && !isMe ? ' wr-locked' : '');
+    div.dataset.f = f;
+    div.innerHTML = `
+      <div class="wr-fp-name" style="color:${color};">${name}</div>
+      <div class="wr-fp-who">${isMe ? '★ TÚ' : (taken ? taken : 'LIBRE')}</div>`;
+    if (!taken || isMe) {
+      div.onclick = () => _wrPickFaction(f);
+    }
+    grid.appendChild(div);
+  });
+}
+
+// ── Pick faction inside waiting room ───────────────────────
+async function _wrPickFaction(f) {
+  G.pf = f;
+  // Update Firebase
+  await ONLINE.updateMyFaction(f);
+}
+
+// ── Show waiting room ───────────────────────────────────────
+function _showWaitingRoom() {
+  const wr = document.getElementById('waiting-room');
+  wr.style.display = 'flex';
+  document.getElementById('wr-code').textContent = ONLINE.getRoomCode();
+
+  const startBtn = document.getElementById('wr-start');
+  if (!ONLINE.isHost()) {
+    startBtn.textContent = 'ESPERANDO AL HOST...';
+    startBtn.disabled = true;
+  }
+
+  ONLINE.onRoomUpdate(_renderWaitingRoom);
+}
+
+// ── Render waiting room from meta ───────────────────────────
+function _renderWaitingRoom(meta) {
+  if (!meta) return;
+  const players = meta.players || {};
+  const host = meta.host;
+  const startBtn = document.getElementById('wr-start');
+  const status = document.getElementById('wr-status');
+
+  // Build taken factions map: { fk -> playerName }
+  const takenFactions = {};
+  Object.entries(players).forEach(([uid, p]) => {
+    if (p.faction) {
+      takenFactions[p.faction] = (uid === ONLINE.getUserId()) ? null : (p.name || '?');
+    }
+  });
+
+  // Rebuild faction grid
+  _buildWrFactionGrid(takenFactions);
+
+  // Render player list
+  const container = document.getElementById('wr-players');
+  container.innerHTML = Object.entries(players).map(([uid, p]) => {
+    const fd = FACTIONS_DEF.find(x => x.f === p.faction);
+    const color = fd ? fd.color : '#888';
+    const isHost = uid === host;
+    const isMe = uid === ONLINE.getUserId();
+    return `<div class="wr-player">
+      <div class="wr-player-dot" style="background:${color};box-shadow:0 0 5px ${color}66;"></div>
+      <div class="wr-player-name">${p.name || 'COMANDANTE'}${isMe ? ' <span style="color:#C8A800;font-size:9px;letter-spacing:1px;">★ TÚ</span>' : ''}</div>
+      <div class="wr-player-faction">${p.faction ? p.faction.toUpperCase() : '—'}</div>
+      ${isHost ? '<div class="wr-player-host">HOST</div>' : ''}
+    </div>`;
+  }).join('');
+
+  const count = Object.keys(players).length;
+  const allHaveFaction = Object.values(players).every(p => p.faction);
+  status.textContent = `${count} JUGADOR${count !== 1 ? 'ES' : ''} EN LA SALA${!allHaveFaction ? ' · FALTAN FACCIONES' : ''}`;
+
+  // Host start button
+  if (ONLINE.isHost()) {
+    const canStart = count >= 2 && allHaveFaction;
+    startBtn.disabled = !canStart;
+    if (count < 2) startBtn.textContent = 'ESPERANDO MÁS JUGADORES...';
+    else if (!allHaveFaction) startBtn.textContent = 'TODOS DEBEN ELEGIR FACCIÓN...';
+    else startBtn.textContent = `☢ INICIAR PARTIDA (${count}J)`;
+  }
+
+  // Guest: game started
+  if (!ONLINE.isHost() && meta.status === 'playing') {
+    _launchOnlineGame(meta);
+  }
+}
+
+// ── Create room ─────────────────────────────────────────────
+function onlineCreateRoom() {
+  if (!selF) {
+    _setOnlineStatus('⚠ ELIGE UNA FACCIÓN PRIMERO', 'error');
+    return;
+  }
+  const name = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  G.pname = name;
+  G.pf = selF;
+  _setOnlineStatus('CREANDO SALA...', '');
+  ONLINE.createRoom().then(() => {
+    _setOnlineStatus('SALA ' + ONLINE.getRoomCode() + ' · ESPERANDO JUGADORES', 'connected');
+    _updateSessionWidget();
+    _showWaitingRoom();
+  }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
+}
+
+// ── Join room (no faction required upfront) ─────────────────
+function onlineJoinRoom() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!code) { _setOnlineStatus('INTRODUCE UN CÓDIGO', 'error'); return; }
+  const name = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  G.pname = name;
+  G.pf = null; // faction chosen inside waiting room
+  _setOnlineStatus('CONECTANDO...', '');
+  ONLINE.joinRoom(code).then(() => {
+    _setOnlineStatus('CONECTADO · SALA ' + code, 'connected');
+    _updateSessionWidget();
+    _showWaitingRoom();
+  }).catch(e => _setOnlineStatus('ERROR: ' + e.message, 'error'));
+}
+
+// ── Host starts game ────────────────────────────────────────
+function wrStartGame() {
+  const totalPlayerCount = parseInt(document.getElementById('pcount').value) || 4;
+  ONLINE.getPlayersInRoom().then(players => {
+    ONLINE.signalGameStart(players, totalPlayerCount).then(() => {
+      _launchOnlineGame({ players, totalPlayerCount });
+    });
+  });
+}
+
+// ── Leave room ──────────────────────────────────────────────
+function wrLeave() {
+  ONLINE.leaveRoom();
+  document.getElementById('waiting-room').style.display = 'none';
+  _setOnlineStatus('OFFLINE · MODO LOCAL', '');
+}
+
+// ── Launch game ─────────────────────────────────────────────
+let _gameAlreadyLaunched = false;
+
+function _launchOnlineGame(meta) {
+  if (_gameAlreadyLaunched) return;
+  _gameAlreadyLaunched = true;
+  document.getElementById('waiting-room').style.display = 'none';
+  const players = meta.players || {};
+  const humanCount = Object.keys(players).length;
+
+  // Use totalPlayerCount from host (includes CPUs), fallback to humanCount or 4
+  const totalPlayerCount = meta.totalPlayerCount || humanCount;
+  G.playerCount = (totalPlayerCount >= 3 && totalPlayerCount <= 6) ? totalPlayerCount : 4;
+  document.getElementById('pcount').value = G.playerCount;
+
+  // Build set of human player factions — CRITICAL for isHumanFaction()
+  _onlinePlayerFactions = new Set(
+    Object.values(players).map(p => p.faction).filter(Boolean)
+  );
+
+  // Set my faction and name from Firebase entry
+  const myEntry = players[ONLINE.getUserId()];
+  if (myEntry && myEntry.faction) {
+    G.pf   = myEntry.faction;
+    selF   = myEntry.faction;
+  }
+  if (myEntry && myEntry.name) G.pname = myEntry.name;
+
+  if (!G.pf) {
+    alert('Error: no tienes facción asignada. Vuelve a unirte a la sala.');
+    return;
+  }
+
+  startGame();
+}
+
+// ── startGame ───────────────────────────────────────────────
+function startGame() {
+  if (!selF && !G.pf) { alert('Elige una facción.'); return; }
+  if (selF && !ONLINE.isOnline()) G.pf = selF;
+  G.pname = document.getElementById('pname').value.trim() || 'COMANDANTE';
+  if (!ONLINE.isOnline()) G.playerCount = parseInt(document.getElementById('pcount').value);
+
+  initGame();
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('hdr').style.display = 'flex';
+  document.getElementById('main').style.display = 'grid';
+  document.getElementById('rcode').textContent = ONLINE.isOnline()
+    ? ONLINE.getRoomCode()
+    : Math.random().toString(36).slice(2,8).toUpperCase();
+  // Show disconnect button in game if online
+  const btnGame = document.getElementById('roombar-disconnect');
+  if (btnGame) btnGame.style.display = ONLINE.isOnline() ? 'inline-block' : 'none';
+  buildMap();
+  updateUI();
+  addLog(`${G.pname} comanda ${FDATA[G.pf].name}.`, 'sys');
+  setupPanZoom();
+  startSetupPhase();
+}
+
+// ── declareVictory ──────────────────────────────────────────
+const _origDeclareVictory = typeof declareVictory === 'function' ? declareVictory : null;
+function declareVictory(goal) {
+  if (_origDeclareVictory) _origDeclareVictory(goal);
+  if (ONLINE.isOnline()) ONLINE.signalGameEnd();
+}
+
+// ── Panel toggle (mobile) ───────────────────────────────────
+function togglePanel(side) {
+  const main = document.getElementById('main');
+  const btn  = document.getElementById(side + '-toggle');
+  const cls  = side + '-collapsed';
+  const isCollapsed = main.classList.toggle(cls);
+
+  if (side === 'lp') {
+    btn.textContent = isCollapsed ? '▶' : '◀';
+    btn.title = isCollapsed ? 'Expandir facciones' : 'Colapsar facciones';
+  } else {
+    btn.textContent = isCollapsed ? '◀' : '▶';
+    btn.title = isCollapsed ? 'Expandir acciones' : 'Colapsar acciones';
+  }
+
+  setTimeout(() => {
+    if (typeof resetMapView === 'function') resetMapView();
+    else if (typeof updateMap === 'function') updateMap();
+  }, 250);
+}
+
+// ── Mobile: prevent double-tap zoom on map ──────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const mapWrap = document.getElementById('map-wrap');
+  if (mapWrap) {
+    let lastTap = 0;
+    mapWrap.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTap < 300) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
+  }
+});
+
+// ── PWA: register service worker ───────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/nuke3000/sw.js')
+      .then(r => console.log('[SW] registered', r.scope))
+      .catch(e => console.warn('[SW] error', e));
+  });
+}
+</script>
+
 </body>
 </html>

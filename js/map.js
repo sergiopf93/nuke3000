@@ -10,18 +10,19 @@ function initGame() {
       ...FDATA[k],
       plutonium: 0,
       soldiers: setup.soldiers,
-      mechs: 0, aircraft: 0, scorpions: 0,
+      mechs: setup.mechs||0, aircraft: 0, scorpions: 0,
       missiles: setup.missiles,
       nukes: setup.nukes,
       alive: true,
       isPlayer: isPlayer,
       eliminatedArmies: 0,
     };
-    // Libertos special: start without nukes, get +5pu +5sol instead
-    if(k==='lib'){
+    // Libertos: swap starting nukes -> +3 Pu + 2 mechs (PDF V3)
+    const libSwap = RULES.setup.libertosSwap;
+    if(k==='lib' && libSwap && libSwap.enabled){
       G.factions[k].nukes = 0;
-      G.factions[k].plutonium = 5;
-      G.factions[k].soldiers += 5;
+      G.factions[k].plutonium += (libSwap.plutonium||3);
+      G.factions[k].mechs += (libSwap.mechs||2);
     }
   });
 

@@ -1,3 +1,17 @@
+
+function applyLibertosScorchedEarth(terId) {
+  // SCORCHED EARTH: gain 1 Missile + 1 Mech + 2 Pu when any Nuclear is destroyed; Mech on that territory
+  if(!G.factions['lib'] || G.factions['lib'].alive===false) return;
+  const libF = G.factions['lib'];
+  const R = RULES.prep;
+  libF.missiles = Math.min(R.maxMissiles||5, (libF.missiles||0)+1);
+  libF.mechs = (libF.mechs||0)+1;
+  libF.plutonium = (libF.plutonium||0)+2;
+  const t = G.territories[terId];
+  if(t && t.owner==='lib') t.mechs=(t.mechs||0)+1;
+  addLog('SCORCHED EARTH: Libertos +1 Misil +1 Mech +2 Pu ('+terName(terId)+')','res');
+  refreshCards();
+}
 let G_combat = null;
 
 // Called when PLAYER attacks
@@ -109,12 +123,21 @@ function openCombatModal(mode) {
       const attN = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
       showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
         ctx.attSelected = chosen;
-        // Defender dice are auto-selected (defender doesn't choose when being attacked)
+        // Now show defender selector (or go straight to roll)
         const defN = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
-        ctx.defSelected = ctx.defPool.slice(0, defN);
-        rollBtn.textContent='⚄ LANZAR DADOS';
-        rollBtn.style.display='inline-block';
-        rollBtn.onclick=()=>resolveCombatRound(false);
+        if(RULES.combat.allowUnitSelection && ctx.defPool.length>0) {
+          showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
+            ctx.defSelected = defChosen;
+            rollBtn.textContent='⚄ LANZAR DADOS';
+            rollBtn.style.display='inline-block';
+            rollBtn.onclick=()=>resolveCombatRound(false);
+          });
+        } else {
+          ctx.defSelected = ctx.defPool.slice(0, defN);
+          rollBtn.textContent='⚄ LANZAR DADOS';
+          rollBtn.style.display='inline-block';
+          rollBtn.onclick=()=>resolveCombatRound(false);
+        }
       });
     } else {
       rollBtn.textContent='⚄ LANZAR DADOS';
@@ -144,11 +167,6 @@ function openCombatModal(mode) {
     cancelBtn.onclick=()=>{closeDice();if(ctx.callback)ctx.callback();};
     setTimeout(()=>resolveCombatRound(true),800);
   }
-  // Clear any stale unit selectors from previous attempt
-  ['att','def'].forEach(s => {
-    const el = document.getElementById('unit-sel-'+s); if(el) el.remove();
-    delete window['_usel_'+s];
-  });
   document.getElementById('dmodal').classList.add('open');
 }
 
@@ -262,8 +280,8 @@ function resolveCombatRound(auto) {
   const def=ctx.defSelected||ctx.defPool.slice(0,Rc.maxDefenseDice);
   const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
   const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.attFk==='clt'){aR.forEach((_,i)=>aR[i]++);} // HOLY WAR: +1 to ALL attack dice
-  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 to ALL defense dice
+  if(ctx.attFk==='clt'){const mi=aR.indexOf(Math.min(...aR));if(mi>=0)aR[mi]++;}
+  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
   att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   def.forEach((_,i)=>{const el=document.getElementById('dd'+i);if(el){el.textContent=dR[i];el.className='die def spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   document.getElementById('dtot-a').textContent=aR.join(' · ');
@@ -292,7 +310,7 @@ function resolveDefenseRoll(aR) {
   const ctx=G_combat; if(!ctx) return;
   const def=ctx.defSelected;
   const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.defFk==='imp'){const mi=dR.indexOf(Math.min(...dR));if(mi>=0)dR[mi]++;}
+  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
   def.forEach((_,i)=>{const el=document.getElementById('dd'+i);if(el){el.textContent=dR[i];el.className='die def spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   document.getElementById('dtot-d').textContent=dR.join(' · ');
   setTimeout(()=>applyBattleResult(aR,dR),800);
@@ -372,12 +390,21 @@ function applyBattleResult(aR,dR) {
           showUnitSelectorInModal('att', ctx.attPool, attN2, (chosen)=>{
             ctx.attSelected = chosen;
             const defN2 = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
-            // Auto-select defender units
-            ctx.defSelected = ctx.defPool.slice(0,defN2);
-            rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-            rollBtn.style.display='inline-block';
-            rollBtn.disabled=false;
-            rollBtn.onclick=()=>resolveCombatRound(false);
+            if(RULES.combat.allowUnitSelection) {
+              showUnitSelectorInModal('def', ctx.defPool, defN2, (defChosen)=>{
+                ctx.defSelected = defChosen;
+                rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+                rollBtn.style.display='inline-block';
+                rollBtn.disabled=false;
+                rollBtn.onclick=()=>resolveCombatRound(false);
+              });
+            } else {
+              ctx.defSelected = ctx.defPool.slice(0,defN2);
+              rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+              rollBtn.style.display='inline-block';
+              rollBtn.disabled=false;
+              rollBtn.onclick=()=>resolveCombatRound(false);
+            }
           });
         } else {
           rollBtn.textContent='⚄ CONTINUAR ATAQUE';
@@ -550,9 +577,6 @@ function showReinforcementUI(count) {
   if(G.pf==='erb' && R.placement.ereubsAnywhereOverride) {
     validTers = myTers;
   } else if(!R.placement.onlyInNuclearTerritories) {
-    validTers = myTers;
-  } else if(G.round === 1) {
-    // Round 1: can place anywhere (no nuclears built yet)
     validTers = myTers;
   } else if(nucTers.length > 0) {
     validTers = nucTers;
@@ -820,6 +844,5 @@ function doMissileFire() {
     setTimeout(()=>{ modal.remove(); },2500);
   };
 }
-
 
 

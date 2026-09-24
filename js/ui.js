@@ -1,3 +1,103 @@
+
+function onlineCreateRoom() {
+  const statusEl = document.getElementById('online-status');
+  if(typeof ONLINE === 'undefined'){if(statusEl)statusEl.textContent='⚠ Firebase no disponible';return;}
+  if(!selF){alert('Elige una facción primero.');return;}
+  G.pf=selF;
+  G.pname=document.getElementById('pname').value.trim()||'COMANDANTE';
+  G.playerCount=parseInt(document.getElementById('pcount').value)||4;
+  if(statusEl){statusEl.textContent='Creando sala...';statusEl.className='';}
+  ONLINE.createRoom().then(()=>{
+    const code=ONLINE.getRoomCode();
+    if(statusEl){statusEl.textContent='✓ SALA: '+code;statusEl.className='connected';}
+    document.getElementById('room-code-input').value=code;
+    addLog('Sala creada: '+code,'sys');
+    // Set up room update listener
+    ONLINE.onRoomUpdate(meta=>{
+      const players=Object.values(meta.players||{});
+      if(statusEl) statusEl.textContent='SALA '+code+' · '+players.length+' jugador(es)';
+    });
+    // Show the host waiting UI
+    _showOnlineWaitingRoom(code);
+  }).catch(e=>{
+    if(statusEl){statusEl.textContent='⚠ Error: '+e.message;statusEl.className='error';}
+  });
+}
+
+function onlineJoinRoom(){
+  const code=document.getElementById('room-code-input').value.trim().toUpperCase();
+  if(!code||code.length<4){alert('Introduce un código de sala válido.');return;}
+  const statusEl=document.getElementById('online-status');
+  if(typeof ONLINE==='undefined'){if(statusEl)statusEl.textContent='⚠ Firebase no disponible';return;}
+  if(!selF){alert('Elige una facción primero.');return;}
+  G.pf=selF;
+  G.pname=document.getElementById('pname').value.trim()||'COMANDANTE';
+  if(statusEl){statusEl.textContent='Conectando a '+code+'...';statusEl.className='';}
+  ONLINE.joinRoom(code).then(()=>{
+    if(statusEl){statusEl.textContent='✓ En sala '+code;statusEl.className='connected';}
+    ONLINE.updateMyFaction(G.pf);
+    addLog('Unido a sala '+code,'sys');
+    ONLINE.onRoomUpdate(meta=>{
+      const players=Object.values(meta.players||{});
+      if(statusEl) statusEl.textContent='SALA '+code+' · '+players.length+' jugador(es)';
+      // If host started game
+      if(meta.status==='playing'&&!G.setup._inSetup){
+        _launchOnlineGame({players:meta.players,totalPlayerCount:meta.totalPlayerCount});
+      }
+    });
+    _showOnlineWaitingRoom(code);
+  }).catch(e=>{
+    if(statusEl){statusEl.textContent='⚠ '+e.message;statusEl.className='error';}
+  });
+}
+
+function onlineDisconnect(){
+  if(typeof ONLINE!=='undefined') ONLINE.leaveRoom();
+  const statusEl=document.getElementById('online-status');
+  if(statusEl){statusEl.textContent='OFFLINE · MODO LOCAL';statusEl.className='';}
+  addLog('Desconectado de la sala.','sys');
+}
+
+function _showOnlineWaitingRoom(code){
+  const ex=document.getElementById('online-waiting');if(ex)ex.remove();
+  const div=document.createElement('div');
+  div.id='online-waiting';
+  div.style.cssText='background:#050508;border:1px solid #1a1a20;padding:12px;margin-top:8px;text-align:center;';
+  div.innerHTML='<div style="font-family:Orbitron,sans-serif;font-size:10px;color:#C8A800;letter-spacing:3px;margin-bottom:8px;">SALA: '+code+'</div>'
+    +'<div style="font-size:9px;color:#666;margin-bottom:12px;">Esperando jugadores...<br>Comparte el código para que se unan</div>'
+    +(ONLINE.isHost()?'<button onclick="_startOnlineGame()" style="background:#0a0a0d;border:1px solid #88cc44;color:#88cc44;padding:8px 20px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">☢ COMENZAR PARTIDA</button>':'<div style="font-size:9px;color:#555;">El host iniciará la partida</div>');
+  const onlineSec=document.getElementById('online-section');
+  if(onlineSec) onlineSec.appendChild(div);
+  else document.getElementById('lbody').appendChild(div);
+}
+
+function _startOnlineGame(){
+  if(!ONLINE.isHost()) return;
+  ONLINE.getPlayersInRoom().then(players=>{
+    const total=Object.keys(players).length;
+    G.playerCount=Math.max(total,2);
+    initGame();
+    ONLINE.signalGameStart(players,G.playerCount);
+    // Assign CPU factions to non-player slots if needed
+    _launchOnlineGame({players,totalPlayerCount:G.playerCount});
+    ONLINE.pushActionWithState('GAME_PHASE_START',{});
+  });
+}
+
+let _onlinePlayerFactions = new Set();
+
+function _launchOnlineGame({players,totalPlayerCount}){
+  G.playerCount=totalPlayerCount||Object.keys(players).length;
+  _onlinePlayerFactions=new Set(Object.values(players).map(p=>p.faction).filter(Boolean));
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('hdr').style.display='flex';
+  document.getElementById('main').style.display='grid';
+  document.getElementById('rcode').textContent=ONLINE.getRoomCode();
+  if(!G.territories||!Object.keys(G.territories).length) initGame();
+  buildMap(); updateUI(); setupPanZoom();
+  addLog(G.pname+' comanda '+FDATA[G.pf].name+'.','sys');
+  startSetupPhase();
+}
 function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
 
 function addLog(msg,type){
@@ -13,189 +113,78 @@ function flashScreen(){
   el.style.display='block';setTimeout(()=>el.style.display='none',400);
 }
 
-
-function showCreateRoom() {
-  const code = Math.random().toString(36).substring(2,8).toUpperCase();
-  const ex = document.getElementById('room-modal');
-  if(ex) ex.remove();
-  const modal = document.createElement('div');
-  modal.id = 'room-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;';
-  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
-  modal.innerHTML = `<div style="background:#08080c;border:1px solid #4488bb;padding:32px 40px;text-align:center;font-family:Orbitron,sans-serif;">
-    <div style="font-size:11px;color:#4488bb;letter-spacing:3px;margin-bottom:16px;">SALA CREADA</div>
-    <div style="font-size:36px;color:#C8A800;letter-spacing:8px;margin-bottom:16px;">${code}</div>
-    <div style="font-size:10px;color:#666;margin-bottom:24px;">Comparte este código con los jugadores</div>
-    <div style="font-size:9px;color:#444;margin-bottom:20px;">⚠ Multijugador online próximamente — por ahora juega en local</div>
-    <button onclick="document.getElementById('room-modal').remove()" style="background:#0a0a0d;border:1px solid #4488bb;color:#4488bb;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;">CERRAR</button>
-  </div>`;
-  document.body.appendChild(modal);
-  document.getElementById('rcode').textContent = code;
-}
-
-function joinRoom(code) {
-  if(!code || code.length < 4) { addLog('Introduce un código de sala válido.','sys'); return; }
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `<div style="background:#08080c;border:1px solid #C8A800;padding:32px 40px;text-align:center;font-family:Orbitron,sans-serif;">
-    <div style="font-size:11px;color:#C8A800;letter-spacing:3px;margin-bottom:16px;">UNIRSE A SALA</div>
-    <div style="font-size:28px;color:#C8A800;letter-spacing:6px;margin-bottom:16px;">${code}</div>
-    <div style="font-size:9px;color:#444;margin-bottom:20px;">⚠ Multijugador online próximamente</div>
-    <button onclick="this.parentElement.parentElement.remove()" style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;">CERRAR</button>
-  </div>`;
-  document.body.appendChild(modal);
-  document.getElementById('rcode').textContent = code;
-}
-
 function showRules(){
-  const ex = document.getElementById('rules-modal');
-  if(ex){ ex.remove(); return; }
-
-  const R = RULES;
-  const modal = document.createElement('div');
-  modal.id = 'rules-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:12px;';
-  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
-
-  function inp(path, w='60px') {
-    const val = path.split('.').reduce((o,k)=>o&&o[k], R);
-    return `<input type="number" value="${val||0}"
-      style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:${w};padding:3px 6px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;"
-      onchange="setRule('${path}',+this.value)">`;
-  }
-  function chk(path) {
-    const val = path.split('.').reduce((o,k)=>o&&o[k], R);
-    return `<input type="checkbox" ${val?'checked':''} style="width:16px;height:16px;cursor:pointer;" onchange="setRule('${path}',this.checked)">`;
-  }
-  function row(label, path, type='num') {
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #0e0e12;">
-      <span style="font-size:10px;color:#888;">${label}</span>
-      ${type==='chk' ? chk(path) : inp(path)}
-    </div>`;
-  }
-  function sec(t) { return `<div style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:3px;color:#C8A800;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #C8A80033;">${t}</div>`; }
-
-  // Phase order editors - drag/text based
-  function phaseOrderEditor(phasesArr, idPrefix) {
-    return phasesArr.map((p,i)=>`
-      <div style="display:flex;align-items:center;gap:6px;margin:3px 0;">
-        <span style="font-family:Orbitron,sans-serif;font-size:8px;color:#555;width:14px;">${i+1}.</span>
-        <span style="font-size:10px;color:#888;flex:1;">${p.label||p}</span>
-      </div>`).join('');
-  }
-
-  // Build starting assets for each player count
-  const assetRows = [3,4,5,6].map(n => {
-    const a = R.setup.startingAssets[n];
-    return `<tr>
-      <td style="font-size:10px;color:#888;padding:3px 6px;">${n}J</td>
-      <td style="padding:2px;"><input type="number" value="${a.soldiers}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.soldiers',+this.value)"></td>
-      <td style="padding:2px;"><input type="number" value="${a.mechs||0}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.mechs',+this.value)"></td>
-      <td style="padding:2px;"><input type="number" value="${a.missiles}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.missiles',+this.value)"></td>
-      <td style="padding:2px;"><input type="number" value="${a.nukes}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.nukes',+this.value)"></td>
-      <td style="padding:2px;"><input type="number" value="${a.territories}" style="width:45px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.${n}.territories',+this.value)"></td>
-    </tr>`;
-  }).join('');
-
-  modal.innerHTML = `<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column;">
-    <div style="padding:12px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">⚙ EDITOR DE REGLAS</div>
-      <button onclick="document.getElementById('rules-modal').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button>
-    </div>
-    <div style="overflow-y:auto;padding:14px 16px;flex:1;font-size:10px;">
-
-      ${sec('GAME SETUP — ACTIVOS INICIALES')}
-      <table style="width:100%;border-collapse:collapse;">
-        <tr style="font-size:9px;color:#555;">
-          <th></th><th>Sol</th><th>Mech</th><th>Misil</th><th>Nuclear</th><th>Terr</th>
-        </tr>
-        ${assetRows}
-      </table>
-      ${row('Libertos: +Plutonio (en lugar de nucleares)','setup.libertosSwap.plutonium')}
-      ${row('Libertos: +Mechs adicionales','setup.libertosSwap.mechs')}
-
-      ${sec('GAME SETUP — ORDEN DE FASES')}
-      <div style="font-size:9px;color:#555;margin-bottom:4px;">Fases de setup (el orden real se define aquí):</div>
-      <div style="background:#05050a;padding:8px;border:1px solid #1a1a20;">
-        ${sec('1. Reclamar territorio')} <div style="font-size:9px;color:#666;">Por turnos: cada jugador elige 1 territorio hasta que todos estén ocupados.</div>
-        ${sec('2. Colocar Nucleares + Soldados')} <div style="font-size:9px;color:#666;">Cada jugador coloca todos sus nucleares y luego todos sus soldados antes de pasar al siguiente.</div>
-        ${chk('setup.phases.0.combinedWith')} <span style="font-size:9px;color:#888;margin-left:6px;">Combinar nuclear+soldados en el mismo turno</span>
-      </div>
-
-      ${sec('PREPARACIÓN — INGRESOS')}
-      ${row('Plutonio por Nuclear Base / turno','prep.plutoniumPerNuclear')}
-      ${row('Refuerzo: soldados por 2 territorios','prep.reinforcements.perTwoTerritories')}
-      ${row('Refuerzo: soldados por 2 terr. en región completa','prep.reinforcements.perTwoTerritoriesFullRegion')}
-      ${row('Refuerzo: soldados por Nuclear Base','prep.reinforcements.perNuclear')}
-
-      ${sec('PREPARACIÓN — CONSTRUCCIÓN')}
-      ${row('Coste Nuclear Base (Pu)','prep.nuclearBuildCost')}
-      ${row('Coste misil (Pu)','prep.missileBuildCost')}
-      ${row('Máx misiles por jugador','prep.maxMissiles')}
-      ${row('Rango movimiento (territorios)','prep.movementRange')}
-
-      ${sec('PREPARACIÓN — MEJORAS')}
-      ${row('Mech: coste soldados','prep.upgrades.mechCost.soldiers')}
-      ${row('Mech: coste Plutonio','prep.upgrades.mechCost.plutonium')}
-      ${row('Aircraft: coste soldados','prep.upgrades.aircraftCost.soldiers')}
-      ${row('Aircraft: coste Plutonio','prep.upgrades.aircraftCost.plutonium')}
-      ${row('Scorpion: coste Mechs','prep.upgrades.scorpionCost.mechs')}
-      ${row('Scorpion: coste Plutonio','prep.upgrades.scorpionCost.plutonium')}
-      ${row('Máx Aircraft en juego','prep.upgrades.maxAircraft')}
-
-      ${sec('COMBATE — DADOS')}
-      ${row('Máx dados atacante','combat.maxAttackDice')}
-      ${row('Máx dados defensor','combat.maxDefenseDice')}
-      ${row('Dado Soldado (D?)','combat.unitDice.soldier')}
-      ${row('Dado Mech (D?)','combat.unitDice.mech')}
-      ${row('Dado Aircraft (D?)','combat.unitDice.aircraft')}
-      ${row('Dado Scorpion (D?)','combat.unitDice.scorpion')}
-      ${row('Empate: gana defensor','combat.tieBreakerDefender','chk')}
-
-      ${sec('COMBATE — MISILES')}
-      ${row('Dado intercepción (D?)','combat.missileInterceptDie')}
-      ${row('Mínimo para interceptar','combat.missileInterceptThreshold')}
-      ${row('Derribar Mech: D6 mínimo','combat.missileTargets.mech')}
-      ${row('Derribar Aircraft: D6 mínimo','combat.missileTargets.aircraft')}
-      ${row('Derribar Scorpion: D6 mínimo','combat.missileTargets.scorpion')}
-
-      ${sec('FASE FINAL')}
-      ${row('Dado mantenimiento (D?)','end.maintenanceDie')}
-      ${row('Resultado = explosión','end.maintenanceExplosionOn')}
-      ${row('Explosiones: Aircraft sobreviven','end.explosionSpareAircraft','chk')}
-
-      ${sec('VICTORIAS — CONDICIONES NUMÉRICAS')}
-      ${row('IMP: regiones completas necesarias','victory.imp.fullRegions')}
-      ${row('CLT: ejércitos eliminados necesarios','victory.clt.armiesEliminated')}
-      ${row('ERB: regiones con Nuclear necesarias','victory.erb.nuclearRegions')}
-      ${row('SHN: regiones con mayor ejército','victory.shn.largestArmyRegions')}
-
-      ${sec('HABILIDADES — BONIFICACIONES')}
-      ${row('PRM: Pu extra por Nuclear Base / turno','prep.plutoniumPerNuclear')}
-      ${row('SHN: soldados extra por Nuclear Base','prep.reinforcements.perNuclear')}
-
-    </div>
-    <div style="padding:10px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">
-      <button onclick="resetRules()" style="flex:1;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RESTAURAR</button>
-      <button onclick="document.getElementById('rules-modal').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>
-    </div>
-  </div>`;
+  const ex=document.getElementById('rules-modal');
+  if(ex){ex.remove();return;}
+  const R=RULES;
+  function inp(path,w){const v=path.split('.').reduce((o,k)=>o&&o[k],R);return '<input type="number" value="'+(v||0)+'" style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:'+(w||'55px')+';padding:3px 5px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;" onchange="setRule(''+path+'',+this.value)">';}
+  function chk(path){const v=path.split('.').reduce((o,k)=>o&&o[k],R);return '<input type="checkbox"'+(v?' checked':'>')+' style="width:16px;height:16px;cursor:pointer;" onchange="setRule(''+path+'',this.checked)">';}
+  function row(label,path,type){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #0e0e12;"><span style="font-size:10px;color:#888;flex:1;">'+label+'</span>'+(type==='chk'?chk(path):inp(path))+'</div>';}
+  function sec(t){return '<div style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:3px;color:#C8A800;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #C8A80033;">'+t+'</div>';}
+  const assetRows=[3,4,5,6].map(n=>{const a=R.setup.startingAssets[n];return '<tr><td style="font-size:10px;color:#888;padding:3px 6px;">'+n+'J</td><td style="padding:2px;"><input type="number" value="'+(a.soldiers||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.soldiers',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.mechs||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.mechs',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.missiles||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.missiles',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.nukes||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.nukes',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.territories||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.territories',+this.value)"></td></tr>';}).join('');
+  const modal=document.createElement('div');
+  modal.id='rules-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:12px;';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML='<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:500px;max-height:92vh;display:flex;flex-direction:column;">'
+    +'<div style="padding:12px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">'
+    +'<div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">⚙ EDITOR DE REGLAS</div>'
+    +'<button onclick="document.getElementById('rules-modal').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button></div>'
+    +'<div style="overflow-y:auto;padding:14px 16px;flex:1;">'
+    +sec('ACTIVOS INICIALES')
+    +'<table style="width:100%;border-collapse:collapse;"><tr style="font-size:9px;color:#555;"><th></th><th>Sol</th><th>Mech</th><th>Misil</th><th>Nuc</th><th>Terr</th></tr>'+assetRows+'</table>'
+    +row('Libertos: +Plutonio (sin nucleares)','setup.libertosSwap.plutonium')
+    +row('Libertos: +Mechs adicionales','setup.libertosSwap.mechs')
+    +sec('INGRESOS')
+    +row('Plutonio por Nuclear / turno','prep.plutoniumPerNuclear')
+    +row('Refuerzo: sol por 2 territorios','prep.reinforcements.perTwoTerritories')
+    +row('Refuerzo: sol por 2 terr. región completa','prep.reinforcements.perTwoTerritoriesFullRegion')
+    +row('Refuerzo: sol por Nuclear Base','prep.reinforcements.perNuclear')
+    +sec('CONSTRUCCIÓN')
+    +row('Coste Nuclear Base (Pu)','prep.nuclearBuildCost')
+    +row('Coste misil (Pu)','prep.missileBuildCost')
+    +row('Máx misiles','prep.maxMissiles')
+    +row('Rango movimiento (territorios)','prep.movementRange')
+    +sec('MEJORAS')
+    +row('Mech: soldados','prep.upgrades.mechCost.soldiers')
+    +row('Mech: Plutonio','prep.upgrades.mechCost.plutonium')
+    +row('Aircraft: soldados','prep.upgrades.aircraftCost.soldiers')
+    +row('Aircraft: Plutonio','prep.upgrades.aircraftCost.plutonium')
+    +row('Scorpion: Mechs','prep.upgrades.scorpionCost.mechs')
+    +row('Scorpion: Plutonio','prep.upgrades.scorpionCost.plutonium')
+    +row('Máx Aircraft en juego','prep.upgrades.maxAircraft')
+    +sec('COMBATE')
+    +row('Máx dados atacante','combat.maxAttackDice')
+    +row('Máx dados defensor','combat.maxDefenseDice')
+    +row('Dado Soldado (D?)','combat.unitDice.soldier')
+    +row('Dado Mech (D?)','combat.unitDice.mech')
+    +row('Dado Aircraft (D?)','combat.unitDice.aircraft')
+    +row('Dado Scorpion (D?)','combat.unitDice.scorpion')
+    +row('Empate gana defensor','combat.tieBreakerDefender','chk')
+    +sec('MISILES')
+    +row('Dado intercepción (D?)','combat.missileInterceptDie')
+    +row('Mínimo para interceptar','combat.missileInterceptThreshold')
+    +row('Derribar Mech: D6 mínimo','combat.missileTargets.mech')
+    +row('Derribar Aircraft: D6 mínimo','combat.missileTargets.aircraft')
+    +row('Derribar Scorpion: D6 mínimo','combat.missileTargets.scorpion')
+    +sec('FASE FINAL')
+    +row('Dado mantenimiento (D?)','end.maintenanceDie')
+    +row('Resultado = explosión','end.maintenanceExplosionOn')
+    +sec('VICTORIAS — VALORES NUMÉRICOS')
+    +row('IMP: regiones completas','victory.imp.fullRegions')
+    +row('CLT: ejércitos a eliminar','victory.clt.armiesEliminated')
+    +row('ERB: regiones con Nuclear','victory.erb.nuclearRegions')
+    +row('SHN: regiones mayor ejército','victory.shn.largestArmyRegions')
+    +'</div>'
+    +'<div style="padding:10px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">'
+    +'<button onclick="resetRules()" style="flex:1;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RESTAURAR</button>'
+    +'<button onclick="document.getElementById('rules-modal').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>'
+    +'</div></div>';
   document.body.appendChild(modal);
 }
 
-function setRule(path, value, el) {
-  const keys = path.split('.');
-  let obj = RULES;
-  for(let i=0;i<keys.length-1;i++) obj = obj[keys[i]];
-  obj[keys[keys.length-1]] = value;
-}
-
-function resetRules() {
-  // Deep copy DEFAULT_RULES back to RULES
-  Object.assign(RULES, JSON.parse(JSON.stringify(DEFAULT_RULES)));
-  document.getElementById('rules-modal').remove();
-  showRules();
-}
+function setRule(path,value){const keys=path.split('.');let obj=RULES;for(let i=0;i<keys.length-1;i++)obj=obj[keys[i]];obj[keys[keys.length-1]]=value;}
+function resetRules(){Object.assign(RULES,JSON.parse(JSON.stringify(DEFAULT_RULES)));document.getElementById('rules-modal').remove();showRules();}
 
 function showTip(e,id){
   const t=G.territories[id];
@@ -282,6 +271,70 @@ function setupPanZoom(){
     G.vx=(bw2-1400*sc2)/2; G.vy=(bh2-787*sc2)/2;
     updateMap();
   });
+
+  // ── Touch: pan + pinch zoom ────────────────────────────
+  let _touches = {};
+  let _lastPinchDist = null;
+
+  wrap.addEventListener('touchstart', e => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(t => {
+      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
+    });
+    if (Object.keys(_touches).length === 1) {
+      const t = e.changedTouches[0];
+      ds = { x: t.clientX - G.vx, y: t.clientY - G.vy };
+      G.dragging = false;
+    }
+    _lastPinchDist = null;
+  }, { passive: false });
+
+  wrap.addEventListener('touchmove', e => {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(t => {
+      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
+    });
+    const touchIds = Object.keys(_touches);
+    if (touchIds.length === 1 && ds) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - ds.x - G.vx;
+      const dy = t.clientY - ds.y - G.vy;
+      if (Math.hypot(dx, dy) > 3) {
+        G.dragging = true;
+        G.vx = t.clientX - ds.x;
+        G.vy = t.clientY - ds.y;
+        updateMap();
+      }
+    } else if (touchIds.length === 2) {
+      const [id1, id2] = touchIds;
+      const t1 = _touches[id1], t2 = _touches[id2];
+      const dist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+      if (_lastPinchDist !== null) {
+        const factor = dist / _lastPinchDist;
+        const rect = wrap.getBoundingClientRect();
+        const mx = (t1.x + t2.x) / 2 - rect.left;
+        const my = (t1.y + t2.y) / 2 - rect.top;
+        const newScale = Math.min(4, Math.max(G.vscaleMin || 0.1, G.vscale * factor));
+        G.vx = mx - (mx - G.vx) * (newScale / G.vscale);
+        G.vy = my - (my - G.vy) * (newScale / G.vscale);
+        G.vscale = newScale;
+        updateMap();
+      }
+      _lastPinchDist = dist;
+      ds = null;
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', e => {
+    Array.from(e.changedTouches).forEach(t => {
+      delete _touches[t.identifier];
+    });
+    _lastPinchDist = null;
+    if (Object.keys(_touches).length === 0) {
+      setTimeout(() => { G.dragging = false; }, 50);
+      ds = null;
+    }
+  }, { passive: false });
 }
 
 function resetV(){
@@ -476,13 +529,14 @@ function cpuTurns() {
 
 
 const VICTORY_DETAIL_FULL = {
-  imp: 'PAX AUGUSTA\n• Controla 5 regiones COMPLETAS al inicio de tu turno\n\nHabilidad — IMPERIAL DEFENSE:\n+1 a todos los dados de defensa',
-  lib: 'TOTAL BLACKOUT\n• El número total de Nuclear Bases en el tablero es igual o menor al número de jugadores (fin de turno)\n\nHabilidad — SCORCHED EARTH:\nPor cada Nuclear Base destruida (propia o enemiga): gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca inmediatamente en ese territorio.',
-  clt: 'THE GREAT OFFERING\n• Elimina a DOS jugadores enemigos (fin de turno)\n\nHabilidad — HOLY WAR:\n+1 a todos los dados de ataque',
-  erb: 'EQUATION ZERO\n• Controla al menos 1 Nuclear Base en 7 regiones distintas (fin de turno)\n\nHabilidad — HIVE MIND:\nPuedes colocar tus refuerzos en cualquier territorio propio, aunque no tenga Nuclear Base',
-  prm: 'TERRAFORMATION\n• Controla la MITAD de todas las Nuclear Bases del tablero (fin de turno)\n\nHabilidad — ADVANCED REACTOR:\n+1 Plutonio extra por cada Nuclear Base que controlas cada turno',
-  shn: 'GENETIC SUPREMACY\n• Tienes el mayor ejército (en AP) en 7 regiones distintas (inicio de turno)\n\nHabilidad — MASS CLONING:\n+1 soldado extra por cada Nuclear Base que controlas en ingresos',
+  imp: 'PAX AUGUSTA\n• Controla 5 regiones COMPLETAS al fin de tu turno\n\nHabilidad — IMPERIAL DEFENSE:\n+1 a TODOS los dados de defensa',
+  lib: 'TOTAL BLACKOUT\n• Nucleares en tablero ≤ número de jugadores (fin de turno)\n\nHabilidad — SCORCHED EARTH:\nPor cada Nuclear destruido: gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca en ese territorio.',
+  clt: 'THE GREAT OFFERING\n• Elimina a DOS jugadores enemigos (fin de turno)\n\nHabilidad — HOLY WAR:\n+1 a TODOS los dados de ataque',
+  erb: 'EQUATION ZERO\n• Controla al menos 1 Nuclear en 7 regiones distintas (fin de turno)\n\nHabilidad — HIVE MIND:\nColoca refuerzos en cualquier territorio propio aunque no tenga Nuclear',
+  prm: 'TERRAFORMATION\n• Controla la MITAD de todos los Nucleares del tablero (fin de turno)\n\nHabilidad — ADVANCED REACTOR:\n+1 Plutonio extra por cada Nuclear Base que controlas',
+  shn: 'GENETIC SUPREMACY\n• Mayor ejército (AP) en 7 regiones distintas (inicio de turno)\n\nHabilidad — MASS CLONING:\n+1 soldado extra por cada Nuclear Base que controlas',
 };
+
 function showFactionObjective(fk) {
   const fd = FDATA[fk]||{name:fk,color:'#888'};
   const detail = VICTORY_DETAIL_FULL[fk]||fd.goal||'';
@@ -572,4 +626,3 @@ function refreshCards() {
   // Update turn order dots
   if(typeof updateTurnOrderBar === 'function') updateTurnOrderBar();
 }
-
