@@ -344,6 +344,25 @@ function drawTerritory(td) {
   apt.setAttribute('id','tu-'+td.id);
   g.appendChild(apt);
 
+  // Territory name label — bottom inside of hex
+  const tname = document.createElementNS(NS,'text');
+  tname.setAttribute('x', td.cx);
+  tname.setAttribute('y', td.cy+26);
+  tname.setAttribute('text-anchor','middle');
+  tname.setAttribute('font-size','5.5');
+  tname.setAttribute('font-family','Orbitron,monospace');
+  tname.setAttribute('fill','rgba(255,255,255,0.45)');
+  tname.setAttribute('pointer-events','none');
+  tname.setAttribute('letter-spacing','0.3');
+  // Build short name: region number + position e.g. "NA-1"
+  const _reg = REGIONS.find(r=>r.id===td.region);
+  const _regTers = TERRITORIES_DEF.filter(t=>t.region===td.region);
+  const _pos = _regTers.findIndex(t=>t.id===td.id)+1;
+  const _regCode = td.region.replace('r0','').replace('r1','1').replace('r','');
+  const _regionNames = {r01:'NA',r02:'GL',r03:'CA',r04:'SA',r05:'EU',r06:'RU',r07:'ME',r08:'AF',r09:'AS',r10:'SE',r11:'OC',r12:'AN'};
+  tname.textContent = (_regionNames[td.region]||td.region)+'-'+_pos;
+  g.appendChild(tname);
+
   // Nuclear icon top-right corner
   const nuc = document.createElementNS(NS,'text');
   nuc.setAttribute('x',td.cx+14.0);

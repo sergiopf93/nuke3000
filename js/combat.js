@@ -351,13 +351,23 @@ function applyBattleResult(aR,dR) {
       else if(leaveUnit==='aircraft'&&tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
       else if(leaveUnit==='scorpions'&&tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
     } else {
-      // Only 1 unit left in src - stays, tgt gets nothing (already 0 defenders)
-      // Put attacking unit into tgt
-      if(src.soldiers>0){src.soldiers--;tgt.soldiers++;}
-      else if(src.mechs>0){src.mechs--;tgt.mechs++;}
-      else if(src.aircraft>0){src.aircraft--;tgt.aircraft++;}
-      else if(src.scorpions>0){src.scorpions--;tgt.scorpions++;}
+      // src has exactly 1 unit — MUST stay in origin (can't occupy AND defend origin)
+      // This shouldn't happen (openDice/executeCpuAttack block attacks with <=1 unit)
+      // Safety net: don't move the unit, tgt stays conquered but empty (assign owner only)
+      // Ensure src keeps its unit
+      addLog('⚠ Conquista sin refuerzos — origen mantiene su unidad','combat');
     }
+    // SAFETY: src must never be empty after conquest
+    if(armyPoints(src)===0){
+      // Emergency: move 1 unit back from tgt to src
+      if(tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
+      else if(tgt.mechs>0){src.mechs=1;tgt.mechs--;}
+      else if(tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
+      else if(tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
+      addLog('⚠ Unidad de guardia asignada a '+terName(ctx.srcId),'sys');
+    }
+    // SAFETY: tgt must have owner set
+    if(!tgt.owner) tgt.owner=ctx.attFk;
     res.innerHTML='<div style="color:#88cc44;font-size:13px;">✅ CONQUISTA: '+ctx.targetId+'</div><div style="font-size:10px;color:#777;">Atq-'+aL+' Def-'+dL+'</div>';
     addLog('⚔ CONQUISTA '+ctx.targetId,'combat');
     checkElimination(ctx.defFk);checkWinCondition();

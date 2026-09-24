@@ -374,6 +374,9 @@ function executeAutoStep(step) {
 
 function applyIncome(fk) {
   const R=RULES.prep, myF=G.factions[fk];
+  // Guard against double application in same round
+  if(myF._incomeAppliedRound === G.round) { addLog('[DEBUG] Income ya aplicado esta ronda','sys'); return; }
+  myF._incomeAppliedRound = G.round;
   const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
   const nukes=myTers.filter(t=>t.hasNuclear).length;
   const rc=R.reinforcements||{};
