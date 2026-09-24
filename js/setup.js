@@ -398,6 +398,11 @@ function setupStep_Claim_Next() {
   });
 
   if(isMe) {
+    // If auto-claim is enabled, pick automatically
+    if(G.setup._autoClaimEnabled) {
+      setTimeout(_doAutoClaimOne, 200);
+      return;
+    }
     G.setup.claimCallback = (id) => {
       const t = G.territories[id];
       if(t.owner) return false;
@@ -406,10 +411,14 @@ function setupStep_Claim_Next() {
     };
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
-    acts.appendChild(setupBtn('AUTO-RECLAMAR TODO', () => {
+    acts.appendChild(setupBtn('AUTO-RECLAMAR RESTO', () => {
       autoClaimAll();
-      if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'AUTOCLAIM' });
     }, '#444'));
+    if(G.setup._autoClaimEnabled) {
+      acts.appendChild(setupBtn('CANCELAR AUTO', () => {
+        G.setup._autoClaimEnabled = false;
+      }, '#444'));
+    }
   } else if(isHuman) {
     // Another human's turn — block and wait
     G.setup.claimCallback = null;
@@ -459,29 +468,22 @@ function doClaimTerritory(fk, id) {
 }
 
 function autoClaimAll() {
-  // Only auto-claim for the PLAYER, respecting turn order for CPUs
-  G.setup.claimCallback = null;
+  // AUTO-RECLAMAR: claims ONE territory for the player, then lets the
+  // turn flow continue normally (other players/CPUs take their turns).
+  // Sets a flag so next time it's the player's turn, auto-claims again.
+  G.setup._autoClaimEnabled = true;
+  _doAutoClaimOne();
+}
+
+function _doAutoClaimOne() {
+  // Pick a random unclaimed territory for the player
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
-  const order = G.setup.order;
-  const totalTers = Object.values(G.territories).length;
-  const playerShare = Math.ceil(totalTers / order.length);
-
-  // Claim up to playerShare territories for the player
-  let claimed = 0;
-  const shuffled = [...unclaimed].sort(()=>Math.random()-.5);
-  for(const t of shuffled) {
-    if(claimed >= playerShare) break;
-    t.owner = G.pf; t.soldiers = 1;
-    G.factions[G.pf].soldiers = Math.max(0, G.factions[G.pf].soldiers-1);
-    G.setup.soldiersLeft[G.pf] = Math.max(0, (G.setup.soldiersLeft[G.pf]||0)-1);
-    claimed++;
-  }
-  updateMap();
-
-  // Advance to next player in turn order (CPUs continue normally)
-  const myIdx = order.indexOf(G.pf);
-  G.setup.orderIdx = (myIdx + 1) % order.length;
-  setupStep_Claim_Next();
+  if(!unclaimed.length) return;
+  const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
+  doClaimTerritory(G.pf, pick.id);
+  // doClaimTerritory advances orderIdx and calls setupStep_Claim_Next
+  // which will check _autoClaimEnabled when it's player's turn again
+  if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'AUTOCLAIM' });
 }
 
 // ════════════════════════════════════════════════════════════════

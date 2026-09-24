@@ -235,11 +235,23 @@ function setupPanZoom(){
   }, { passive: false });
 
   wrap.addEventListener('touchend', e => {
+    const touch = e.changedTouches[0];
     Array.from(e.changedTouches).forEach(t => {
       delete _touches[t.identifier];
     });
     _lastPinchDist = null;
     if (Object.keys(_touches).length === 0) {
+      // Detect tap: if we didn't drag, treat as a click on the territory
+      if (!G.dragging && touch) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (el) {
+          let tid = null;
+          for (const [id, g] of Object.entries(pathEls)) {
+            if (g === el || g.contains(el)) { tid = id; break; }
+          }
+          if (tid) onTerritoryClick(tid, e);
+        }
+      }
       setTimeout(() => { G.dragging = false; }, 50);
       ds = null;
     }
