@@ -1,63 +1,4 @@
 
-function onlineCreateRoom() {
-  const statusEl = document.getElementById('online-status');
-  if(typeof ONLINE === 'undefined'){if(statusEl)statusEl.textContent='⚠ Firebase no disponible';return;}
-  if(!selF){alert('Elige una facción primero.');return;}
-  G.pf=selF;
-  G.pname=document.getElementById('pname').value.trim()||'COMANDANTE';
-  G.playerCount=parseInt(document.getElementById('pcount').value)||4;
-  if(statusEl){statusEl.textContent='Creando sala...';statusEl.className='';}
-  ONLINE.createRoom().then(()=>{
-    const code=ONLINE.getRoomCode();
-    if(statusEl){statusEl.textContent='✓ SALA: '+code;statusEl.className='connected';}
-    document.getElementById('room-code-input').value=code;
-    addLog('Sala creada: '+code,'sys');
-    // Set up room update listener
-    ONLINE.onRoomUpdate(meta=>{
-      const players=Object.values(meta.players||{});
-      if(statusEl) statusEl.textContent='SALA '+code+' · '+players.length+' jugador(es)';
-    });
-    // Show the host waiting UI
-    _showOnlineWaitingRoom(code);
-  }).catch(e=>{
-    if(statusEl){statusEl.textContent='⚠ Error: '+e.message;statusEl.className='error';}
-  });
-}
-
-function onlineJoinRoom(){
-  const code=document.getElementById('room-code-input').value.trim().toUpperCase();
-  if(!code||code.length<4){alert('Introduce un código de sala válido.');return;}
-  const statusEl=document.getElementById('online-status');
-  if(typeof ONLINE==='undefined'){if(statusEl)statusEl.textContent='⚠ Firebase no disponible';return;}
-  if(!selF){alert('Elige una facción primero.');return;}
-  G.pf=selF;
-  G.pname=document.getElementById('pname').value.trim()||'COMANDANTE';
-  if(statusEl){statusEl.textContent='Conectando a '+code+'...';statusEl.className='';}
-  ONLINE.joinRoom(code).then(()=>{
-    if(statusEl){statusEl.textContent='✓ En sala '+code;statusEl.className='connected';}
-    ONLINE.updateMyFaction(G.pf);
-    addLog('Unido a sala '+code,'sys');
-    ONLINE.onRoomUpdate(meta=>{
-      const players=Object.values(meta.players||{});
-      if(statusEl) statusEl.textContent='SALA '+code+' · '+players.length+' jugador(es)';
-      // If host started game
-      if(meta.status==='playing'&&!G.setup._inSetup){
-        _launchOnlineGame({players:meta.players,totalPlayerCount:meta.totalPlayerCount});
-      }
-    });
-    _showOnlineWaitingRoom(code);
-  }).catch(e=>{
-    if(statusEl){statusEl.textContent='⚠ '+e.message;statusEl.className='error';}
-  });
-}
-
-function onlineDisconnect(){
-  if(typeof ONLINE!=='undefined') ONLINE.leaveRoom();
-  const statusEl=document.getElementById('online-status');
-  if(statusEl){statusEl.textContent='OFFLINE · MODO LOCAL';statusEl.className='';}
-  addLog('Desconectado de la sala.','sys');
-}
-
 function _showOnlineWaitingRoom(code){
   const ex=document.getElementById('online-waiting');if(ex)ex.remove();
   const div=document.createElement('div');
@@ -71,33 +12,6 @@ function _showOnlineWaitingRoom(code){
   else document.getElementById('lbody').appendChild(div);
 }
 
-function _startOnlineGame(){
-  if(!ONLINE.isHost()) return;
-  ONLINE.getPlayersInRoom().then(players=>{
-    const total=Object.keys(players).length;
-    G.playerCount=Math.max(total,2);
-    initGame();
-    ONLINE.signalGameStart(players,G.playerCount);
-    // Assign CPU factions to non-player slots if needed
-    _launchOnlineGame({players,totalPlayerCount:G.playerCount});
-    ONLINE.pushActionWithState('GAME_PHASE_START',{});
-  });
-}
-
-let _onlinePlayerFactions = new Set();
-
-function _launchOnlineGame({players,totalPlayerCount}){
-  G.playerCount=totalPlayerCount||Object.keys(players).length;
-  _onlinePlayerFactions=new Set(Object.values(players).map(p=>p.faction).filter(Boolean));
-  document.getElementById('lobby').style.display='none';
-  document.getElementById('hdr').style.display='flex';
-  document.getElementById('main').style.display='grid';
-  document.getElementById('rcode').textContent=ONLINE.getRoomCode();
-  if(!G.territories||!Object.keys(G.territories).length) initGame();
-  buildMap(); updateUI(); setupPanZoom();
-  addLog(G.pname+' comanda '+FDATA[G.pf].name+'.','sys');
-  startSetupPhase();
-}
 function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
 
 function addLog(msg,type){
