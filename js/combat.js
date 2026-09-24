@@ -109,21 +109,12 @@ function openCombatModal(mode) {
       const attN = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
       showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
         ctx.attSelected = chosen;
-        // Now show defender selector (or go straight to roll)
+        // Defender dice are auto-selected (defender doesn't choose when being attacked)
         const defN = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
-        if(RULES.combat.allowUnitSelection && ctx.defPool.length>0) {
-          showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
-            ctx.defSelected = defChosen;
-            rollBtn.textContent='⚄ LANZAR DADOS';
-            rollBtn.style.display='inline-block';
-            rollBtn.onclick=()=>resolveCombatRound(false);
-          });
-        } else {
-          ctx.defSelected = ctx.defPool.slice(0, defN);
-          rollBtn.textContent='⚄ LANZAR DADOS';
-          rollBtn.style.display='inline-block';
-          rollBtn.onclick=()=>resolveCombatRound(false);
-        }
+        ctx.defSelected = ctx.defPool.slice(0, defN);
+        rollBtn.textContent='⚄ LANZAR DADOS';
+        rollBtn.style.display='inline-block';
+        rollBtn.onclick=()=>resolveCombatRound(false);
       });
     } else {
       rollBtn.textContent='⚄ LANZAR DADOS';
@@ -153,6 +144,11 @@ function openCombatModal(mode) {
     cancelBtn.onclick=()=>{closeDice();if(ctx.callback)ctx.callback();};
     setTimeout(()=>resolveCombatRound(true),800);
   }
+  // Clear any stale unit selectors from previous attempt
+  ['att','def'].forEach(s => {
+    const el = document.getElementById('unit-sel-'+s); if(el) el.remove();
+    delete window['_usel_'+s];
+  });
   document.getElementById('dmodal').classList.add('open');
 }
 
@@ -376,21 +372,12 @@ function applyBattleResult(aR,dR) {
           showUnitSelectorInModal('att', ctx.attPool, attN2, (chosen)=>{
             ctx.attSelected = chosen;
             const defN2 = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
-            if(RULES.combat.allowUnitSelection) {
-              showUnitSelectorInModal('def', ctx.defPool, defN2, (defChosen)=>{
-                ctx.defSelected = defChosen;
-                rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-                rollBtn.style.display='inline-block';
-                rollBtn.disabled=false;
-                rollBtn.onclick=()=>resolveCombatRound(false);
-              });
-            } else {
-              ctx.defSelected = ctx.defPool.slice(0,defN2);
-              rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-              rollBtn.style.display='inline-block';
-              rollBtn.disabled=false;
-              rollBtn.onclick=()=>resolveCombatRound(false);
-            }
+            // Auto-select defender units
+            ctx.defSelected = ctx.defPool.slice(0,defN2);
+            rollBtn.textContent='⚄ CONTINUAR ATAQUE';
+            rollBtn.style.display='inline-block';
+            rollBtn.disabled=false;
+            rollBtn.onclick=()=>resolveCombatRound(false);
           });
         } else {
           rollBtn.textContent='⚄ CONTINUAR ATAQUE';
@@ -563,6 +550,9 @@ function showReinforcementUI(count) {
   if(G.pf==='erb' && R.placement.ereubsAnywhereOverride) {
     validTers = myTers;
   } else if(!R.placement.onlyInNuclearTerritories) {
+    validTers = myTers;
+  } else if(G.round === 1) {
+    // Round 1: can place anywhere (no nuclears built yet)
     validTers = myTers;
   } else if(nucTers.length > 0) {
     validTers = nucTers;
@@ -830,5 +820,6 @@ function doMissileFire() {
     setTimeout(()=>{ modal.remove(); },2500);
   };
 }
+
 
 

@@ -102,70 +102,6 @@ function setupPanZoom(){
     G.vx=(bw2-1400*sc2)/2; G.vy=(bh2-787*sc2)/2;
     updateMap();
   });
-
-  // ── Touch: pan + pinch zoom ────────────────────────────
-  let _touches = {};
-  let _lastPinchDist = null;
-
-  wrap.addEventListener('touchstart', e => {
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(t => {
-      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
-    });
-    if (Object.keys(_touches).length === 1) {
-      const t = e.changedTouches[0];
-      ds = { x: t.clientX - G.vx, y: t.clientY - G.vy };
-      G.dragging = false;
-    }
-    _lastPinchDist = null;
-  }, { passive: false });
-
-  wrap.addEventListener('touchmove', e => {
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(t => {
-      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
-    });
-    const touchIds = Object.keys(_touches);
-    if (touchIds.length === 1 && ds) {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - ds.x - G.vx;
-      const dy = t.clientY - ds.y - G.vy;
-      if (Math.hypot(dx, dy) > 3) {
-        G.dragging = true;
-        G.vx = t.clientX - ds.x;
-        G.vy = t.clientY - ds.y;
-        updateMap();
-      }
-    } else if (touchIds.length === 2) {
-      const [id1, id2] = touchIds;
-      const t1 = _touches[id1], t2 = _touches[id2];
-      const dist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-      if (_lastPinchDist !== null) {
-        const factor = dist / _lastPinchDist;
-        const rect = wrap.getBoundingClientRect();
-        const mx = (t1.x + t2.x) / 2 - rect.left;
-        const my = (t1.y + t2.y) / 2 - rect.top;
-        const newScale = Math.min(4, Math.max(G.vscaleMin || 0.1, G.vscale * factor));
-        G.vx = mx - (mx - G.vx) * (newScale / G.vscale);
-        G.vy = my - (my - G.vy) * (newScale / G.vscale);
-        G.vscale = newScale;
-        updateMap();
-      }
-      _lastPinchDist = dist;
-      ds = null;
-    }
-  }, { passive: false });
-
-  wrap.addEventListener('touchend', e => {
-    Array.from(e.changedTouches).forEach(t => {
-      delete _touches[t.identifier];
-    });
-    _lastPinchDist = null;
-    if (Object.keys(_touches).length === 0) {
-      setTimeout(() => { G.dragging = false; }, 50);
-      ds = null;
-    }
-  }, { passive: false });
 }
 
 function resetV(){
@@ -457,3 +393,4 @@ function refreshCards() {
   // Update turn order dots
   if(typeof updateTurnOrderBar === 'function') updateTurnOrderBar();
 }
+
