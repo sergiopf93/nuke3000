@@ -62,6 +62,13 @@
           ⚙ EDITAR REGLAS
         </button>
         <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA</button>
+        <button onclick="showCreateRoom()" style="flex:1;background:#0a0a0d;border:1px solid #4488bb;color:#4488bb;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">🌐 CREAR SALA</button>
+      </div>
+      <div id="room-join-bar" style="display:flex;gap:8px;margin-top:8px;">
+        <input id="room-code-input" placeholder="Código de sala (6 letras)" maxlength="6"
+          style="flex:1;background:#050508;border:1px solid #333;color:#C8A800;padding:10px 14px;font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;"
+          oninput="this.value=this.value.toUpperCase()">
+        <button onclick="joinRoom(document.getElementById('room-code-input').value)" style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 18px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;">UNIRSE ▶</button>
       </div>
       <div class="lquote">"Now I am become death, the destroyer of worlds" — Oppenheimer, 1945</div>
     </div>
