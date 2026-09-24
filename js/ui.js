@@ -13,6 +13,40 @@ function flashScreen(){
   el.style.display='block';setTimeout(()=>el.style.display='none',400);
 }
 
+
+function showCreateRoom() {
+  const code = Math.random().toString(36).substring(2,8).toUpperCase();
+  const ex = document.getElementById('room-modal');
+  if(ex) ex.remove();
+  const modal = document.createElement('div');
+  modal.id = 'room-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+  modal.innerHTML = `<div style="background:#08080c;border:1px solid #4488bb;padding:32px 40px;text-align:center;font-family:Orbitron,sans-serif;">
+    <div style="font-size:11px;color:#4488bb;letter-spacing:3px;margin-bottom:16px;">SALA CREADA</div>
+    <div style="font-size:36px;color:#C8A800;letter-spacing:8px;margin-bottom:16px;">${code}</div>
+    <div style="font-size:10px;color:#666;margin-bottom:24px;">Comparte este código con los jugadores</div>
+    <div style="font-size:9px;color:#444;margin-bottom:20px;">⚠ Multijugador online próximamente — por ahora juega en local</div>
+    <button onclick="document.getElementById('room-modal').remove()" style="background:#0a0a0d;border:1px solid #4488bb;color:#4488bb;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;">CERRAR</button>
+  </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('rcode').textContent = code;
+}
+
+function joinRoom(code) {
+  if(!code || code.length < 4) { addLog('Introduce un código de sala válido.','sys'); return; }
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `<div style="background:#08080c;border:1px solid #C8A800;padding:32px 40px;text-align:center;font-family:Orbitron,sans-serif;">
+    <div style="font-size:11px;color:#C8A800;letter-spacing:3px;margin-bottom:16px;">UNIRSE A SALA</div>
+    <div style="font-size:28px;color:#C8A800;letter-spacing:6px;margin-bottom:16px;">${code}</div>
+    <div style="font-size:9px;color:#444;margin-bottom:20px;">⚠ Multijugador online próximamente</div>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;">CERRAR</button>
+  </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('rcode').textContent = code;
+}
+
 function showRules(){
   const ex = document.getElementById('rules-modal');
   if(ex){ ex.remove(); return; }
