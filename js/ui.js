@@ -1,17 +1,4 @@
 
-function _showOnlineWaitingRoom(code){
-  const ex=document.getElementById('online-waiting');if(ex)ex.remove();
-  const div=document.createElement('div');
-  div.id='online-waiting';
-  div.style.cssText='background:#050508;border:1px solid #1a1a20;padding:12px;margin-top:8px;text-align:center;';
-  div.innerHTML='<div style="font-family:Orbitron,sans-serif;font-size:10px;color:#C8A800;letter-spacing:3px;margin-bottom:8px;">SALA: '+code+'</div>'
-    +'<div style="font-size:9px;color:#666;margin-bottom:12px;">Esperando jugadores...<br>Comparte el código para que se unan</div>'
-    +(ONLINE.isHost()?'<button onclick="_startOnlineGame()" style="background:#0a0a0d;border:1px solid #88cc44;color:#88cc44;padding:8px 20px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">☢ COMENZAR PARTIDA</button>':'<div style="font-size:9px;color:#555;">El host iniciará la partida</div>');
-  const onlineSec=document.getElementById('online-section');
-  if(onlineSec) onlineSec.appendChild(div);
-  else document.getElementById('lbody').appendChild(div);
-}
-
 function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
 
 function addLog(msg,type){
@@ -31,29 +18,56 @@ function showRules(){
   const ex=document.getElementById('rules-modal');
   if(ex){ex.remove();return;}
   const R=RULES;
-  function inp(path,w){const v=path.split('.').reduce((o,k)=>o&&o[k],R);return '<input type="number" value="'+(v||0)+'" style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:'+(w||'55px')+';padding:3px 5px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;" onchange="setRule(''+path+'',+this.value)">';}
-  function chk(path){const v=path.split('.').reduce((o,k)=>o&&o[k],R);return '<input type="checkbox"'+(v?' checked':'>')+' style="width:16px;height:16px;cursor:pointer;" onchange="setRule(''+path+'',this.checked)">';}
-  function row(label,path,type){return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #0e0e12;"><span style="font-size:10px;color:#888;flex:1;">'+label+'</span>'+(type==='chk'?chk(path):inp(path))+'</div>';}
-  function sec(t){return '<div style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:3px;color:#C8A800;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #C8A80033;">'+t+'</div>';}
-  const assetRows=[3,4,5,6].map(n=>{const a=R.setup.startingAssets[n];return '<tr><td style="font-size:10px;color:#888;padding:3px 6px;">'+n+'J</td><td style="padding:2px;"><input type="number" value="'+(a.soldiers||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.soldiers',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.mechs||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.mechs',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.missiles||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.missiles',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.nukes||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.nukes',+this.value)"></td><td style="padding:2px;"><input type="number" value="'+(a.territories||0)+'" style="width:44px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule('setup.startingAssets.'+n+'.territories',+this.value)"></td></tr>';}).join('');
+
+  function getVal(path){return path.split('.').reduce((o,k)=>o&&o[k],R);}
+  function inp(path,w){
+    const v=getVal(path)||0;
+    const p=path.replace(/'/g,"\\'");
+    return '<input type="number" value="'+v+'" '
+      +'style="background:#0a0a0d;border:1px solid #333;color:#C8A800;width:'+(w||'55px')+';padding:3px 5px;font-family:Orbitron,sans-serif;font-size:10px;text-align:right;" '
+      +'onchange="setRule(\''+p+'\',+this.value)">';
+  }
+  function chk(path){
+    const v=getVal(path);
+    const p=path.replace(/'/g,"\\'");
+    return '<input type="checkbox"'+(v?' checked':'')
+      +' style="width:16px;height:16px;cursor:pointer;"'
+      +' onchange="setRule(\''+p+'\',this.checked)">';
+  }
+  function row(label,path,type){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #0e0e12;">'
+      +'<span style="font-size:10px;color:#888;flex:1;">'+label+'</span>'
+      +(type==='chk'?chk(path):inp(path))+'</div>';
+  }
+  function sec(t){
+    return '<div style="font-family:Orbitron,sans-serif;font-size:8px;letter-spacing:3px;color:#C8A800;margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid #C8A80033;">'+t+'</div>';
+  }
+
+  const assetRows=[3,4,5,6].map(function(n){
+    const a=R.setup.startingAssets[n];
+    function ai(field){return '<input type="number" value="'+(a[field]||0)+'" style="width:42px;background:#0a0a0d;border:1px solid #333;color:#C8A800;font-size:10px;padding:2px;" onchange="setRule(\'setup.startingAssets.'+n+'.'+field+'\',+this.value)">';}
+    return '<tr><td style="font-size:10px;color:#888;padding:3px 4px;">'+n+'J</td><td>'+ai('soldiers')+'</td><td>'+ai('mechs')+'</td><td>'+ai('missiles')+'</td><td>'+ai('nukes')+'</td><td>'+ai('territories')+'</td></tr>';
+  }).join('');
+
   const modal=document.createElement('div');
   modal.id='rules-modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;padding:12px;';
-  modal.onclick=e=>{if(e.target===modal)modal.remove();};
-  modal.innerHTML='<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:500px;max-height:92vh;display:flex;flex-direction:column;">'
+  modal.onclick=function(e){if(e.target===modal)modal.remove();};
+  modal.innerHTML=
+    '<div style="background:#08080c;border:1px solid #252530;width:100%;max-width:500px;max-height:92vh;display:flex;flex-direction:column;">'
     +'<div style="padding:12px 16px;border-bottom:1px solid #1a1a20;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">'
     +'<div style="font-family:Orbitron,sans-serif;font-size:12px;letter-spacing:3px;color:#C8A800;">⚙ EDITOR DE REGLAS</div>'
-    +'<button onclick="document.getElementById('rules-modal').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button></div>'
+    +'<button onclick="document.getElementById(\'rules-modal\').remove()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;">✕</button></div>'
     +'<div style="overflow-y:auto;padding:14px 16px;flex:1;">'
     +sec('ACTIVOS INICIALES')
-    +'<table style="width:100%;border-collapse:collapse;"><tr style="font-size:9px;color:#555;"><th></th><th>Sol</th><th>Mech</th><th>Misil</th><th>Nuc</th><th>Terr</th></tr>'+assetRows+'</table>'
-    +row('Libertos: +Plutonio (sin nucleares)','setup.libertosSwap.plutonium')
-    +row('Libertos: +Mechs adicionales','setup.libertosSwap.mechs')
+    +'<table style="width:100%;border-collapse:collapse;margin-bottom:4px;"><tr style="font-size:9px;color:#555;"><th></th><th>Sol</th><th>Mech</th><th>Misil</th><th>Nuc</th><th>Terr</th></tr>'+assetRows+'</table>'
+    +row('Libertos: +Plutonio','setup.libertosSwap.plutonium')
+    +row('Libertos: +Mechs','setup.libertosSwap.mechs')
     +sec('INGRESOS')
     +row('Plutonio por Nuclear / turno','prep.plutoniumPerNuclear')
-    +row('Refuerzo: sol por 2 territorios','prep.reinforcements.perTwoTerritories')
-    +row('Refuerzo: sol por 2 terr. región completa','prep.reinforcements.perTwoTerritoriesFullRegion')
-    +row('Refuerzo: sol por Nuclear Base','prep.reinforcements.perNuclear')
+    +row('Refuerzo: sol / 2 territorios','prep.reinforcements.perTwoTerritories')
+    +row('Refuerzo: sol / 2 terr. región completa','prep.reinforcements.perTwoTerritoriesFullRegion')
+    +row('Refuerzo: sol / Nuclear Base','prep.reinforcements.perNuclear')
     +sec('CONSTRUCCIÓN')
     +row('Coste Nuclear Base (Pu)','prep.nuclearBuildCost')
     +row('Coste misil (Pu)','prep.missileBuildCost')
@@ -66,7 +80,7 @@ function showRules(){
     +row('Aircraft: Plutonio','prep.upgrades.aircraftCost.plutonium')
     +row('Scorpion: Mechs','prep.upgrades.scorpionCost.mechs')
     +row('Scorpion: Plutonio','prep.upgrades.scorpionCost.plutonium')
-    +row('Máx Aircraft en juego','prep.upgrades.maxAircraft')
+    +row('Máx Aircraft','prep.upgrades.maxAircraft')
     +sec('COMBATE')
     +row('Máx dados atacante','combat.maxAttackDice')
     +row('Máx dados defensor','combat.maxDefenseDice')
@@ -84,7 +98,7 @@ function showRules(){
     +sec('FASE FINAL')
     +row('Dado mantenimiento (D?)','end.maintenanceDie')
     +row('Resultado = explosión','end.maintenanceExplosionOn')
-    +sec('VICTORIAS — VALORES NUMÉRICOS')
+    +sec('VICTORIAS')
     +row('IMP: regiones completas','victory.imp.fullRegions')
     +row('CLT: ejércitos a eliminar','victory.clt.armiesEliminated')
     +row('ERB: regiones con Nuclear','victory.erb.nuclearRegions')
@@ -92,11 +106,10 @@ function showRules(){
     +'</div>'
     +'<div style="padding:10px 16px;border-top:1px solid #1a1a20;display:flex;gap:8px;flex-shrink:0;">'
     +'<button onclick="resetRules()" style="flex:1;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RESTAURAR</button>'
-    +'<button onclick="document.getElementById('rules-modal').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>'
+    +'<button onclick="document.getElementById(\'rules-modal\').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>'
     +'</div></div>';
   document.body.appendChild(modal);
 }
-
 function setRule(path,value){const keys=path.split('.');let obj=RULES;for(let i=0;i<keys.length-1;i++)obj=obj[keys[i]];obj[keys[keys.length-1]]=value;}
 function resetRules(){Object.assign(RULES,JSON.parse(JSON.stringify(DEFAULT_RULES)));document.getElementById('rules-modal').remove();showRules();}
 
@@ -113,24 +126,6 @@ function hideTip(){ document.getElementById('tip').className=''; }
 // ── LOBBY ──────────────────────────────────────────────────────
 let selF=null;
 function pickF(el){ document.querySelectorAll('.fp').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); selF=el.dataset.f; }
-function startGame(){
-  if(!selF){ alert('Elige una facción.'); return; }
-  G.pf=selF;
-  G.pname=document.getElementById('pname').value.trim()||'COMANDANTE';
-  G.playerCount=parseInt(document.getElementById('pcount').value);
-  initGame();
-  document.getElementById('lobby').style.display='none';
-  document.getElementById('hdr').style.display='flex';
-  document.getElementById('main').style.display='grid';
-  document.getElementById('rcode').textContent=Math.random().toString(36).slice(2,8).toUpperCase();
-  buildMap();
-  updateUI();
-  addLog(`${G.pname} comanda ${FDATA[G.pf].name}.`,'sys');
-  setupPanZoom();
-  // Start setup phase (roll dice, claim territories, etc.)
-  startSetupPhase();
-}
-
 // ── PAN & ZOOM ─────────────────────────────────────────────────
 function setupPanZoom(){
   const wrap=document.getElementById('map-wrap');
