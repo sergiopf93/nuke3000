@@ -375,10 +375,12 @@
       <div class="cb" onclick="resetV()" title="Centrar">⌖</div>
     </div>
     <div id="roombar">SALA · <span id="rcode">LOCAL</span>
-      <button id="roombar-disconnect" onclick="onlineDisconnect()"
-        style="display:none;margin-left:8px;background:transparent;border:1px solid #8B1A1A;
-        color:#8B1A1A;padding:1px 6px;font-family:Orbitron,sans-serif;font-size:8px;
-        letter-spacing:1px;cursor:pointer;" title="Salir de la sala">✕</button>
+      <button onclick="onlineDisconnect()"
+        style="margin-left:8px;background:transparent;border:1px solid #555;
+        color:#888;padding:1px 6px;font-family:Orbitron,sans-serif;font-size:8px;
+        letter-spacing:1px;cursor:pointer;" title="Salir / Volver al lobby"
+        onmouseover="this.style.borderColor='#8B1A1A';this.style.color='#8B1A1A'"
+        onmouseout="this.style.borderColor='#555';this.style.color='#888'">✕ SALIR</button>
     </div>
 
     <div id="setup-panel" style="display:none;position:absolute;top:0;left:0;right:0;z-index:500;background:rgba(4,4,8,0.96);border-bottom:1px solid #1a1a20;">
@@ -409,27 +411,29 @@
 
   <div id="rp">
     <button id="rp-toggle" onclick="togglePanel('rp')" title="Colapsar panel">▶</button>
-    <div id="phase-header" style="background:#050508;border-bottom:1px solid #1a1a20;padding:10px 12px;flex-shrink:0;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div id="pg-phase" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;">PREPARACIÓN</div>
-        <div id="pg-turn-owner" style="font-size:10px;color:#888;letter-spacing:1px;"></div>
+
+    <div id="rp-top">
+      <div id="phase-header" style="background:#050508;border-bottom:1px solid #1a1a20;padding:10px 12px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div id="pg-phase" style="font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;color:#C8A800;">PREPARACIÓN</div>
+          <div id="pg-turn-owner" style="font-size:10px;color:#888;letter-spacing:1px;"></div>
+        </div>
+        <div id="step-instruction" style="background:#08080c;border:1px solid #1a1a20;padding:8px 10px;border-radius:1px;">
+          <div id="step-title" style="font-family:Orbitron,sans-serif;font-size:11px;color:#C8A800;margin-bottom:4px;letter-spacing:2px;"></div>
+          <div id="step-detail" style="font-size:11px;color:#777;line-height:1.6;"></div>
+        </div>
       </div>
-      <div id="step-instruction" style="background:#08080c;border:1px solid #1a1a20;padding:8px 10px;border-radius:1px;">
-        <div id="step-title" style="font-family:Orbitron,sans-serif;font-size:11px;color:#C8A800;margin-bottom:4px;letter-spacing:2px;"></div>
-        <div id="step-detail" style="font-size:11px;color:#777;line-height:1.6;"></div>
+      <div id="actions-area" style="overflow-y:auto;min-height:0;">
+        <div id="step-dots" style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid #0e0e12;flex-wrap:wrap;"></div>
+        <div id="step-actions" style="padding:10px 12px;"></div>
+        <div id="objective-section" style="display:none;margin:0;padding:10px 12px;border-top:1px solid #0e0e12;">
+          <div style="font-size:9px;letter-spacing:3px;color:#999;margin-bottom:6px;">OBJETIVO</div>
+          <div id="faction-objective" style="font-size:11px;color:#999;line-height:1.6;"></div>
+        </div>
       </div>
     </div>
 
-    <div id="actions-area" style="flex:1;overflow-y:auto;min-height:0;">
-      <div id="step-dots" style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid #0e0e12;flex-wrap:wrap;"></div>
-      <div id="step-actions" style="padding:10px 12px;"></div>
-      <div id="objective-section" style="display:none;margin:0;padding:10px 12px;border-top:1px solid #0e0e12;">
-        <div style="font-size:9px;letter-spacing:3px;color:#999;margin-bottom:6px;">OBJETIVO</div>
-        <div id="faction-objective" style="font-size:11px;color:#999;line-height:1.6;"></div>
-      </div>
-    </div>
-
-    <div id="logwrap" style="height:200px;min-height:200px;border-top:1px solid #1a1a20;display:flex;flex-direction:column;flex-shrink:0;">
+    <div id="rp-log">
       <div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:3px;color:#999;padding:5px 10px;border-bottom:1px solid #0e0e12;flex-shrink:0;">REGISTRO</div>
       <div id="clog" style="flex:1;overflow-y:auto;padding:6px 10px;font-size:11px;"></div>
     </div>
