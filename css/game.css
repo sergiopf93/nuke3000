@@ -272,7 +272,9 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
   /* Left panel */
   #lp {
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding: 6px;
     gap: 4px;
     transition: width 0.2s ease;
@@ -305,6 +307,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
     position: relative;
     overflow: hidden;
     transition: width 0.2s ease;
+    display: flex;
+    flex-direction: column;
   }
   #main.rp-collapsed #rp {
     width: 0;
@@ -381,64 +385,80 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
 }
 
 /* ── MOBILE ── */
+/* Setup panel scroll - applies at all sizes */
+#setup-roll-mode {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px 12px;
+  box-sizing: border-box;
+}
+#setup-panel {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 768px) {
-  /* Left panel: full height with vertical scroll */
+  /* Left panel: vertical scroll, override the hidden from 900px block */
   #lp {
     overflow-y: auto !important;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
-    height: 100%;
-    box-sizing: border-box;
   }
 
-  /* Right panel: flex column, fills height, 2/3 actions + 1/3 log */
+  /* Right panel must be a flex column filling its grid cell */
   #rp {
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
-    height: 100%;
-    box-sizing: border-box;
+    /* height comes from the grid row — no explicit height needed */
   }
+
+  /* rp-top = 2/3, rp-log = 1/3 using flex */
   #rp-top {
-    flex: 0 0 66.666%;     /* exactly 2/3 of rp height */
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    flex: 2 1 0 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   }
   #rp-top #phase-header {
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
   }
   #rp-top #actions-area {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
   #rp-log {
-    flex: 0 0 33.333%;     /* exactly 1/3 of rp height */
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-top: 2px solid #1a1a20;
-    overflow: hidden;
+    overflow: hidden !important;
   }
   #rp-log #clog {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Center: dice-roll section must scroll */
-  #setup-overlay, #start-overlay {
+  /* Setup roll screen: inner content scrollable */
+  #setup-roll-mode {
+    max-height: calc(100vh - 40px) !important;
     overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    max-height: 100vh;
+    align-items: flex-start !important;
+    padding: 16px 8px !important;
   }
-
-  /* Session widget gone, no bottom padding needed */
-  #main {
-    padding-bottom: 0 !important;
+  #setup-roll-mode > div {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
