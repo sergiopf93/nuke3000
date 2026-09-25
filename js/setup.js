@@ -20,30 +20,46 @@ function setupBtn(label, onclick, color) {
 }
 
 function getSetupActionsDiv() {
-  const barMode = document.getElementById('setup-bar-mode');
-  if(barMode && barMode.style.display !== 'none') return document.getElementById('setup-bar-actions');
+  // Bar mode: overlay hidden, use right panel step-actions
+  const p = document.getElementById('setup-panel');
+  if(!p || p.style.display === 'none') {
+    return document.getElementById('step-actions');
+  }
+  // Roll mode: overlay visible, use its actions div
   return document.getElementById('setup-actions');
 }
 
 function showSetupPanel(title, info, mode) {
-  const p = document.getElementById('setup-panel');
-  p.style.display = 'block';
-  const rollMode = document.getElementById('setup-roll-mode');
-  const barMode  = document.getElementById('setup-bar-mode');
   if(mode === 'bar') {
-    rollMode.style.display = 'none';
-    barMode.style.display  = 'flex';
-    document.getElementById('setup-bar-title').textContent = title;
-    document.getElementById('setup-bar-info').innerHTML    = info;
-    document.getElementById('setup-bar-actions').innerHTML = '';
-    document.getElementById('setup-bar-log').textContent   = '';
+    // Bar mode: use the RIGHT PANEL — keep overlay hidden so map is visible
+    const p = document.getElementById('setup-panel');
+    if(p) p.style.display = 'none';
+    // Write to rp phase header + step-actions
+    const stepTitle = document.getElementById('step-title');
+    const stepActs  = document.getElementById('step-actions');
+    if(stepTitle) stepTitle.textContent = title;
+    if(stepActs)  stepActs.innerHTML    = '';
+    // Also update pg-phase label
+    const pgPhase = document.getElementById('pg-phase');
+    if(pgPhase) pgPhase.textContent = title;
+    const pgOwner = document.getElementById('pg-turn-owner');
+    if(pgOwner) pgOwner.innerHTML = info;
   } else {
-    rollMode.style.display = 'flex';
-    barMode.style.display  = 'none';
-    document.getElementById('setup-title').textContent  = title;
-    document.getElementById('setup-info').innerHTML     = info;
-    document.getElementById('setup-rolls').innerHTML    = '';
-    document.getElementById('setup-actions').innerHTML  = '';
+    // Roll mode: show the overlay (needed for dice UI)
+    const p = document.getElementById('setup-panel');
+    if(p) p.style.display = 'block';
+    const rollMode = document.getElementById('setup-roll-mode');
+    const barMode  = document.getElementById('setup-bar-mode');
+    if(rollMode) { rollMode.style.display = 'flex'; }
+    if(barMode)  { barMode.style.display  = 'none'; }
+    const st = document.getElementById('setup-title');
+    const si = document.getElementById('setup-info');
+    const sr = document.getElementById('setup-rolls');
+    const sa = document.getElementById('setup-actions');
+    if(st) st.textContent = title;
+    if(si) si.innerHTML   = info;
+    if(sr) sr.innerHTML   = '';
+    if(sa) sa.innerHTML   = '';
   }
 }
 
