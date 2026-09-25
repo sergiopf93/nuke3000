@@ -391,27 +391,25 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
 
 /* ── MOBILE ── */
 /* Setup panel scroll - applies at all sizes */
-/* Setup panel fills board-area height — works in all orientations */
+/* Setup panel — height auto so map stays visible underneath */
 #board-area{position:relative;}
 #setup-panel{
   box-sizing:border-box;
-  height:100%;        /* fill board-area so children can scroll */
-  overflow:hidden;
+  max-height:100%;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 }
 #setup-roll-mode {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
   padding: 24px 16px;
-  height: 100%;       /* fill setup-panel so overflow-y works */
+  width: 100%;
 }
 #setup-roll-mode > div {
   width: 100%;
   max-width: 560px;
-  flex-shrink: 0;     /* don't shrink — let parent scroll instead */
 }
 
 @media (max-width: 768px) {
@@ -434,11 +432,15 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
   }
 }
 
-/* Landscape mobile: short height, ensure setup panel scrolls */
+/* Landscape mobile: short height — cap setup panel so it scrolls */
 @media (orientation: landscape) and (max-height: 520px) {
+  #setup-panel {
+    max-height: calc(100vh - 44px);  /* viewport minus header */
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
   #setup-roll-mode {
     padding: 8px !important;
-    align-items: flex-start !important;
   }
   #setup-roll-mode > div {
     padding-bottom: 16px;
