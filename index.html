@@ -290,7 +290,7 @@
           const div = document.createElement('div');
           div.className = `fp ${f}`;
           div.dataset.f = f;
-          div.onclick = () => pickF(div);
+          div.onclick = () => { if(typeof pickF==='function') pickF(div); else { document.querySelectorAll('.fp').forEach(e=>e.classList.remove('sel')); div.classList.add('sel'); window.selF=div.dataset.f; } };
           div.innerHTML = `
             <div class="fdot"></div>
             <div class="fpn">${name}</div>
@@ -329,7 +329,7 @@
       </div>
 
       <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;margin-bottom:8px;">
-        <button onclick="showRules()" style="background:#0a0a0d;border:1px solid #555;color:#888;
+        <button onclick="if(typeof showRules==='function')showRules()" style="background:#0a0a0d;border:1px solid #555;color:#888;
           padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
           ⚙ EDITAR REGLAS
         </button>
@@ -348,7 +348,7 @@
   <div id="turn-ui">
     <span id="rnd-info">RONDA <strong id="rnum">1</strong> · <span id="curturn" style="color:#888">—</span></span>
     <div id="phase-badge">PREP</div>
-    <button class="hbtn secondary" onclick="showRules()" title="Editor de Reglas">⚙ REGLAS</button>
+    <button class="hbtn secondary" onclick="if(typeof showRules==='function')showRules()" title="Editor de Reglas">⚙ REGLAS</button>
     <button class="hbtn" id="btn-next" onclick="nextStep()">SIGUIENTE ▶</button>
   </div>
 </div>
@@ -525,12 +525,6 @@ function _updateSessionWidget() {
     const sw = document.getElementById('rcode');
     if(sw && typeof ONLINE !== 'undefined') sw.textContent = ONLINE.getRoomCode ? ONLINE.getRoomCode() : '——';
   }
-  widget.style.display = 'flex';
-  const codeEl    = document.getElementById('sw-code');
-  const factionEl = document.getElementById('sw-faction');
-  if (codeEl)    codeEl.textContent    = ONLINE.getRoomCode() || '——';
-  if (factionEl) factionEl.textContent = G.pf ? G.pf.toUpperCase() : '';
-}
 
 // Poll every second to keep widget in sync across all screens
 setInterval(_updateSessionWidget, 1000);
