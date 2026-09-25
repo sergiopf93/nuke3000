@@ -3,10 +3,11 @@ function updateUI(){ refreshCards(); updatePhaseBanner(G.pf); }
 
 function addLog(msg,type){
   const log=document.getElementById('clog');
+  if(!log) return;
   const e=document.createElement('div');
-  e.className=`le ${type}`;e.textContent=msg;
+  e.className='le '+(type||'');e.textContent=msg;
   log.insertBefore(e,log.firstChild);
-  while(log.children.length>40) log.removeChild(log.lastChild);
+  // No limit — full history kept, scroll to see older entries
 }
 
 function flashScreen(){

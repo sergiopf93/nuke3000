@@ -476,14 +476,18 @@ function autoClaimAll() {
 }
 
 function _doAutoClaimOne() {
-  // Pick a random unclaimed territory for the player
+  // Safety: verify it's actually this player's turn
+  const currentFk = G.setup.order[G.setup.orderIdx % G.setup.order.length];
+  if(currentFk !== G.pf) {
+    // Not our turn — wait for the sync event
+    G.setup._autoClaimEnabled = true; // keep flag, Claim_Next will re-trigger
+    return;
+  }
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(!unclaimed.length) return;
   const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
   doClaimTerritory(G.pf, pick.id);
-  // doClaimTerritory advances orderIdx and calls setupStep_Claim_Next
-  // which will check _autoClaimEnabled when it's player's turn again
-  if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'AUTOCLAIM' });
+  // Sync is handled inside doClaimTerritory (if _amHost or fk===G.pf)
 }
 
 // ════════════════════════════════════════════════════════════════
