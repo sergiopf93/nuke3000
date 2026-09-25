@@ -392,7 +392,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Rajdhani',sans-serif;font
 /* ── MOBILE ── */
 /* Setup panel scroll - applies at all sizes */
 /* Setup panel is position:fixed (see inline style) — no CSS needed */
-#board-area{position:relative;}
+#board-area{position:relative;overflow:hidden;display:flex;flex-direction:column;}
+#map-wrap{flex:1;overflow:hidden;position:relative;}
 #setup-roll-mode > div {
   width: 100%;
   max-width: 520px;
