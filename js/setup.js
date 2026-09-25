@@ -26,24 +26,33 @@ function getSetupActionsDiv() {
 }
 
 function showSetupPanel(title, info, mode) {
+  // Hide the overlay — use the right panel (#rp) for all setup content
   const p = document.getElementById('setup-panel');
-  p.style.display = 'block';
+  if(p) p.style.display = 'none';
+
+  // Use right panel elements (same as game phase)
+  const titleEl  = document.getElementById('step-title');
+  const detailEl = document.getElementById('step-detail');
+  const actEl    = document.getElementById('step-actions');
+  if(titleEl)  titleEl.textContent = title;
+  if(detailEl) detailEl.innerHTML  = info;
+  if(actEl)    actEl.innerHTML     = '';
+
+  // Also populate legacy IDs in case something reads them
   const rollMode = document.getElementById('setup-roll-mode');
   const barMode  = document.getElementById('setup-bar-mode');
+  if(rollMode) rollMode.style.display = 'none';
+  if(barMode)  barMode.style.display  = 'none';
   if(mode === 'bar') {
-    rollMode.style.display = 'none';
-    barMode.style.display  = 'flex';
-    document.getElementById('setup-bar-title').textContent = title;
-    document.getElementById('setup-bar-info').innerHTML    = info;
-    document.getElementById('setup-bar-actions').innerHTML = '';
-    document.getElementById('setup-bar-log').textContent   = '';
+    const bt = document.getElementById('setup-bar-title');
+    const bi = document.getElementById('setup-bar-info');
+    if(bt) bt.textContent = title;
+    if(bi) bi.innerHTML   = info;
   } else {
-    rollMode.style.display = 'flex';
-    barMode.style.display  = 'none';
-    document.getElementById('setup-title').textContent  = title;
-    document.getElementById('setup-info').innerHTML     = info;
-    document.getElementById('setup-rolls').innerHTML    = '';
-    document.getElementById('setup-actions').innerHTML  = '';
+    const st = document.getElementById('setup-title');
+    const si = document.getElementById('setup-info');
+    if(st) st.textContent = title;
+    if(si) si.innerHTML   = info;
   }
 }
 
