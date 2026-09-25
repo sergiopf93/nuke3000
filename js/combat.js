@@ -390,6 +390,18 @@ function applyBattleResult(aR,dR) {
     renderDicePools();
     if(ctx.isPlayerAtt){
       const canContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
+      // Always hide roll button first — re-show only if canContinue
+      if(rollBtn) rollBtn.style.display='none';
+      if(!canContinue) {
+        // Attacker exhausted (only 1 unit left must stay) — close combat
+        if(retreatBtn) retreatBtn.style.display='none';
+        if(cancelBtn){cancelBtn.textContent='CERRAR';cancelBtn.style.display='inline-block';
+          cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;if(ctx.callback)ctx.callback();};}
+        res.innerHTML='<div style="color:#4488cc;font-size:13px;">🛡 DEFENSA EXITOSA</div><div style="font-size:10px;color:#777;">El atacante no tiene más unidades disponibles</div>';
+        addLog('⚔ Defensa exitosa — atacante sin unidades','combat');
+        updateMap(); refreshCards();
+        return;
+      }
       if(retreatBtn){retreatBtn.style.display='inline-block';retreatBtn.onclick=()=>retreatCombat();}
       if(cancelBtn){cancelBtn.textContent='TERMINAR COMBATE';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};}
       if(canContinue && rollBtn) {
