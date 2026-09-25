@@ -367,7 +367,7 @@
     <div id="fcards"></div>
   </div>
 
-  <div id="board-area">
+  <div id="board-area" style="position:relative;overflow:hidden;">
     <div id="bcontrols">
       <button onclick="resetMapView()" title="Resetear vista" style="background:#0a0a0d;border:1px solid #333;color:#888;width:28px;height:28px;cursor:pointer;font-size:14px;">⌂</button>
       <div class="cb" onclick="zv(1.15)" title="Zoom +">+</div>
@@ -383,8 +383,8 @@
         onmouseout="this.style.borderColor='#555';this.style.color='#888'">✕ SALIR</button>
     </div>
 
-    <div id="setup-panel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:900;background:rgba(4,4,8,0.97);overflow-y:auto;-webkit-overflow-scrolling:touch;">
-      <div id="setup-roll-mode" style="display:flex;justify-content:center;align-items:flex-start;min-height:100%;padding:24px 16px;box-sizing:border-box;">
+    <div id="setup-panel" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:500;background:rgba(4,4,8,0.97);overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div id="setup-roll-mode" style="display:flex;justify-content:center;align-items:flex-start;padding:24px 16px;box-sizing:border-box;width:100%;">
         <div style="width:100%;max-width:560px;">
           <div id="setup-title" style="font-family:Orbitron,sans-serif;font-size:13px;letter-spacing:4px;color:#C8A800;margin-bottom:16px;"></div>
           <div id="setup-info" style="font-size:11px;color:#888;margin-bottom:14px;line-height:1.8;"></div>
