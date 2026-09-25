@@ -802,7 +802,6 @@ function doMissileFire() {
 
   document.getElementById('miss-fire-btn').onclick = () => {
     const btn = document.getElementById('miss-fire-btn');
-    // Check if target has only 1 unit BEFORE firing
     if(armyPoints(t)<=1){
       addLog('⚠ No se puede eliminar la última unidad. Misil conservado.','sys');
       modal.remove(); return;
@@ -814,97 +813,97 @@ function doMissileFire() {
     G.missileFiringMode=false;
 
     const defF = G.factions[t.owner];
-    let intercepted=false, resultMsg='', resultColor='#cc4433';
+    const Rc = RULES.combat, MT = Rc.missileTargets;
+    const resEl = document.getElementById('miss-result');
 
-    if(defF && defF.missiles>0) {
-      defF.missiles--; // always consumed when used to intercept
-      const roll=Math.floor(Math.random()*Rc.missileInterceptDie)+1;
-      if(roll>=Rc.missileInterceptThreshold) {
-        intercepted=true;
-        resultMsg=`🛡 INTERCEPTADO — D${Rc.missileInterceptDie}=${roll} (≥${Rc.missileInterceptThreshold})`;
-        resultColor='#88cc44';
-        addLog(`Misil interceptado (D${Rc.missileInterceptDie}=${roll})`,'res');
-      } else {
-        resultMsg=`Intercepción fallida — D${Rc.missileInterceptDie}=${roll} (<${Rc.missileInterceptThreshold})`;
+    // ── FASE 1: DEFENSOR TIRA PARA INTERCEPTAR ──────────────────
+    let intercepted = false;
+    const impactLines = [];
+    const targetable  = [];
+
+    if(defF && defF.missiles > 0) {
+      defF.missiles--;
+      const defRoll = Math.floor(Math.random()*6)+1;
+      const interceptOk = defRoll >= Rc.missileInterceptThreshold;
+      addLog(`🛡 Dado defensor: D6=${defRoll} (necesita ≥${Rc.missileInterceptThreshold}) → ${interceptOk?'INTERCEPTADO':'fallida'}`, 'combat');
+      if(interceptOk) {
+        intercepted = true;
+        resEl.innerHTML =
+          `<div style="color:#88cc44;font-size:12px;margin-bottom:8px;">🛡 INTERCEPTADO</div>` +
+          `<div style="font-size:10px;color:#aaa;">Dado defensor: D6=${defRoll} ≥${Rc.missileInterceptThreshold}</div>`;
+        updateMap(); refreshCards();
+        setTimeout(()=>{ modal.remove(); }, 2500);
+        return;
       }
+      resEl.innerHTML = `<div style="color:#cc8833;font-size:10px;margin-bottom:6px;">Intercepción fallida — D6=${defRoll} &lt;${Rc.missileInterceptThreshold}</div>`;
     }
 
-    if(!intercepted) {
-      const MT = Rc.missileTargets;
-      if(armyPoints(t) <= 1) {
-        const res=document.getElementById('miss-result');
-        if(res){res.textContent='⚠ Sin efecto — no puede eliminar la última unidad';res.style.color='#888';}
-        setTimeout(()=>{ modal.remove(); },2000);
-        return;
-      }
+    // ── FASE 2: ATACANTE TIRA PARA DETERMINAR BAJAS ──────────────
+    const attRoll = Math.floor(Math.random()*6)+1;
+    addLog(`🚀 Dado atacante: D6=${attRoll}`, 'combat');
 
-      // Roll dice for each armored unit type present, collect targetable units
-      const targetable = [];
-      if(t.soldiers > 0) {
-        targetable.push({ type:'soldiers', label:'🪖 Soldado' });
-      }
-      if(t.mechs > 0) {
-        const r=Math.floor(Math.random()*6)+1;
-        addLog('Dado Mech D6='+r+' (necesita ≥'+MT.mech+')', 'combat');
-        if(r >= MT.mech) targetable.push({ type:'mechs', label:'🤖 Mech (D6='+r+' ✓)' });
-        else addLog('Mech resistió (D6='+r+'<'+MT.mech+')', 'combat');
-      }
-      if(t.aircraft > 0) {
-        const r=Math.floor(Math.random()*6)+1;
-        addLog('Dado Aircraft D6='+r+' (necesita ≥'+MT.aircraft+')', 'combat');
-        if(r >= MT.aircraft) targetable.push({ type:'aircraft', label:'✈ Aircraft (D6='+r+' ✓)' });
-        else addLog('Aircraft resistió (D6='+r+'<'+MT.aircraft+')', 'combat');
-      }
-      if(t.scorpions > 0) {
-        const r=Math.floor(Math.random()*6)+1;
-        addLog('Dado Scorpion D6='+r+' (necesita ≥'+MT.scorpion+')', 'combat');
-        if(r >= MT.scorpion) targetable.push({ type:'scorpions', label:'🦂 Scorpion (D6='+r+' ✓)' });
-        else addLog('Scorpion resistió (D6='+r+'<'+MT.scorpion+')', 'combat');
-      }
+    if(t.soldiers > 0) {
+      targetable.push({ type:'soldiers', label:'🪖 Soldado', diceInfo:'' });
+    }
+    if(t.mechs > 0) {
+      const ok = attRoll >= MT.mech;
+      impactLines.push(`🤖 Mech: D6=${attRoll} vs ≥${MT.mech} → ${ok?'✓ alcanzable':'✗ resistió'}`);
+      if(ok) targetable.push({ type:'mechs', label:'🤖 Mech', diceInfo:`D6=${attRoll}` });
+    }
+    if(t.aircraft > 0) {
+      const ok = attRoll >= MT.aircraft;
+      impactLines.push(`✈ Aircraft: D6=${attRoll} vs ≥${MT.aircraft} → ${ok?'✓ alcanzable':'✗ resistió'}`);
+      if(ok) targetable.push({ type:'aircraft', label:'✈ Aircraft', diceInfo:`D6=${attRoll}` });
+    }
+    if(t.scorpions > 0) {
+      const ok = attRoll >= MT.scorpion;
+      impactLines.push(`🦂 Scorpion: D6=${attRoll} vs ≥${MT.scorpion} → ${ok?'✓ alcanzable':'✗ resistió'}`);
+      if(ok) targetable.push({ type:'scorpions', label:'🦂 Scorpion', diceInfo:`D6=${attRoll}` });
+    }
+    impactLines.forEach(l => addLog(l, 'combat'));
 
-      if(targetable.length === 0) {
-        const res=document.getElementById('miss-result');
-        if(res){res.textContent='🛡 IMPACTO SIN EFECTO — todas las unidades resistieron';res.style.color='#888';}
-        updateMap(); refreshCards();
-        setTimeout(()=>{ modal.remove(); },2500);
-        return;
-      }
-
-      const applyKill = (unitType) => {
-        t[unitType]--;
-        const killed = targetable.find(u=>u.type===unitType);
-        addLog('Misil → '+terName(id)+': '+(killed?killed.label:'unidad')+' eliminada','combat');
-        updateMap(); refreshCards();
-        const step=(STEPS[G_step.phase]||[])[G_step.idx];
-        if(step) renderStepActions(step);
-        setTimeout(()=>{ modal.remove(); },1500);
-      };
-
-      if(targetable.length === 1) {
-        // Only one option — apply automatically
-        const res=document.getElementById('miss-result');
-        if(res){res.textContent='💀 IMPACTO — '+targetable[0].label+' eliminado';res.style.color='#cc4433';}
-        applyKill(targetable[0].type);
-        return;
-      }
-
-      // Multiple options — player chooses via global temp function
-      window._missileKillFn = applyKill;
-      const res=document.getElementById('miss-result');
-      if(res){
-        res.innerHTML='<div style="color:#cc4433;font-size:11px;margin-bottom:10px;">💀 IMPACTO — elige unidad a eliminar:</div>'+
-          targetable.map(u=>'<button onclick="window._missileKillFn(\'' + u.type + '\')" style="display:block;width:100%;margin-bottom:6px;background:#0a0a0d;border:1px solid #cc4433;color:#cc4433;padding:8px;font-family:Orbitron,sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;">' + u.label + '</button>').join('');
-      }
-      btn.style.display='none';
+    if(targetable.length === 0) {
+      addLog('🛡 IMPACTO SIN EFECTO — todas las unidades blindadas resistieron', 'combat');
+      resEl.innerHTML =
+        `<div style="color:#888;font-size:12px;margin-bottom:8px;">🛡 IMPACTO SIN EFECTO</div>` +
+        `<div style="font-size:10px;color:#666;line-height:1.8;">${impactLines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+      updateMap(); refreshCards();
+      setTimeout(()=>{ modal.remove(); }, 3000);
       return;
     }
 
-    const res2=document.getElementById('miss-result');
-    if(res2 && resultMsg){res2.textContent=resultMsg;res2.style.color=resultColor;}
-    updateMap();refreshCards();
-    const step2=(STEPS[G_step.phase]||[])[G_step.idx];
-    if(step2) renderStepActions(step2);
-    setTimeout(()=>{ modal.remove(); },2500);
+    // ── ELECCIÓN DE UNIDAD (SIEMPRE, aunque sea solo soldado) ─
+    const applyKill = (unitType) => {
+      window._missileKillFn = null;
+      t[unitType]--;
+      const killed = targetable.find(u=>u.type===unitType);
+      const killLabel = killed ? killed.label + (killed.diceInfo ? ` (${killed.diceInfo})` : '') : unitType;
+      addLog(`💥 IMPACTO — ${killLabel} eliminado en ${terName(id)}`, 'combat');
+      updateMap(); refreshCards();
+      const step = (STEPS[G_step.phase]||[])[G_step.idx];
+      if(step) renderStepActions(step);
+      setTimeout(()=>{ modal.remove(); }, 1500);
+    };
+
+    // Build dice summary
+    const diceHtml = impactLines.length
+      ? `<div style="font-size:10px;color:#888;line-height:1.8;margin-bottom:10px;text-align:left;">${impactLines.map(l=>`<div>${l}</div>`).join('')}</div>`
+      : '';
+
+    // Always show picker, even for a single option
+    window._missileKillFn = applyKill;
+    resEl.innerHTML =
+      `<div style="color:#cc4433;font-size:11px;margin-bottom:8px;">💥 IMPACTO — elige unidad a eliminar:</div>` +
+      diceHtml +
+      targetable.map(u =>
+        `<button onclick="window._missileKillFn('${u.type}')"
+          style="display:block;width:100%;margin-bottom:6px;background:#0a0a0d;
+          border:1px solid #cc4433;color:#cc4433;padding:8px;font-family:Orbitron,sans-serif;
+          font-size:10px;letter-spacing:1px;cursor:pointer;">
+          ${u.label}${u.diceInfo ? ' <span style="color:#888;font-size:9px;">('+u.diceInfo+')</span>' : ''}
+        </button>`
+      ).join('');
+    btn.style.display = 'none';
   };
 }
 
