@@ -23,9 +23,6 @@ const STEPS = {
     { id:'attack',   title:'1. ATACAR (opcional)',
       detail:'Selecciona tu territorio, luego haz clic en uno enemigo adyacente. Puedes atacar varias veces.',
       isAuto: false },
-    { id:'cmove',    title:'2. MOVER UNIDADES (opcional)',
-      detail:'Reposiciona unidades antes de terminar el turno.',
-      isAuto: false },
   ],
   end: [
     { id:'regroup',  title:'1. REAGRUPAR',

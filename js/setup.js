@@ -1,4 +1,4 @@
-const SETUP_STEPS = ['roll', 'claim', 'soldiers', 'nuclear'];
+const SETUP_STEPS = ['roll', 'claim', 'deploy']; // deploy = soldiers+nuclear combined per player
 
 // ── Helpers ───────────────────────────────────────────────────
 function setupLog(msg) {
@@ -125,8 +125,7 @@ function runSetupStep(stepIdx) {
   if(step !== 'roll') hideSetupPanel();
   if(step === 'roll')          setupStep_Roll();
   else if(step === 'claim')    setupStep_Claim();
-  else if(step === 'soldiers') setupStep_PlaceSoldiers();
-  else if(step === 'nuclear')  setupStep_PlaceNuclears();
+  else if(step === 'deploy')   setupStep_Deploy(); // soldiers + nuclear combined
 }
 
 function nextSetupStep() {
@@ -816,6 +815,151 @@ function doPlaceNuclear(fk,id){
 // ════════════════════════════════════════════════════════════════
 //  END SETUP
 // ════════════════════════════════════════════════════════════════
+// ── DEPLOY PHASE: soldiers + nuclear combined per player ──────────────
+function setupStep_Deploy() {
+  G.setup.deployIdx = 0;
+  // soldiersLeft was already init in startSetupPhase — reuse
+  setupStep_Deploy_Next();
+}
+
+function setupStep_Deploy_Next() {
+  // Find next faction that still has soldiers OR mechs OR nukes to place
+  const order = G.setup.order;
+  for(let i = 0; i < order.length; i++) {
+    const idx = (G.setup.deployIdx + i) % order.length;
+    const fk  = order[idx];
+    const hasUnits = (G.setup.soldiersLeft[fk]||0) > 0 || (G.factions[fk].mechs||0) > 0;
+    const hasNukes = (G.setup.nukesLeft[fk]||0) > 0;
+    if(hasUnits || hasNukes) {
+      G.setup.deployIdx = idx;
+      setupStep_Deploy_ForFaction(fk);
+      return;
+    }
+  }
+  // All done
+  nextSetupStep();
+}
+
+function setupStep_Deploy_ForFaction(fk) {
+  const fd     = FDATA[fk];
+  const isMe   = isMyFaction(fk);
+  const isHuman= isHumanFaction(fk);
+  const solLeft = G.setup.soldiersLeft[fk]||0;
+  const mechLeft= G.factions[fk].mechs||0;
+  const nukLeft = G.setup.nukesLeft[fk]||0;
+
+  const unitSummary = [];
+  if(solLeft)  unitSummary.push(`${solLeft} sol`);
+  if(mechLeft) unitSummary.push(`${mechLeft} mech`);
+  if(nukLeft)  unitSummary.push(`${nukLeft} nuclear`);
+
+  showSetupPanel('DESPLIEGUE — '+fd.name,
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — ${unitSummary.join(' + ')} por colocar`,
+    'bar');
+
+  if(!isMe) {
+    // CPU or other human: auto-distribute then advance
+    if(!isHuman) {
+      _autoDistributeFaction(fk);
+      // Also auto-place nukes
+      const unclaimed = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+      let n = nukLeft;
+      for(const t of unclaimed) {
+        if(n <= 0) break;
+        t.hasNuclear = true; n--;
+      }
+      G.setup.nukesLeft[fk] = 0;
+      updateMap();
+    }
+    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
+    setTimeout(setupStep_Deploy_Next, isHuman ? 200 : 600);
+    return;
+  }
+
+  // Player's turn: show unit placement UI
+  const acts = getSetupActionsDiv();
+  acts.innerHTML = '';
+
+  // SOLDIERS & MECHS: click territory to place
+  if(solLeft > 0 || mechLeft > 0) {
+    const instr = document.createElement('div');
+    instr.style.cssText = 'font-size:10px;color:#888;margin-bottom:8px;';
+    instr.textContent = `Clic en territorio propio para colocar unidades (${solLeft} sol, ${mechLeft} mech)`;
+    acts.appendChild(instr);
+
+    G.setup.claimCallback = (id) => {
+      const t = G.territories[id];
+      if(!t || t.owner !== fk) return false;
+      showSoldierCounter(fk, id, Object.values(G.territories).filter(t2=>t2.owner===fk), null);
+      return true;
+    };
+  }
+
+  // NUCLEARS: place after soldiers
+  if(nukLeft > 0) {
+    const nukBtn = setupBtn(`☢ COLOCAR NUCLEAR (${nukLeft} restantes)`, () => {
+      activateNuclearMode_Setup(fk);
+    }, '#1a3a1a');
+    acts.appendChild(nukBtn);
+  }
+
+  // DONE button (when no units left to place)
+  const doneBtn = setupBtn('✓ TERMINAR DESPLIEGUE', () => {
+    G.setup.claimCallback = null;
+    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
+    setupStep_Deploy_Next();
+  }, '#C8A800');
+  acts.appendChild(doneBtn);
+
+  // Auto-distribute button
+  acts.appendChild(setupBtn('AUTO DISTRIBUIR TODO', () => {
+    _autoDistributeFaction(fk);
+    G.setup.claimCallback = null;
+    // Auto-place nukes
+    const available = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+    let n = nukLeft;
+    for(const t of available){ if(n<=0) break; t.hasNuclear=true; n--; }
+    G.setup.nukesLeft[fk]=0;
+    updateMap();
+    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
+    setupStep_Deploy_Next();
+  }, '#333'));
+
+  updateMap();
+}
+
+function activateNuclearMode_Setup(fk) {
+  G.nuclearMode = true;
+  Object.values(G.territories).forEach(t=>{
+    const ring = document.getElementById('tr-'+t.id);
+    if(!ring) return;
+    if(t.owner===fk && !t.hasNuclear) {
+      ring.setAttribute('stroke','#C8A800'); ring.setAttribute('stroke-width','2.5');
+    } else {
+      ring.setAttribute('stroke', FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');
+      ring.setAttribute('stroke-width','1.5');
+    }
+  });
+  // Override territory click for setup nuclear placement
+  G.setup.claimCallback = (id) => {
+    const t = G.territories[id];
+    if(!t || t.owner !== fk || t.hasNuclear) return false;
+    t.hasNuclear = true;
+    G.setup.nukesLeft[fk] = Math.max(0, (G.setup.nukesLeft[fk]||0) - 1);
+    G.nuclearMode = false;
+    Object.values(G.territories).forEach(t2=>{
+      const ring = document.getElementById('tr-'+t2.id);
+      if(ring){ ring.setAttribute('stroke', FDATA[t2.owner]?FDATA[t2.owner].color:'#1a1a20'); ring.setAttribute('stroke-width','1.5'); }
+    });
+    updateMap();
+    // Refresh the deploy panel
+    setupStep_Deploy_ForFaction(fk);
+    return true;
+  };
+  addLog('Clic en territorio propio para colocar Nuclear Complex.', 'sys');
+}
+
+
 function endSetupPhase(){
   hideSetupPanel();
   G.setup.claimCallback=null;

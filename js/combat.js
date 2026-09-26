@@ -85,7 +85,7 @@ function openCombatModal(mode) {
   if(leaveIdx >= 0) attAvail.splice(leaveIdx, 1);
   const defFull=buildPool(tgt);
   const attN=Math.min(attAvail.length,Rc.maxAttackDice);
-  const defN=Math.min(attN,Rc.maxDefenseDice,defFull.length); // Risk-style
+  const defN=Math.min(Rc.maxDefenseDice,defFull.length); // Defender always up to maxDefenseDice
   ctx.attPool=attAvail; ctx.defPool=defFull;
   ctx.attSelected=attAvail.slice(0,attN);
   ctx.defSelected=defFull.slice(0,defN);
@@ -124,7 +124,7 @@ function openCombatModal(mode) {
       showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
         ctx.attSelected = chosen;
         // Defender is CPU — auto-select defense dice
-        const defN = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
+        const defN = Math.min(RULES.combat.maxDefenseDice, ctx.defPool.length);
         ctx.defSelected = ctx.defPool.slice(0, defN);
         rollBtn.textContent='⚄ LANZAR DADOS';
         rollBtn.style.display='inline-block';
@@ -296,7 +296,7 @@ function rollAttackerThenDefend() {
       '<div style="color:#ff4444;margin-bottom:6px;">Atacante tiró: '+aR.join(', ')+'</div>'+
       '<div style="font-size:10px;color:#C8A800;">Elige tus unidades de defensa</div>';
     // Let defender choose their units
-    const defN=Math.min(aR.length, Rc.maxDefenseDice, ctx.defPool.length);
+    const defN=Math.min(Rc.maxDefenseDice, ctx.defPool.length);
     if(Rc.allowUnitSelection && ctx.defPool.length>0){
       showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
         ctx.defSelected=defChosen;
@@ -389,7 +389,7 @@ function applyBattleResult(aR,dR) {
     if(attRebuild.length>0) attRebuild.splice(attRebuild.length-1,1); // remove cheapest
     ctx.attPool=attRebuild; ctx.defPool=buildPool(tgt);
     const aN=Math.min(ctx.attPool.length,Rc.maxAttackDice);
-    const dN=Math.min(aN,Rc.maxDefenseDice,ctx.defPool.length);
+    const dN=Math.min(Rc.maxDefenseDice,ctx.defPool.length);
     ctx.attSelected=ctx.attPool.slice(0,aN);ctx.defSelected=ctx.defPool.slice(0,dN);
     renderDicePools();
     if(ctx.isPlayerAtt){
@@ -415,7 +415,7 @@ function applyBattleResult(aR,dR) {
           const attN2 = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
           showUnitSelectorInModal('att', ctx.attPool, attN2, (chosen)=>{
             ctx.attSelected = chosen;
-            const defN2 = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
+            const defN2 = Math.min(RULES.combat.maxDefenseDice, ctx.defPool.length);
             if(RULES.combat.allowUnitSelection) {
               showUnitSelectorInModal('def', ctx.defPool, defN2, (defChosen)=>{
                 ctx.defSelected = defChosen;

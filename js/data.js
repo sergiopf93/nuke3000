@@ -110,7 +110,7 @@ const FDATA = {
 const DEFAULT_RULES = {
   // ── SETUP ─────────────────────────────────────────────────────
   setup: {
-    steps: ['roll','claim','nuclear','soldiers'],
+    steps: ['roll','claim','deploy'],
     startingAssets: {
       3: {soldiers:60, mechs:4, missiles:2, nukes:4, territories:20, plutonium:0},
       4: {soldiers:45, mechs:3, missiles:2, nukes:3, territories:15, plutonium:0},
