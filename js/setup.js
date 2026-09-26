@@ -617,71 +617,68 @@ function showSoldierCounter(fk, id, validTers, evt) {
     font-family:Orbitron,sans-serif;text-align:center;min-width:130px;`;
 
   let qty = 1;
-  const title = document.createElement('div');
-  title.style.cssText = `font-size:10px;letter-spacing:2px;color:${FDATA[fk].color};margin-bottom:8px;`;
   const mechsAvail = G.factions[fk].mechs||0;
-  title.textContent = 'COLOCAR UNIDADES';
-  const maxEl = document.createElement('div');
-  maxEl.style.cssText = 'font-size:10px;color:#777;margin-bottom:10px;';
-  maxEl.textContent = `Sol: ${maxAdd}  Mech: ${mechsAvail}`;
+  let mechQty = 0;
 
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;';
+  // TITLE
+  const title = document.createElement('div');
+  title.style.cssText=`font-size:10px;letter-spacing:2px;color:${FDATA[fk].color};margin-bottom:10px;`;
+  title.textContent='COLOCAR UNIDADES';
+
+  // SOLDIER ROW: icon + counter
+  const solRow = document.createElement('div');
+  solRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;';
+  const solLbl = document.createElement('span');
+  solLbl.textContent='🪖'; solLbl.style.cssText='font-size:14px;';
+  const solAvailLbl = document.createElement('span');
+  solAvailLbl.style.cssText='font-size:9px;color:#666;min-width:28px;';
+  solAvailLbl.textContent='×'+maxAdd;
   const btnMinus = document.createElement('button');
-  btnMinus.textContent='−';
-  btnMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
+  btnMinus.textContent='−'; btnMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
   const qtyEl = document.createElement('span');
   qtyEl.style.cssText='font-size:22px;color:#fff;min-width:32px;display:inline-block;text-align:center;';
-  qtyEl.textContent = qty;
+  qtyEl.textContent=qty;
   const btnPlus = document.createElement('button');
-  btnPlus.textContent='+';
-  btnPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
+  btnPlus.textContent='+'; btnPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
+  btnMinus.onclick=(e)=>{e.stopPropagation();if(qty>0){qty--;qtyEl.textContent=qty;}};
+  btnPlus.onclick=(e)=>{e.stopPropagation();if(qty<maxAdd){qty++;qtyEl.textContent=qty;}};
+  solRow.appendChild(solLbl); solRow.appendChild(btnMinus); solRow.appendChild(qtyEl); solRow.appendChild(btnPlus); solRow.appendChild(solAvailLbl);
 
-  // Mech counter
-  let mechQty = 0;
+  // MECH ROW: icon + counter (only if mechs available)
   const mechRow = document.createElement('div');
-  mechRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;';
+  mechRow.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;';
+  let mQtyEl;
   if(mechsAvail > 0) {
-    const mLbl = document.createElement('span'); mLbl.textContent='🤖'; mLbl.style.cssText='font-size:12px;color:#888;';
-    const mMinus = document.createElement('button'); mMinus.textContent='−'; mMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:24px;height:24px;cursor:pointer;font-size:14px;';
-    const mQtyEl = document.createElement('span'); mQtyEl.style.cssText='font-size:18px;color:#fff;min-width:24px;text-align:center;'; mQtyEl.textContent='0';
-    const mPlus = document.createElement('button'); mPlus.textContent='+'; mPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:24px;height:24px;cursor:pointer;font-size:14px;';
+    const mLbl=document.createElement('span'); mLbl.textContent='🤖'; mLbl.style.cssText='font-size:14px;';
+    const mAvailLbl=document.createElement('span'); mAvailLbl.style.cssText='font-size:9px;color:#666;min-width:28px;'; mAvailLbl.textContent='×'+mechsAvail;
+    const mMinus=document.createElement('button'); mMinus.textContent='−'; mMinus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
+    mQtyEl=document.createElement('span'); mQtyEl.style.cssText='font-size:22px;color:#fff;min-width:32px;display:inline-block;text-align:center;'; mQtyEl.textContent='0';
+    const mPlus=document.createElement('button'); mPlus.textContent='+'; mPlus.style.cssText='background:#111;border:1px solid #333;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px;';
     mMinus.onclick=(e)=>{e.stopPropagation();if(mechQty>0){mechQty--;mQtyEl.textContent=mechQty;}};
     mPlus.onclick=(e)=>{e.stopPropagation();if(mechQty<mechsAvail){mechQty++;mQtyEl.textContent=mechQty;}};
-    mechRow.appendChild(mLbl); mechRow.appendChild(mMinus); mechRow.appendChild(mQtyEl); mechRow.appendChild(mPlus);
-    popup.appendChild(mechRow);
+    mechRow.appendChild(mLbl); mechRow.appendChild(mMinus); mechRow.appendChild(mQtyEl); mechRow.appendChild(mPlus); mechRow.appendChild(mAvailLbl);
   }
 
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText='display:flex;gap:6px;';
-  const btnOk = document.createElement('button');
+  // OK / CANCEL
+  const btnRow=document.createElement('div'); btnRow.style.cssText='display:flex;gap:6px;';
+  const btnOk=document.createElement('button');
   btnOk.textContent='✓ OK';
-  btnOk.style.cssText=`background:#0a0a0d;border:1px solid ${FDATA[fk].color};color:${FDATA[fk].color};
-    padding:5px 12px;font-family:Orbitron,sans-serif;font-size:10px;cursor:pointer;flex:1;`;
-  const btnX = document.createElement('button');
-  btnX.textContent='✕';
-  btnX.style.cssText='background:#0a0a0d;border:1px solid #333;color:#888;padding:5px 8px;cursor:pointer;font-size:10px;';
-
-  btnMinus.onclick=(e)=>{e.stopPropagation();if(qty>1){qty--;qtyEl.textContent=qty;}};
-  btnPlus.onclick =(e)=>{e.stopPropagation();if(qty<maxAdd){qty++;qtyEl.textContent=qty;}};
-  btnX.onclick    =(e)=>{e.stopPropagation();popup.remove();};
-  btnOk.onclick   =(e)=>{
-    e.stopPropagation();
-    popup.remove();
-    // Place mechs FIRST so doPlaceSoldier sees correct remaining count
-    if(mechQty > 0) {
-      const t = G.territories[id];
-      if(t) { t.mechs += mechQty; G.factions[fk].mechs = Math.max(0,(G.factions[fk].mechs||0)-mechQty); }
-    }
-    // Then place soldiers (this triggers turn advance if both are 0)
-    doPlaceSoldier(fk, id, qty);
+  btnOk.style.cssText=`background:#0a0a0d;border:1px solid ${FDATA[fk].color};color:${FDATA[fk].color};padding:5px 12px;font-family:Orbitron,sans-serif;font-size:10px;cursor:pointer;flex:1;`;
+  const btnX=document.createElement('button');
+  btnX.textContent='✕'; btnX.style.cssText='background:#0a0a0d;border:1px solid #333;color:#888;padding:5px 8px;cursor:pointer;font-size:10px;';
+  btnX.onclick=(e)=>{e.stopPropagation();popup.remove();};
+  btnOk.onclick=(e)=>{
+    e.stopPropagation(); popup.remove();
+    if(mechQty>0){const t=G.territories[id];if(t){t.mechs+=mechQty;G.factions[fk].mechs=Math.max(0,(G.factions[fk].mechs||0)-mechQty);}}
+    if(qty>0) doPlaceSoldier(fk,id,qty);
+    else { updateMap(); refreshCards(); setupStep_Deploy_ForFaction(fk); }
   };
 
-  row.appendChild(btnMinus); row.appendChild(qtyEl); row.appendChild(btnPlus);
+  // Build popup: title → soldier row → mech row (if any) → buttons
+  popup.appendChild(title);
+  popup.appendChild(solRow);
+  if(mechsAvail>0) popup.appendChild(mechRow);
   btnRow.appendChild(btnOk); btnRow.appendChild(btnX);
-  popup.appendChild(title); popup.appendChild(maxEl);
-  popup.appendChild(row);
-  // mechRow already appended above if mechs available
   popup.appendChild(btnRow);
   document.body.appendChild(popup);
 }
@@ -886,34 +883,28 @@ function setupStep_Deploy_ForFaction(fk) {
       return true;
     };
 
-    // Auto-distribute soldiers only
     acts.appendChild(setupBtn('AUTO DISTRIBUIR UNIDADES',()=>{
       _autoDistributeFaction(fk);
       G.setup.claimCallback=null;
       updateMap();
-      // Move to nuclear phase for this player
-      setupStep_Deploy_ForFaction(fk);
+      setupStep_Deploy_ForFaction(fk); // re-render: will show nuclear phase if nuks remain
     },'#333'));
 
   } else if(nukLeft > 0) {
     // ── FASE 2: COLOCAR NUCLEARES ──────────────────────────────
     const instr=document.createElement('div');
     instr.style.cssText='font-size:10px;color:#888;margin-bottom:8px;';
-    instr.textContent=`Coloca tus ${nukLeft} Nuclear Base(s) en el mapa`;
+    instr.textContent=`Coloca tus ${nukLeft} Nuclear Base(s) — clic en el mapa`;
     acts.appendChild(instr);
-
-    // Activate nuclear placement mode immediately
     activateNuclearMode_Setup(fk);
-
+    // AUTO button for nukes
     acts.appendChild(setupBtn('AUTO COLOCAR NUCLEARES',()=>{
-      G.setup.claimCallback=null;
-      G.nuclearMode=false;
+      G.setup.claimCallback=null; G.nuclearMode=false;
       const available=Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
       let n=nukLeft;
       for(const t of available){ if(n<=0) break; t.hasNuclear=true; n--; }
       G.setup.nukesLeft[fk]=0;
       updateMap();
-      // Done — advance turn
       G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
       setupStep_Deploy_Next();
     },'#333'));
