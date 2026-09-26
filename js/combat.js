@@ -123,21 +123,12 @@ function openCombatModal(mode) {
       const attN = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
       showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
         ctx.attSelected = chosen;
-        // Now show defender selector (or go straight to roll)
+        // Defender is CPU — auto-select defense dice
         const defN = Math.min(chosen.length, RULES.combat.maxDefenseDice, ctx.defPool.length);
-        if(RULES.combat.allowUnitSelection && ctx.defPool.length>0) {
-          showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
-            ctx.defSelected = defChosen;
-            rollBtn.textContent='⚄ LANZAR DADOS';
-            rollBtn.style.display='inline-block';
-            rollBtn.onclick=()=>resolveCombatRound(false);
-          });
-        } else {
-          ctx.defSelected = ctx.defPool.slice(0, defN);
-          rollBtn.textContent='⚄ LANZAR DADOS';
-          rollBtn.style.display='inline-block';
-          rollBtn.onclick=()=>resolveCombatRound(false);
-        }
+        ctx.defSelected = ctx.defPool.slice(0, defN);
+        rollBtn.textContent='⚄ LANZAR DADOS';
+        rollBtn.style.display='inline-block';
+        rollBtn.onclick=()=>resolveCombatRound(false);
       });
     } else {
       rollBtn.textContent='⚄ LANZAR DADOS';
@@ -295,14 +286,27 @@ function rollAttackerThenDefend() {
   const Rc=RULES.combat, ctx=G_combat; if(!ctx) return;
   const att=ctx.attSelected;
   const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.attFk==='clt'){const mi=aR.indexOf(Math.min(...aR));if(mi>=0)aR[mi]++;}
+  if(ctx.attFk==='clt'){aR.forEach((_,i)=>aR[i]++);}
   att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
   document.getElementById('dtot-a').textContent=aR.join(' · ');
   ctx._attRolls=aR;
   const rollBtn=document.getElementById('btn-roll');
   setTimeout(()=>{
-    document.getElementById('dres').innerHTML='<div style="color:#ff4444;">Atacante: '+aR.join(', ')+'</div><div style="font-size:10px;color:#C8A800;">Ahora TUS dados de defensa</div>';
-    if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
+    document.getElementById('dres').innerHTML=
+      '<div style="color:#ff4444;margin-bottom:6px;">Atacante tiró: '+aR.join(', ')+'</div>'+
+      '<div style="font-size:10px;color:#C8A800;">Elige tus unidades de defensa</div>';
+    // Let defender choose their units
+    const defN=Math.min(aR.length, Rc.maxDefenseDice, ctx.defPool.length);
+    if(Rc.allowUnitSelection && ctx.defPool.length>0){
+      showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
+        ctx.defSelected=defChosen;
+        if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
+      });
+      if(rollBtn) rollBtn.style.display='none';
+    } else {
+      ctx.defSelected=ctx.defPool.slice(0,defN);
+      if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
+    }
   },800);
 }
 
@@ -440,9 +444,22 @@ function applyBattleResult(aR,dR) {
         rollBtn.disabled=true;
       }
     } else if(ctx.isPlayerDef){
-      // Player is defender - see attacker roll then defend
-      if(rollBtn){rollBtn.textContent='⚄ VER SIGUIENTE TIRADA ATACANTE';rollBtn.style.display='inline-block';rollBtn.onclick=()=>rollAttackerThenDefend();}
-      if(cancelBtn)cancelBtn.style.display='none';
+      // Check if attacker still has units to continue
+      const canAttContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
+      if(!canAttContinue) {
+        // Attacker wiped — defender wins
+        if(rollBtn) rollBtn.style.display='none';
+        if(retreatBtn) retreatBtn.style.display='none';
+        if(cancelBtn){cancelBtn.textContent='CERRAR';cancelBtn.style.display='inline-block';
+          cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;if(ctx.callback)ctx.callback();};}
+        res.innerHTML='<div style="color:#88cc44;font-size:13px;">🛡 DEFENSA EXITOSA</div><div style="font-size:10px;color:#777;">El atacante ha sido repelido</div>';
+        addLog('🛡 Defensa exitosa — atacante repelido', 'combat');
+        updateMap(); refreshCards();
+      } else {
+        // Player is defender - see attacker roll then defend
+        if(rollBtn){rollBtn.textContent='⚄ VER SIGUIENTE TIRADA ATACANTE';rollBtn.style.display='inline-block';rollBtn.onclick=()=>rollAttackerThenDefend();}
+        if(cancelBtn)cancelBtn.style.display='none';
+      }
     } else {
       // Spectator - CPU vs CPU, auto-resolve
       if(rollBtn){rollBtn.textContent='▶ VER SIGUIENTE RONDA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>setTimeout(()=>resolveCombatRound(true),400);}
