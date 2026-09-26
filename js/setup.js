@@ -841,89 +841,88 @@ function setupStep_Deploy_Next() {
 }
 
 function setupStep_Deploy_ForFaction(fk) {
-  const fd     = FDATA[fk];
-  const isMe   = isMyFaction(fk);
-  const isHuman= isHumanFaction(fk);
-  const solLeft = G.setup.soldiersLeft[fk]||0;
-  const mechLeft= G.factions[fk].mechs||0;
-  const nukLeft = G.setup.nukesLeft[fk]||0;
+  const fd      = FDATA[fk];
+  const isMe    = isMyFaction(fk);
+  const isHuman = isHumanFaction(fk);
+  const solLeft  = G.setup.soldiersLeft[fk]||0;
+  const mechLeft = G.factions[fk].mechs||0;
+  const nukLeft  = G.setup.nukesLeft[fk]||0;
+  const hasUnits = solLeft > 0 || mechLeft > 0;
 
-  const unitSummary = [];
-  if(solLeft)  unitSummary.push(`${solLeft} sol`);
-  if(mechLeft) unitSummary.push(`${mechLeft} mech`);
-  if(nukLeft)  unitSummary.push(`${nukLeft} nuclear`);
-
-  showSetupPanel('DESPLIEGUE — '+fd.name,
-    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'} — ${unitSummary.join(' + ')} por colocar`,
+  // Phase title changes based on what still needs placing
+  const phase = hasUnits ? '1/2 UNIDADES' : '2/2 NUCLEARES';
+  showSetupPanel('DESPLIEGUE '+phase+' — '+fd.name,
+    `<span style="color:${fd.color}">${fd.name}</span>${isMe?' <span style="color:#C8A800;">[TU TURNO]</span>':isHuman?' [jugador]':' [CPU]'}`,
     'bar');
 
   if(!isMe) {
-    // CPU or other human: auto-distribute then advance
     if(!isHuman) {
       _autoDistributeFaction(fk);
-      // Also auto-place nukes
       const unclaimed = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
       let n = nukLeft;
-      for(const t of unclaimed) {
-        if(n <= 0) break;
-        t.hasNuclear = true; n--;
-      }
-      G.setup.nukesLeft[fk] = 0;
+      for(const t of unclaimed){ if(n<=0) break; t.hasNuclear=true; n--; }
+      G.setup.nukesLeft[fk]=0;
       updateMap();
     }
-    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
-    setTimeout(setupStep_Deploy_Next, isHuman ? 200 : 600);
+    G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
+    setTimeout(setupStep_Deploy_Next, isHuman?200:600);
     return;
   }
 
-  // Player's turn: show unit placement UI
   const acts = getSetupActionsDiv();
   acts.innerHTML = '';
 
-  // SOLDIERS & MECHS: click territory to place
-  if(solLeft > 0 || mechLeft > 0) {
+  if(hasUnits) {
+    // ── FASE 1: COLOCAR SOLDADOS Y MECHS ──────────────────────
     const instr = document.createElement('div');
-    instr.style.cssText = 'font-size:10px;color:#888;margin-bottom:8px;';
-    instr.textContent = `Clic en territorio propio para colocar unidades (${solLeft} sol, ${mechLeft} mech)`;
+    instr.style.cssText='font-size:10px;color:#888;margin-bottom:8px;';
+    instr.textContent=`Clic en territorio propio para colocar unidades (${solLeft} sol, ${mechLeft} mech)`;
     acts.appendChild(instr);
 
-    G.setup.claimCallback = (id) => {
-      const t = G.territories[id];
-      if(!t || t.owner !== fk) return false;
-      showSoldierCounter(fk, id, Object.values(G.territories).filter(t2=>t2.owner===fk), null);
+    G.setup.claimCallback=(id)=>{
+      const t=G.territories[id];
+      if(!t||t.owner!==fk) return false;
+      showSoldierCounter(fk,id,Object.values(G.territories).filter(t2=>t2.owner===fk),null);
       return true;
     };
+
+    // Auto-distribute soldiers only
+    acts.appendChild(setupBtn('AUTO DISTRIBUIR UNIDADES',()=>{
+      _autoDistributeFaction(fk);
+      G.setup.claimCallback=null;
+      updateMap();
+      // Move to nuclear phase for this player
+      setupStep_Deploy_ForFaction(fk);
+    },'#333'));
+
+  } else if(nukLeft > 0) {
+    // ── FASE 2: COLOCAR NUCLEARES ──────────────────────────────
+    const instr=document.createElement('div');
+    instr.style.cssText='font-size:10px;color:#888;margin-bottom:8px;';
+    instr.textContent=`Coloca tus ${nukLeft} Nuclear Base(s) en el mapa`;
+    acts.appendChild(instr);
+
+    // Activate nuclear placement mode immediately
+    activateNuclearMode_Setup(fk);
+
+    acts.appendChild(setupBtn('AUTO COLOCAR NUCLEARES',()=>{
+      G.setup.claimCallback=null;
+      G.nuclearMode=false;
+      const available=Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
+      let n=nukLeft;
+      for(const t of available){ if(n<=0) break; t.hasNuclear=true; n--; }
+      G.setup.nukesLeft[fk]=0;
+      updateMap();
+      // Done — advance turn
+      G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
+      setupStep_Deploy_Next();
+    },'#333'));
+
+  } else {
+    // Nothing left — auto-advance
+    G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
+    setTimeout(setupStep_Deploy_Next,200);
   }
-
-  // NUCLEARS: place after soldiers
-  if(nukLeft > 0) {
-    const nukBtn = setupBtn(`☢ COLOCAR NUCLEAR (${nukLeft} restantes)`, () => {
-      activateNuclearMode_Setup(fk);
-    }, '#1a3a1a');
-    acts.appendChild(nukBtn);
-  }
-
-  // DONE button (when no units left to place)
-  const doneBtn = setupBtn('✓ TERMINAR DESPLIEGUE', () => {
-    G.setup.claimCallback = null;
-    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
-    setupStep_Deploy_Next();
-  }, '#C8A800');
-  acts.appendChild(doneBtn);
-
-  // Auto-distribute button
-  acts.appendChild(setupBtn('AUTO DISTRIBUIR TODO', () => {
-    _autoDistributeFaction(fk);
-    G.setup.claimCallback = null;
-    // Auto-place nukes
-    const available = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
-    let n = nukLeft;
-    for(const t of available){ if(n<=0) break; t.hasNuclear=true; n--; }
-    G.setup.nukesLeft[fk]=0;
-    updateMap();
-    G.setup.deployIdx = (G.setup.deployIdx + 1) % G.setup.order.length;
-    setupStep_Deploy_Next();
-  }, '#333'));
 
   updateMap();
 }
@@ -946,14 +945,23 @@ function activateNuclearMode_Setup(fk) {
     if(!t || t.owner !== fk || t.hasNuclear) return false;
     t.hasNuclear = true;
     G.setup.nukesLeft[fk] = Math.max(0, (G.setup.nukesLeft[fk]||0) - 1);
+    // Clear nuclear highlights
     G.nuclearMode = false;
     Object.values(G.territories).forEach(t2=>{
-      const ring = document.getElementById('tr-'+t2.id);
-      if(ring){ ring.setAttribute('stroke', FDATA[t2.owner]?FDATA[t2.owner].color:'#1a1a20'); ring.setAttribute('stroke-width','1.5'); }
+      const ring=document.getElementById('tr-'+t2.id);
+      if(ring){ring.setAttribute('stroke',FDATA[t2.owner]?FDATA[t2.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}
     });
     updateMap();
-    // Refresh the deploy panel
-    setupStep_Deploy_ForFaction(fk);
+    const remainingNuks = G.setup.nukesLeft[fk]||0;
+    if(remainingNuks > 0) {
+      // More nukes to place — stay in nuclear mode for this player
+      setupStep_Deploy_ForFaction(fk);
+    } else {
+      // All nukes placed — advance turn
+      G.setup.claimCallback = null;
+      G.setup.deployIdx = (G.setup.deployIdx+1) % G.setup.order.length;
+      setupStep_Deploy_Next();
+    }
     return true;
   };
   addLog('Clic en territorio propio para colocar Nuclear Complex.', 'sys');
