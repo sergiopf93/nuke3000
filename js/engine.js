@@ -985,10 +985,30 @@ function onTerritoryClick(id,event){
   if(G.reinforcementMode&&G.reinforcementMode.callback){const handled=G.reinforcementMode.callback(id,event);if(handled)return;return;}
   if(G.pendingCpuAttack&&G.pendingCpuAttack[id]){const pending=G.pendingCpuAttack[id];if(pending.spectator){if(pending._timer)clearTimeout(pending._timer);delete G.pendingCpuAttack[id];clearAttackFlash(id);openCombatModal('cpu-att-cpu-def');}else{openCombatModal('cpu-att-player-def');}return;}
   if(G.setup&&G.setup._inSetup){return;}
+  // Nuclear destroy mode — player selects which nuclear to destroy on the map
+  if(G.nukeDestroyMode && window._nukeDestroyState) {
+    const st = window._nukeDestroyState;
+    if(!st.validIds.has(id)) return;
+    if(st.chosen.has(id)) {
+      st.chosen.delete(id);
+      const ring = document.getElementById('tr-'+id);
+      if(ring){ring.setAttribute('stroke','#ff8800');ring.setAttribute('stroke-width','4');}
+    } else if(st.chosen.size < st.needed) {
+      st.chosen.add(id);
+      const ring = document.getElementById('tr-'+id);
+      if(ring){ring.setAttribute('stroke','#ff2222');ring.setAttribute('stroke-width','5');}
+    }
+    const cnt = document.getElementById('nuke-destroy-count');
+    if(cnt) cnt.textContent = 'Seleccionados: '+st.chosen.size+' / '+st.needed;
+    const btn = document.getElementById('nuke-destroy-confirm');
+    if(btn){btn.disabled=(st.chosen.size!==st.needed);btn.style.opacity=st.chosen.size===st.needed?'1':'0.4';}
+    return;
+  }
+
   if(G.nuclearMode){const tgt=G.territories[id];if(tgt&&tgt.owner===G.pf&&!tgt.hasNuclear){G.sel=id;doAct('nuke');G.nuclearMode=false;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(ring){ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});return;}}
   if(G.missileFiringMode){const tgt=G.territories[id];if(!tgt||!tgt.owner||tgt.owner===G.pf){addLog('Selecciona un territorio ENEMIGO para el misil.','sys');return;}G.missileFiringMode=false;G.sel=id;doMissileFire();return;}
   if(G.dragging)return;
-  if(G.moveSrc){const src=G.territories[G.moveSrc],dst=G.territories[id];if(id===G.moveSrc){G.moveSrc=null;document.getElementById('map-wrap').classList.remove('moving');updateMap();return;}if(dst&&dst.owner===G.pf&&src.adj&&src.adj.includes(id)){showMoveUnitsPopup(G.moveSrc,id,event);}else{addLog(`${id} no es destino válido.`,'sys');}return;}
+  if(G.moveSrc){const src=G.territories[G.moveSrc],dst=G.territories[id];if(id===G.moveSrc){G.moveSrc=null;G.moveTargets=null;document.getElementById('map-wrap').classList.remove('moving');updateMap();return;}if(!G.moveTargets)G.moveTargets=getMovableTargets(G.moveSrc,RULES.prep.movementRange||2);if(dst&&G.moveTargets.has(id)){showMoveUnitsPopup(G.moveSrc,id,event);}else{addLog(`${terName(id)} no es destino válido (fuera de rango).`,'sys');}return;}
   if(G.moveMode&&G.territories[id]?.owner===G.pf&&armyPoints(G.territories[id])>0){G.moveSrc=id;G.moveTargets=getMovableTargets(id,RULES.prep.movementRange||2);document.getElementById('map-wrap').classList.add('moving');addLog(`Origen: ${terName(id)}. Clic en destino.`,'move');updateMap();return;}
   if(G_step&&G_step.phase==='combat'&&G_step.isMyTurn){const tgt=G.territories[id];if(G.attackSrc&&tgt&&tgt.owner&&tgt.owner!==G.pf){const src=G.territories[G.attackSrc];if(src&&src.adj&&src.adj.includes(id)){const btn=document.getElementById('ba-attack');if(btn){btn.disabled=false;btn.onclick=()=>{G.sel=G.attackSrc;openDice(id);};btn.textContent='⚔ ATACAR '+id;}selectTerritory(id);return;}else{addLog('Territorio no adyacente.','sys');}}if(tgt&&tgt.owner===G.pf&&armyPoints(tgt)>1){G.attackSrc=id;G.moveTargets=null;const btn=document.getElementById('ba-attack');if(btn){btn.disabled=true;btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO';}selectTerritory(id);addLog(`Origen: ${terName(id)}. Clic en enemigo adyacente.`,'sys');return;}}
   selectTerritory(id);
