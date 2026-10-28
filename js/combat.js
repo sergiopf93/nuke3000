@@ -177,7 +177,7 @@ function scheduleCombat(ctx,action,delay){
 }
 function combatView(ctx,result=null){
   return {srcId:ctx.srcId,targetId:ctx.targetId,attFk:ctx.attFk,defFk:ctx.defFk,
-    round:result?ctx.history.length:ctx.round,initialAtt:ctx.initialAtt,initialDef:ctx.initialDef,
+    visualId:ctx.visualId,round:result?ctx.history.length:ctx.round,initialAtt:ctx.initialAtt,initialDef:ctx.initialDef,
     attSelected:ctx.attSelected,defSelected:ctx.defSelected,before:ctx.before,done:ctx.done,result};
 }
 function publishCombatView(ctx,result=null){
@@ -199,7 +199,10 @@ function showCombatView(view){
     // JSON transports copies; restore references used by the existing paired-dice renderer.
     for(const pair of view.result.pairs)for(const side of ['att','def'])pair[side]=view.result[side+'Rolls'].find(d=>d.type===pair[side].type&&d.index===pair[side].index);
     displayBattleResult(ctx,view.result);
-    if(typeof BattleScene!=='undefined'&&RULES.version==='v4')BattleScene.result(ctx,view.result);
+    if(typeof BattleScene!=='undefined'&&RULES.version==='v4'){
+      const presented=BattleScene.result(ctx,view.result);
+      if(view.done)PhaseVisuals.settle(presented).then(()=>{if(G_combat===ctx&&ctx.remote&&ctx.done)closeDice();});
+    }
   }else renderDicePools();
   document.getElementById('btn-roll').style.display='none';
   const close=document.getElementById('btn-cancel');close.style.display=ctx.done?'inline-block':'none';close.textContent='CERRAR';close.onclick=closeDice;

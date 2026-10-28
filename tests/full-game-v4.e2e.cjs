@@ -1,4 +1,4 @@
-// Full real-browser game: UI actions only; seed and timer acceleration are the only injections.
+// Full real-browser game: UI actions only; seeded RNG, timer acceleration and a visual preference; no domain-state injections.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),player=process.env.NUKE_E2E_FACTION||'prm',players=Number(process.env.NUKE_E2E_PLAYERS||3);
@@ -22,6 +22,7 @@ const server=http.createServer((req,res)=>{
    if(url.endsWith('/js/firebase-config.js'))return route.fulfill({contentType:'text/javascript',body:''});
    return route.continue();
   });
+  await context.addInitScript(()=>localStorage.setItem('nuke-animation-mode','minimal'));
   await context.addInitScript(seed=>{
    let state=seed>>>0;Math.random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
    const timeout=window.setTimeout.bind(window);window.setTimeout=(fn,delay,...args)=>timeout(fn,Math.min((delay||0)*0.02,30),...args);

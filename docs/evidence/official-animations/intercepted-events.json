@@ -1,0 +1,137 @@
+{
+  "events": [
+    {
+      "type": "launch",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [],
+        "blocked": false,
+        "status": "launched",
+        "revision": 0,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      }
+    },
+    {
+      "type": "interception",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [
+          6
+        ],
+        "blocked": true,
+        "status": "intercepted",
+        "revision": 1,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      },
+      "dice": [
+        {
+          "kind": "d6",
+          "value": 6,
+          "raw": 6,
+          "effective": 6,
+          "bonus": 0,
+          "label": "Intercepción 1"
+        }
+      ],
+      "success": true
+    },
+    {
+      "type": "end",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [
+          6
+        ],
+        "blocked": true,
+        "status": "intercepted",
+        "revision": 1,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      }
+    }
+  ],
+  "last": {
+    "targetId": "01_02",
+    "target": "sol",
+    "interceptions": [
+      6
+    ],
+    "blocked": true,
+    "destroyed": 0
+  },
+  "randomCalls": 1,
+  "remaining": 5,
+  "bases": 1,
+  "missiles": 0
+}

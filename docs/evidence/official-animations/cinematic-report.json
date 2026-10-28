@@ -1,0 +1,82 @@
+[
+  {
+    "scenario": "order",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "touch": false,
+    "errors": [],
+    "video": "order-1440.webm"
+  },
+  {
+    "scenario": "battle",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "touch": false,
+    "errors": [],
+    "video": "battle-1440.webm"
+  },
+  {
+    "scenario": "missile",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "touch": false,
+    "errors": [],
+    "video": "missile-1440.webm"
+  },
+  {
+    "scenario": "maintenance",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "touch": false,
+    "errors": [],
+    "video": "maintenance-1440.webm"
+  },
+  {
+    "scenario": "order",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "touch": true,
+    "errors": [],
+    "video": "order-844.webm"
+  },
+  {
+    "scenario": "battle",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "touch": true,
+    "errors": [],
+    "video": "battle-844.webm"
+  },
+  {
+    "scenario": "missile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "touch": true,
+    "errors": [],
+    "video": "missile-844.webm"
+  },
+  {
+    "scenario": "maintenance",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "touch": true,
+    "errors": [],
+    "video": "maintenance-844.webm"
+  }
+]

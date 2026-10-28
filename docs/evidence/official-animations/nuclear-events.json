@@ -1,0 +1,642 @@
+{
+  "events": [
+    {
+      "type": "launch",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [],
+        "blocked": false,
+        "status": "launched",
+        "revision": 0,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      }
+    },
+    {
+      "type": "impact",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [],
+        "blocked": false,
+        "status": "impacted",
+        "revision": 2,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "beforeImpact": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "destroyed": 3,
+        "accidentRoll": 1,
+        "after": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 1,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": false,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      }
+    },
+    {
+      "type": "accident",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [],
+        "blocked": false,
+        "status": "impacted",
+        "revision": 2,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "beforeImpact": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "destroyed": 3,
+        "accidentRoll": 1,
+        "after": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 1,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": false,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      },
+      "dice": [
+        {
+          "kind": "d12",
+          "value": 1,
+          "raw": 1,
+          "effective": 1,
+          "bonus": 0,
+          "label": "Accidente nuclear"
+        }
+      ],
+      "explosion": {
+        "centers": [
+          "01_02",
+          "01_01",
+          "01_03"
+        ],
+        "frames": [
+          {
+            "centerId": "01_02",
+            "effects": [
+              {
+                "territoryId": "01_02",
+                "centerId": "01_02",
+                "isCenter": true,
+                "before": {
+                  "id": "01_02",
+                  "region": "r01",
+                  "cx": 278,
+                  "cy": 174.3,
+                  "adj": [
+                    "01_01",
+                    "01_03",
+                    "01_04",
+                    "01_05"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 2,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": true,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_02",
+                  "region": "r01",
+                  "cx": 278,
+                  "cy": 174.3,
+                  "adj": [
+                    "01_01",
+                    "01_03",
+                    "01_04",
+                    "01_05"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              },
+              {
+                "territoryId": "01_01",
+                "centerId": "01_02",
+                "isCenter": true,
+                "before": {
+                  "id": "01_01",
+                  "region": "r01",
+                  "cx": 212,
+                  "cy": 136.2,
+                  "adj": [
+                    "01_02",
+                    "06_07"
+                  ],
+                  "owner": "imp",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": true,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_01",
+                  "region": "r01",
+                  "cx": 212,
+                  "cy": 136.2,
+                  "adj": [
+                    "01_02",
+                    "06_07"
+                  ],
+                  "owner": "imp",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              },
+              {
+                "territoryId": "01_03",
+                "centerId": "01_02",
+                "isCenter": true,
+                "before": {
+                  "id": "01_03",
+                  "region": "r01",
+                  "cx": 278,
+                  "cy": 250.5,
+                  "adj": [
+                    "01_02",
+                    "01_05",
+                    "01_06",
+                    "03_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": true,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_03",
+                  "region": "r01",
+                  "cx": 278,
+                  "cy": 250.5,
+                  "adj": [
+                    "01_02",
+                    "01_05",
+                    "01_06",
+                    "03_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              },
+              {
+                "territoryId": "01_04",
+                "centerId": "01_02",
+                "isCenter": false,
+                "before": {
+                  "id": "01_04",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 136.2,
+                  "adj": [
+                    "01_02",
+                    "01_05",
+                    "01_07"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_04",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 136.2,
+                  "adj": [
+                    "01_02",
+                    "01_05",
+                    "01_07"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              },
+              {
+                "territoryId": "01_05",
+                "centerId": "01_02",
+                "isCenter": false,
+                "before": {
+                  "id": "01_05",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 212.4,
+                  "adj": [
+                    "01_02",
+                    "01_03",
+                    "01_04",
+                    "01_06",
+                    "01_07"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_05",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 212.4,
+                  "adj": [
+                    "01_02",
+                    "01_03",
+                    "01_04",
+                    "01_06",
+                    "01_07"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              }
+            ]
+          },
+          {
+            "centerId": "01_01",
+            "effects": [
+              {
+                "territoryId": "06_07",
+                "centerId": "01_01",
+                "isCenter": false,
+                "before": {
+                  "id": "06_07",
+                  "region": "r06",
+                  "cx": 1136,
+                  "cy": 136.2,
+                  "adj": [
+                    "06_06",
+                    "01_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "06_07",
+                  "region": "r06",
+                  "cx": 1136,
+                  "cy": 136.2,
+                  "adj": [
+                    "06_06",
+                    "01_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              }
+            ]
+          },
+          {
+            "centerId": "01_03",
+            "effects": [
+              {
+                "territoryId": "01_06",
+                "centerId": "01_03",
+                "isCenter": false,
+                "before": {
+                  "id": "01_06",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 288.6,
+                  "adj": [
+                    "01_03",
+                    "01_05",
+                    "03_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "01_06",
+                  "region": "r01",
+                  "cx": 344,
+                  "cy": 288.6,
+                  "adj": [
+                    "01_03",
+                    "01_05",
+                    "03_01"
+                  ],
+                  "owner": "lib",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              },
+              {
+                "territoryId": "03_01",
+                "centerId": "01_03",
+                "isCenter": false,
+                "before": {
+                  "id": "03_01",
+                  "region": "r03",
+                  "cx": 278,
+                  "cy": 326.7,
+                  "adj": [
+                    "01_03",
+                    "01_06",
+                    "03_02"
+                  ],
+                  "owner": "clt",
+                  "soldiers": 5,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                },
+                "after": {
+                  "id": "03_01",
+                  "region": "r03",
+                  "cx": 278,
+                  "cy": 326.7,
+                  "adj": [
+                    "01_03",
+                    "01_06",
+                    "03_02"
+                  ],
+                  "owner": "clt",
+                  "soldiers": 1,
+                  "mechs": 0,
+                  "aircraft": 0,
+                  "scorpions": 0,
+                  "hasNuclear": false,
+                  "attackers": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "end",
+      "event": {
+        "id": "missile:10:1",
+        "attFk": "imp",
+        "defFk": "lib",
+        "targetId": "01_02",
+        "target": "sol",
+        "interceptions": [],
+        "blocked": false,
+        "status": "impacted",
+        "revision": 2,
+        "before": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "beforeImpact": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 5,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": true,
+          "attackers": {}
+        },
+        "destroyed": 3,
+        "accidentRoll": 1,
+        "after": {
+          "id": "01_02",
+          "region": "r01",
+          "cx": 278,
+          "cy": 174.3,
+          "adj": [
+            "01_01",
+            "01_03",
+            "01_04",
+            "01_05"
+          ],
+          "owner": "lib",
+          "soldiers": 1,
+          "mechs": 0,
+          "aircraft": 0,
+          "scorpions": 0,
+          "hasNuclear": false,
+          "attackers": {}
+        },
+        "sourceTerritory": "01_01",
+        "targetTerritory": "01_02"
+      }
+    }
+  ],
+  "last": {
+    "targetId": "01_02",
+    "target": "sol",
+    "interceptions": [],
+    "blocked": false,
+    "destroyed": 3,
+    "accident": 1
+  },
+  "randomCalls": 1,
+  "remaining": 1,
+  "bases": 0,
+  "missiles": 0
+}

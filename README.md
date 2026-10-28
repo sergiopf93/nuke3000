@@ -1,3 +1,19 @@
+# NUKE3000 — miniaturas oficiales y dados animados
+
+Se conserva el tablero original y el Reglamento V4. La presentación utiliza recortes reales del material oficial: soldados, mecas, aeronaves, escorpiones, misiles, bases y dados D6/D12/D20. No usa el fondo del prototipo ni miniaturas SVG genéricas.
+
+Dados comunes en sorteo/desempates, combate, intercepción, accidente y mantenimiento. Disparos dirigidos al perdedor real, degradaciones y supervivientes entre rondas. Mantenimiento muestra todos los resultados antes de elegir bases. Opciones cinematográfica/rápida/mínima y omisión, sin cambiar reglas ni resultados.
+
+[Jugar](https://sergiopf93.github.io/nuke3000/) · [Capturas, vídeos y comparativa del mapa](docs/evidence/official-animations/index.html) · [Contrato visual](docs/COMBAT_VISUAL_DESIGN.md) · [Procedencia/calidad](docs/ASSET_INVENTORY.md).
+
+Pruebas: `npm test` (337); `npm run test:cinematic`; `npm run test:browser`; `npm run test:v4:browser`; partidas completas `npm run test:v4:e2e` / `npm run test:v4:e2e:mobile`. Node22 y Playwright1.63 con Chrome. La grabación necesita el codificador gratuito de Playwright; el juego no depende de él.
+
+Pendientes: validación artística, Safari/iPhone físico y Firebase real/reconexión. Las imágenes del PDF son provisionales: para mejorar se necesitan fotos frontal/3⁄4/lateral de las figuras, fondo neutro y ≥2000 px de alto.
+
+---
+
+## Histórico anterior a las miniaturas oficiales
+
 # NUKE3000 — Reglamento V4 y combate2.5D
 
 Juego de estrategia para3–6 facciones. Nuevas partidas usan V4: refuerzos por región, tropas comprometidas antes de combatir, combate obligatorio con bajas tipadas, misiles sin dado de impacto, cadenas nucleares y mantenimiento con elección posterior de bases. Se conserva el tablero original de60territorios.

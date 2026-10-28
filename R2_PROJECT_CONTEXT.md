@@ -1,3 +1,19 @@
+# Estado vigente — miniaturas oficiales y dados comunes
+
+Solicitud: `PROMPT_PARA_R2.md` y ZIP NUKE3000 de animaciones. Se sustituye solo presentación: recortes PNG oficiales, escena transparente sobre el mapa original y DiceSequence común a sorteo/desempates, combate, intercepciones, accidente y mantenimiento. Se retiran SVG genéricos y efectos ornamentales sobre el tablero. No se integra el fondo de la demo ni su motor ficticio.
+
+Nuevos módulos: `js/dice-sequence.js`, `js/phase-visuals.js`; `battle-scene.js` sustituido. Hooks de presentación en setup/v4-game/combat/online. Estado lógico V4, preset V3, mapa y motor puro conservados. El resultado se decide/sincroniza antes de representar; promesas finitas y registros locales fuera de G impiden bloqueos o duplicados. Observadores no tiran dados.
+
+337 tests Node; ocho escenas grabadas en escritorio/móvil, casos de intercepción/cadena/cancelación, regresiones V3/V4, dos clientes y partidas completas cuatro jugadores hasta Libertos ronda4/48 acciones. Comparación con a70a285: geometría/adyacencias/SVG exactos; cero píxeles distintos en las capturas finales de ambos tamaños. Evidencia en `docs/evidence/official-animations/`.
+
+PWA V7: `nuke3000-v7-official-animation`, marca HTML `official-miniatures-v7`. Incluye los nueve PNG y módulos nuevos; actualización desde V6,35 hashes y arranque offline comprobados. Node22/Playwright1.63/Chrome; grabador gratuito de Playwright usado solo en QA, sin nuevas dependencias del juego.
+
+Documentos vigentes: COMBAT_VISUAL_DESIGN y ASSET_INVENTORY. Las descripciones de miniaturas SVG del historial inferior ya no representan el producto actual. Pendientes Safari/iPhone físico, Firebase real/reconexión y fotografías de alta resolución para sustituir los recortes provisionales.
+
+---
+
+## Histórico anterior a las miniaturas oficiales
+
 # Estado vigente — Reglamento V4 y combate cinematográfico (28/10/2026)
 
 Fuente activa: `index.html`, JavaScript clásico, sin build. Desarrollo autorizado directamente en main y publicación tras verificaciones. PDFs originales V4 (13 páginas) y lore V1 (54 páginas) leídos mediante PDFKit; reporte `pruebas/v2.txt` leído. El tablero y sus 60 coordenadas/12 regiones/adyacencias no se modifican.

@@ -1,0 +1,55 @@
+{
+  "unitTests": 337,
+  "originalUnitTestsPreserved": 318,
+  "normalSceneVideos": 8,
+  "additionalLifecycleVideos": 3,
+  "engineFilesUnchanged": [
+    "js/rules-v4.js",
+    "js/battle.js",
+    "js/engine.js",
+    "js/data.js",
+    "js/map.js"
+  ],
+  "mapBaseline": "a70a285",
+  "mapGeometryIdentical": true,
+  "mapRawChangedPixels": [
+    0,
+    0
+  ],
+  "v4FullGames": [
+    {
+      "viewport": "1440x900",
+      "winner": "lib",
+      "round": 4,
+      "uiActions": 48
+    },
+    {
+      "viewport": "844x390 touch",
+      "winner": "lib",
+      "round": 4,
+      "uiActions": 48
+    }
+  ],
+  "v3FullGame": {
+    "winner": "lib",
+    "round": 12,
+    "uiActions": 121
+  },
+  "online": "Two Chrome clients with controlled transport: desktop/touch battles, repeated missile responses, retry, unique income; mixed-speed initial order and tie generations.",
+  "serviceWorker": {
+    "from": "36a9c15 / V6",
+    "to": "nuke3000-v7-official-animation",
+    "isolatedHashedResources": 35,
+    "offlineTerritories": 60
+  },
+  "limits": [
+    "Physical Safari/iPhone untested",
+    "Real Firebase/reconnect untested",
+    "Images remain low-resolution PDF crops"
+  ],
+  "cameraRestoredAndAnimationsCleared": [
+    "1440x900",
+    "844x390"
+  ],
+  "mixedSpeedOnlineSetup": "Passed: initial D6, future tie generation retained, local presentation barrier before claim"
+}

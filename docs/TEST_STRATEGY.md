@@ -1,3 +1,17 @@
+# Validación de miniaturas oficiales y dados comunes
+
+- `npm test`:337 tests (318 anteriores+19 de eventos/representación). Contratos de dados, bruto/mínimo/bonificación, dirección ganadora/perdedora, bajas tipadas, eventos duplicados, error de renderizado y ausencia de RNG visual.
+- `test:cinematic`: ocho vídeos y capturas normales de sorteo/desempate, batalla, misil y mantenimiento en escritorio y móvil horizontal. IDs persistentes tras degradaciones; elección de bases bloqueada durante la tirada. Casos adicionales de intercepción exitosa sin impacto, D12=1 y cadena, cancelación/visibilidad simulada y DOM limitado con ejércitos grandes. Comparativa automática contra a70a285: grafo/SVG exactos y cero diferencias significativas; las capturas finales dan cero píxeles distintos incluso antes de la tolerancia.
+- `test:v4:browser`: mecánicas V4 sin regresiones; dos clientes autoritativos en escritorio y touch, cierre automático, intercepciones humanas, retry y transiciones. Sorteo y desempate online con velocidades distintas comprobados: se conserva el D6 futuro y no se cambia de pantalla antes de los dados locales. Las fixtures reglamentarias usan animación mínima o rápida; las grabaciones de presentación usan cinemática normal.
+- `test:v4:e2e` / `:mobile`: partidas completas cuatro jugadores, solo semilla/aceleración/preferencia visual, sin escribir estado de partida desde el test. Victoria válida Libertos ronda4,48 acciones UI en ambos tamaños.
+- `test:browser`: regresiones V3 explícitas y matriz responsive existente; SW V6→V7 con35 recursos SHA256, retirada de caché anterior y arranque offline60. Firebase-config se neutraliza en el servidor aislado de pruebas y no se compara con su archivo real en ese test.
+
+Grabaciones y evidencia en `docs/evidence/official-animations`. Las escenas aisladas son fixtures explícitas, no partidas completas. No se declara Safari/iPhone físico ni Firebase real verificados. Se ejecutan también node --check de scripts activos e inline y git diff --check. No hay build/typecheck/linter configurados.
+
+---
+
+## Histórico anterior a las miniaturas oficiales
+
 # Validación de la migración V4
 
 Node22+, Playwright1.63/Chrome. Sin nuevas dependencias ni build/typecheck/lint inexistentes. `node --check` para JS activos; `git diff --check`. Suites V3 mantienen expectativas antiguas bajo ?rules=v3, no se borran tests para hacer pasar V4.

@@ -329,7 +329,9 @@ const ONLINE = (() => {
   function _handleRemoteAction(action) {
     if(G.gameOver) return;
     const { type, payload } = action;
+    if(typeof setupDicePending==='function'&&setupDicePending()&&G.setup?._stepIdx===0&&['SETUP_NEXT_STEP','SETUP_SYNC','GAME_PHASE_START'].includes(type)){setupDiceReady().then(()=>_handleRemoteAction(action));return;}
     if(payload?._G?.schemaVersion>2){addLog('La sala usa una versión más reciente. Actualiza el juego.','sys');return;}
+    if(type==='PRESENTATION_EVENT'){if(typeof PhaseVisuals!=='undefined')PhaseVisuals.receive(payload);return;}
     if(type==='DECISION_REQUEST')return _receiveDecision(action);
     if(type==='DECISION_RESPONSE')return _receiveDecisionResponse(action);
     if(type==='DECISION_DONE')return _receiveDecisionClosed(action);
@@ -354,7 +356,7 @@ const ONLINE = (() => {
 
       // ── Setup phase ──
       case 'SETUP_ROLL':
-        if (typeof _onRemoteRoll === 'function') _onRemoteRoll(payload.fk, payload.roll);
+        if (typeof _onRemoteRoll === 'function') _onRemoteRoll(payload.fk, payload.roll, payload.generation);
         break;
 
       case 'SETUP_NEXT_STEP':

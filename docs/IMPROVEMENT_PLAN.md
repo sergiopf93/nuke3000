@@ -1,3 +1,15 @@
+# Sustitución selectiva de presentación
+
+Implementados: retirada de ornamentos/SVG genéricos, sprites oficiales, dados comunes en todas las fases V4, disparos correctos y miniaturas persistentes, secuencias reales de misil y mantenimiento, cancelación y observación online. Motor V4 y mapa preservados.
+
+Verificación:337 tests, escenas grabadas, partidas completas, dos clientes y comparación del tablero; caché V7. Publicar solo tras estos gates y comprobar commit/archivos públicos.
+
+Siguiente validación humana: dirección artística y Safari físico. Para una versión gráfica final, fotografías de alta definición indicadas en ASSET_INVENTORY. No añadir un motor3D para resolver la baja resolución de los recortes.
+
+---
+
+## Histórico anterior a las miniaturas oficiales
+
 # Evolución V4 — hitos actuales
 
 1. Auditoría PDF/lore y diferencial: realizada, con decisiones provisionales expresas.

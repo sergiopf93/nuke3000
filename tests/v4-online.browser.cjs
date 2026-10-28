@@ -20,6 +20,7 @@ const server=http.createServer((req,res)=>{
     if(url.endsWith('/js/online.js'))return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(root,'js/online.js'),'utf8').replace('    signalGameEnd,','    __configure:(uid,db)=>{_roomId="test";_userId=uid;_db=db;_isHost=uid==="a";}, _handleRemoteAction,\n    signalGameEnd,')});
     return route.continue();
    });
+   await context.addInitScript(()=>localStorage.setItem('nuke-animation-mode','fast'));
    const page=pages[uid]=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',err=>errors.push(err.message));
    await page.exposeFunction('publishTestAction',action=>{queue.push(action);});
    await page.goto(origin+'?rules=v4');await page.locator(`#faction-grid [data-f="${faction}"]`)[touch?'tap':'click']();await page.locator('#pname').fill(uid);await page.locator('#btnstart')[touch?'tap':'click']();
@@ -36,7 +37,7 @@ const server=http.createServer((req,res)=>{
    },{uid,faction});
   }
   const pump=async()=>{while(queue.length){const action=queue.shift();await pages[action.playerId==='a'?'b':'a'].evaluate(action=>ONLINE._handleRemoteAction(action),action);}};
-  const settle=async(predicate,limit=200)=>{for(let i=0;i<limit;i++){await pages.a.waitForTimeout(40);await pump();if(await predicate())return;}throw Error('No converge el protocolo V4 '+JSON.stringify(await Promise.all(Object.entries(pages).map(async([uid,p])=>({uid,...await p.evaluate(()=>({key:currentStepKey(),revision:G.snapshotRevision,waiting:G.waitingDecision,pending:G.pendingMissile,last:G.lastMissile,modal:document.getElementById('online-decision-modal')?.outerHTML,logs:G.log?.slice(-4)}))})))));};
+  const settle=async(predicate,limit=800)=>{for(let i=0;i<limit;i++){await pages.a.waitForTimeout(40);await pump();if(await predicate())return;}throw Error('No converge el protocolo V4 '+JSON.stringify(await Promise.all(Object.entries(pages).map(async([uid,p])=>({uid,...await p.evaluate(()=>({key:currentStepKey(),revision:G.snapshotRevision,waiting:G.waitingDecision,pending:G.pendingMissile,last:G.lastMissile,modal:document.getElementById('online-decision-modal')?.outerHTML,logs:G.log?.slice(-4)}))})))));};
   // The move publishes committed troops while ownership stays with the defender.
   await pages.a.evaluate(()=>{G.phase='prep';G_step={currentFk:'clt',phase:'prep',idx:4,isMyTurn:true};Object.assign(G.territories['01_01'],{soldiers:1,scorpions:2});transferUnits('01_01','01_02',{scorpions:2});});await pages.a.waitForTimeout(100);await pump();
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,committed:G.territories['01_02'].attackers.clt.scorpions,guard:G.territories['01_01'].soldiers})),{owner:'lib',committed:2,guard:1});
@@ -44,12 +45,12 @@ const server=http.createServer((req,res)=>{
   await settle(()=>pages.a.evaluate(()=>completed===1));
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,scorpions:G.territories['01_02'].scorpions})),{owner:'clt',scorpions:2});
   assert.equal(await pages.a.evaluate(()=>window.domainRounds),1);assert.equal(await pages.b.evaluate(()=>window.domainRounds),0,'El invitado no vuelve a tirar');
-  assert.equal(await pages.b.locator('#dmodal.open').isVisible(),true);await pages.b.locator('#btn-cancel')[touch?'tap':'click']();assert.equal(await pages.b.locator('#dmodal.open').count(),0);
+  await settle(()=>pages.b.evaluate(()=>G_combat===null));assert.equal(await pages.b.locator('.nuke-cinematic').count(),0,'El observador regresa al tablero automáticamente');
   // The host also owns authoritative resolution for a CPU attacker against a human.
   await pages.a.evaluate(()=>{G_step={currentFk:'imp',phase:'combat',idx:1,isMyTurn:false};G.currentFaction='imp';Object.assign(G.territories['01_02'],{owner:'lib',soldiers:1,mechs:1,scorpions:0,attackers:{imp:{soldiers:0,mechs:0,aircraft:0,scorpions:2}}});window.completed=0;V4Game.battle('01_02','imp',()=>completed++);});
   await settle(()=>pages.a.evaluate(()=>completed===1));
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,units:RulesV4.count(G.territories['01_02'])})),{owner:'imp',units:2});
-  assert.equal(await pages.a.evaluate(()=>window.domainRounds),3);assert.equal(await pages.b.evaluate(()=>window.domainRounds),0);await pages.b.locator('#btn-cancel')[touch?'tap':'click']();
+  assert.equal(await pages.a.evaluate(()=>window.domainRounds),3);assert.equal(await pages.b.evaluate(()=>window.domainRounds),0);await settle(()=>pages.b.evaluate(()=>G_combat===null));
   // Multiple human defensive responses, each tied to the actual attacking faction.
   for(const attacker of ['clt','imp']){
    await pages.a.evaluate(attacker=>{G.round++;G.phase='combat';G.currentFaction=attacker;G_step={currentFk:attacker,phase:'combat',idx:0,isMyTurn:attacker===G.pf};Object.assign(G.territories['01_02'],{owner:'lib',soldiers:5,mechs:1,aircraft:0,scorpions:0,attackers:{},hasNuclear:false});G.factions[attacker].missiles=2;G.factions.lib.missiles=2;Math.random=()=>.1;window.missileComplete=0;V4Game.missile('01_02',attacker,'sol',()=>missileComplete++);},attacker);
@@ -58,7 +59,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(await pages.a.evaluate(()=>G.waitingDecision.toFaction),'lib');
     await pages.b.locator('#remote-intercept')[touch?'tap':'click']();await pump();
    }
-   await settle(()=>pages.a.evaluate(()=>missileComplete===1));
+   await settle(async()=>await pages.a.evaluate(()=>missileComplete===1)&&await pages.b.evaluate(()=>G.territories['01_02'].soldiers===2));
    for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(attacker=>({att:G.factions[attacker].missiles,def:G.factions.lib.missiles,soldiers:G.territories['01_02'].soldiers}),attacker),{att:1,def:0,soldiers:2});
    assert.deepEqual(await pages.a.evaluate(()=>G.lastMissile.interceptions),[1,1]);assert.equal(await pages.b.locator('#online-decision-modal').count(),0);
    if(await pages.a.locator('#missile-modal').isVisible())await pages.a.locator('#missile-modal button').click();

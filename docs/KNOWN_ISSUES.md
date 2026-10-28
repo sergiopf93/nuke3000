@@ -1,3 +1,17 @@
+# Presentación vigente y límites
+
+Retiradas las miniaturas SVG genéricas y las animaciones ornamentales V4 anteriores. La presentación actual usa exclusivamente los nueve recortes oficiales recibidos y resultados reales del motor. Las afirmaciones inferiores sobre SVG o escenas previas son históricas.
+
+- Calidad provisional de recortes del PDF: ver ASSET_INVENTORY para dimensiones y fotografías necesarias. No son modelos3D.
+- Safari/iPhone físico y medición de fluidez/memoria en hardware real pendientes del propietario. Chrome táctil, reducción de movimiento, cancelación y visibilidad simulada sí comprobados.
+- Online comprobado en dos Chrome con transporte controlado; no sustituye una prueba con Firebase real/reconexión.
+- Se conservan las ambigüedades de V4 documentadas y la limitación previa del asistente de disputa de faccionesD6. Este cambio no altera reglas ni añade ese asistente.
+- Sin sonido. Sin dependencias de animación nuevas ni servicios de pago.
+
+---
+
+## Histórico anterior a las miniaturas oficiales
+
 # Estado V4 y límites vigentes
 
 Las reglas y decisiones V3 inferiores son históricas y no describen V4.

@@ -1,12 +1,9 @@
-# Inventario visual de la evolución V4
+# Inventario vigente — miniaturas del paquete oficial
 
-- `assets/tablero.jpg`: fondo existente; se conserva sin sustitución.
-- `assets/units/{soldier,mech,aircraft,scorpion,nuclear}.png`: imágenes existentes; esta escena no necesita nuevas texturas ni altera esos archivos.
-- `assets/units/*_portrait.jpg`: seis retratos existentes, disponibles para pantallas de facción; no sustituidos.
-- `assets/fonts/`: Orbitron y Rajdhani existentes, reutilizadas por la escena.
-- Reglamento V4, página 5: lámina MATERIAL inspeccionada visualmente. Muestra soldado armado, meca bípedo, aeronave con dos propulsores, escorpión con varias patas y cañón superior, base y misil. Referencia para las siluetas SVG originales incorporadas a `js/battle-scene.js`; no son recortes ni nuevos modelos tridimensionales.
-- Lore V1, página 1: portada NUKE3000 LORE inspeccionada. No se han reutilizado ilustraciones de páginas interiores en este módulo; no atribuir las miniaturas a personajes concretos del lore.
+Fuente recibida: `NUKE3000_animaciones_prototipo.zip`; contrato leído `INTEGRACION_R2.md`; solicitud del propietario `PROMPT_PARA_R2.md`. Prototipo ejecutado e inspeccionado en Chrome local antes de integrar. La demo solo mostró ejemplos; sus resultados ficticios no se incorporaron al motor.
 
-No hay imágenes generadas mediante IA, servicios externos, nuevas dependencias ni recursos de otras franquicias en este módulo. Las figuras son representaciones vectoriales simplificadas, diferenciadas por silueta y color de bando. Su fidelidad artística necesita validación del usuario.
+Se integran nueve PNG en `assets/cinematic/`: soldado, meca, aeronave, escorpión, misil, base nuclear y dados D6/D12/D20. Todos son copias byte a byte de los recortes oficiales recibidos, procedentes de MATERIAL, p.5 del Reglamento V4. Dimensiones y SHA256 en [README de assets](../assets/cinematic/README.md).
 
-Se inspeccionaron visualmente también las páginas 19/25/31/37/43/49 del lore: láminas de meca, aeronave y escorpión de Imperators, Libertos, Cultistas, Erebus, Consorcio y Shinin. Comparten silueta funcional y varían cabinas, blindajes y colores (ocre, verde envejecido, rojo, metal oscuro con energía azul, gris y blanco). Las miniaturas SVG mantienen esa diferenciación por tipo a nivel esquemático; no reproducen el detalle ni las texturas de estas láminas. El piloto usa colores de bando, todavía no variantes artísticas completas por facción.
+No se integra `board_reference.png`. Fondo, paleta, hexágonos, texturas, coordenadas, adyacencias y fuentes Orbitron/Rajdhani existentes se conservan. Se retiran las miniaturas SVG genéricas, el terreno duplicado y los pulsos decorativos de la iteración anterior. La nueva escena transparente muestra directamente el mapa vivo, sin reemplazarlo por una imagen.
+
+Calidad provisional: las figuras tienen entre 284 y 425 px de alto en los recortes; no equivalen a fotografías originales de alta definición ni a modelos 3D. Se solicitan para una mejora futura vistas frontal/3⁄4/lateral de las seis figuras, fondo neutro, luz uniforme y ≥2000 px de alto, más fotos por facción si deben conservarse colores particulares y dados legibles. No se han generado figuras sustitutivas ni contratado servicios.

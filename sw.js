@@ -1,5 +1,5 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v6-rules-v4';
+const CACHE = 'nuke3000-v7-official-animation';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',
@@ -18,6 +18,18 @@ const ASSETS = [
   '/nuke3000/js/rules-v4.js',
   '/nuke3000/js/v4-game.js',
   '/nuke3000/js/battle-scene.js',
+  '/nuke3000/js/dice-sequence.js',
+  '/nuke3000/js/phase-visuals.js',
+  '/nuke3000/css/dice-sequence.css',
+  '/nuke3000/assets/cinematic/soldier.png',
+  '/nuke3000/assets/cinematic/mech.png',
+  '/nuke3000/assets/cinematic/aircraft.png',
+  '/nuke3000/assets/cinematic/scorpion.png',
+  '/nuke3000/assets/cinematic/missile.png',
+  '/nuke3000/assets/cinematic/nuclear_base.png',
+  '/nuke3000/assets/cinematic/dice_d6.png',
+  '/nuke3000/assets/cinematic/dice_d12.png',
+  '/nuke3000/assets/cinematic/dice_d20.png',
   '/nuke3000/css/battle-scene.css',
   '/nuke3000/js/engine.js',
   '/nuke3000/js/combat.js',

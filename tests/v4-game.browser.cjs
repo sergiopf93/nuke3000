@@ -6,7 +6,7 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{browser=await chromium.launch({channel:'chrome',headless:true});const origin='http://127.0.0.1:'+server.address().port;
 for(const viewport of [{width:1440,height:900},{width:844,height:390}]){
- const touch=viewport.width===844,context=await browser.newContext({viewport,hasTouch:touch,isMobile:touch,serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
+ const touch=viewport.width===844,context=await browser.newContext({viewport,hasTouch:touch,isMobile:touch,serviceWorkers:'block'}),page=await context.newPage(),errors=[];await context.addInitScript(()=>localStorage.setItem('nuke-animation-mode','minimal'));page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
  await context.route('**/*',r=>{const url=r.request().url();if(!url.startsWith(origin)&&!url.startsWith('data:'))return r.abort();if(url.endsWith('/js/firebase-config.js'))return r.fulfill({contentType:'text/javascript',body:''});return r.continue();});
  await page.goto(origin+'?rules=v4');await page.locator('#faction-grid [data-f="imp"]').click();await page.locator('#pname').fill('QA V4');await page.locator('#btnstart').click();
  assert.equal(await page.evaluate(()=>RULES.version),'v4');
@@ -16,7 +16,7 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390}]){
  await page.evaluate(()=>{G.phase='combat';G_step.phase='combat';G_step.idx=1;renderStepActions(STEPS.combat[1]);});
  const prior=await page.evaluate(()=>currentStepKey());await page.evaluate(()=>advanceStep());assert.equal(await page.evaluate(()=>currentStepKey()),prior,'No puede omitir combate obligatorio');
  await page.locator('#step-actions button').filter({hasText:/COMBATIR/}).click();
- await page.waitForFunction(()=>G_combat?.history.length>0);assert.equal(await page.locator('#btn-cancel').isVisible(),false,'Sin retirada');
+ await page.waitForFunction(()=>G.lastBattle?.status==='conquered');assert.equal(await page.locator('#btn-cancel').isVisible(),false,'Sin retirada');
  await page.waitForFunction(()=>G_combat===null);assert.equal(await page.evaluate(()=>G.territories['01_02'].owner),'imp');assert.equal(await page.evaluate(()=>RulesV4.pendingAttacks(V4Game.state(),'imp').length),0);
  await page.screenshot({path:path.join(evidence,viewport.width+'-conquest.png')});
  // The chosen category precedes launch. Two failures spend two defensive missiles; no impact die.
@@ -28,7 +28,7 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390}]){
  assert.deepEqual(await page.evaluate(()=>({blocked:G.lastMissile.blocked,rolls:G.lastMissile.interceptions,mech:G.territories[G.sel].mechs,def:G.factions.lib.missiles})),{blocked:true,rolls:[6],mech:1,def:2});await page.locator('#missile-modal button').click();
  // Nuclear rolls are displayed together; the player chooses any own base afterwards.
  await page.evaluate(()=>{G.phase='end';G_step={currentFk:'imp',phase:'end',idx:1,isMyTurn:true};for(const t of Object.values(G.territories))t.hasNuclear=false;for(const id of ['01_01','01_02','03_01'])Object.assign(G.territories[id],{owner:'imp',hasNuclear:true,soldiers:5});window.maintenanceCalls=0;Math.random=()=>maintenanceCalls++===0?0:.99;window.finishedMaintenance=0;runMaintenanceRollsFor('imp',()=>finishedMaintenance++);});
- assert.match(await page.locator('.v4-maint-dice').innerText(),/D12: 1.*D12: 12.*D12: 12/);assert.equal(await page.evaluate(()=>Object.values(G.territories).filter(t=>t.hasNuclear).length),3,'Ninguna base explota antes de elegir');
+ await page.locator('#maint-modal button').filter({hasText:/EXPLOTAR/}).first().waitFor();assert.deepEqual(await page.locator('#maint-modal .ds-die').evaluateAll(els=>els.map(el=>Number(el.dataset.value))),[1,12,12]);assert.equal(await page.evaluate(()=>Object.values(G.territories).filter(t=>t.hasNuclear).length),3,'Ninguna base explota antes de elegir');
  const target=await page.evaluate(()=>terName('01_02'));await page.locator('#maint-modal button').filter({hasText:'EXPLOTAR '+target}).click();
  assert.equal(await page.evaluate(()=>G.territories['01_02'].hasNuclear),false);assert.equal(await page.evaluate(()=>G.territories['01_01'].hasNuclear),false,'La base adyacente encadena');assert.equal(await page.evaluate(()=>G.territories['03_01'].hasNuclear),true,'Base remota conservada');await page.locator('#maint-modal button').filter({hasText:'FINALIZAR'}).click();assert.equal(await page.evaluate(()=>finishedMaintenance),1);
  // Regional pools cannot be spent in another region and auto deployment exhausts each locally.

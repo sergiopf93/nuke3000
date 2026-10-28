@@ -1,3 +1,33 @@
+// Browser-only promises stay outside G.setup and therefore outside network snapshots.
+const setupDicePresentations = new Map();
+const queuedSetupRolls=new Map();
+let setupDicePendingCount=0;
+function setupDicePending(){return setupDicePendingCount>0;}
+function setupDiceReady(generation=G.setup.rollGeneration){
+  return Promise.all([...setupDicePresentations].filter(([key])=>key.startsWith(generation+':')).map(([,promise])=>promise));
+}
+function animateSetupDie(fk,roll,generation){
+  if(typeof DiceSequence==='undefined')return;
+  let result=document.getElementById('roll-result-'+fk);
+  let card=document.getElementById('roll-card-'+fk);
+  if(!result){const rolls=document.getElementById('setup-rolls');if(!rolls)return;card=document.createElement('div');card.id='roll-card-'+fk;card.style.cssText='border:1px solid '+FDATA[fk].color+';text-align:center;';const label=document.createElement('div');label.textContent=FDATA[fk].name;label.style.cssText='color:'+FDATA[fk].color+';font-size:10px';result=document.createElement('div');result.id='roll-result-'+fk;card.append(label,result);rolls.append(card);}
+  const container=result;
+  if(!container)return;
+  // Keep authoritative result in setup; presentation never changes it.
+  if(result)result.textContent='';
+  if(card)card.setAttribute('aria-busy','true');
+  let controls=document.getElementById('setup-dice-controls');
+  if(!controls){controls=DiceSequence.controls();controls.id='setup-dice-controls';const rolls=document.getElementById('setup-rolls');rolls.parentElement.insertBefore(controls,rolls);}
+  const cause=G.setup._tieGroups?'DESEMPATE DE ORDEN · D6':'ORDEN INICIAL · D6';
+  setupDicePendingCount++;
+  const promise=PhaseVisuals.dice('setup:'+generation+':'+fk,[{kind:'d6',value:roll,raw:roll,effective:roll,bonus:0,label:FDATA[fk].name}],cause,container,false,{controls:false}).then(()=>{
+    setupDicePendingCount--;
+    if(card?.isConnected)card.setAttribute('aria-busy','false');
+  });
+  setupDicePresentations.set(generation+':'+fk,promise);
+  if(setupDicePresentations.size>60)setupDicePresentations.delete(setupDicePresentations.keys().next().value);
+}
+
 const SETUP_STEPS = ['roll', 'claim', 'deploy']; // deploy = soldiers+nuclear combined per player
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -91,6 +121,7 @@ function _syncSetup(type, extra) {
 
 // ── Start setup ───────────────────────────────────────────────
 function startSetupPhase() {
+  queuedSetupRolls.clear();
   const allFkeys = Object.keys(FDATA);
   if (_isOnline()) {
     const humanFks = (typeof _onlinePlayerFactions !== 'undefined' && _onlinePlayerFactions)
@@ -212,7 +243,7 @@ function rollFor(fk) {
   const roll = Math.floor(Math.random()*6)+1;
   _applyRoll(fk, roll);
   if (_isOnline() && (fk === G.pf || !isHumanFaction(fk))) {
-    ONLINE.pushAction('SETUP_ROLL', { fk, roll });
+    ONLINE.pushAction('SETUP_ROLL', { fk, roll, generation:G.setup.rollGeneration });
   }
 }
 
@@ -251,6 +282,8 @@ function _applyRoll(fk, roll) {
     if (b) b.style.display = 'none';
   }
 
+  animateSetupDie(fk,roll,G.setup.rollGeneration);
+
   // Host auto-rolls CPUs
   if (_amHost()) {
     G.setup.order.forEach(fk2 => {
@@ -263,16 +296,28 @@ function _applyRoll(fk, roll) {
   const allRolled = G.setup.order.every(fk2 => G.setup.rollResults[fk2] !== undefined);
   if(allRolled&&!G.setup._resolvingRoll){
     G.setup._resolvingRoll=true;const generation=G.setup.rollGeneration;
-    setTimeout(()=>{if(G.setup._inSetup&&G.setup._stepIdx===0&&G.setup.rollGeneration===generation)resolveRollOrder();},800);
+    const resolve=()=>{if(G.setup._inSetup&&G.setup._stepIdx===0&&G.setup.rollGeneration===generation)resolveRollOrder();};
+    if(typeof DiceSequence!=='undefined')setupDiceReady(generation).then(resolve);else setTimeout(resolve,800);
   }
 }
 
-function _onRemoteRoll(fk, roll) { _applyRoll(fk, roll); }
+function _onRemoteRoll(fk,roll,generation=G.setup.rollGeneration){
+  if(!G.setup._inSetup||G.setup._stepIdx!==0)return;
+  if(!Number.isInteger(generation)||generation<G.setup.rollGeneration)return;
+  if(generation>G.setup.rollGeneration){queuedSetupRolls.set(generation+':'+fk,{fk,roll,generation});if(queuedSetupRolls.size>64)queuedSetupRolls.delete(queuedSetupRolls.keys().next().value);return;}
+  _applyRoll(fk,roll);
+}
+function flushSetupRolls(){
+  for(const [id,entry]of queuedSetupRolls){
+    if(entry.generation<=G.setup.rollGeneration){queuedSetupRolls.delete(id);if(entry.generation===G.setup.rollGeneration)_onRemoteRoll(entry.fk,entry.roll,entry.generation);}
+  }
+}
 
 function resolveRollOrder() {
   G.setup._resolvingRoll=false;
   G.setup.rollGeneration=(G.setup.rollGeneration||0)+1;
   G.setup._rollScheduled={};
+  setTimeout(flushSetupRolls,0);
   const results = G.setup.rollResults;
   if(!G.setup._tieGroups) {
     G.setup._tieGroups = [G.setup.order.slice()];

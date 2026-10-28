@@ -14,7 +14,11 @@ const V4Game = (() => {
   function wrap(name,fn){legacy[name]=window[name];window[name]=function(...args){return enabled()?fn(...args):legacy[name](...args);};}
   function updateEliminations(by){for(const fk of G.setup.order||[])checkElimination(fk,by);}
   function sync(message){updateMap();refreshCards();const hint=document.getElementById('territory-hint');if(enabled()&&hint&&G_step.isMyTurn){const sid=STEPS[G_step.phase]?.[G_step.idx]?.id;if(sid==='attack')hint.textContent='Toca un territorio con tropas comprometidas · Combate obligatorio';if(sid==='move')hint.textContent='Origen propio → destino propio o enemigo · Conserva una unidad en origen';} _syncNow(message,'sys');}
-  function effect(kind,data){if(typeof BattleScene!=='undefined')BattleScene.effect(kind,data);if(typeof ONLINE!=='undefined'&&ONLINE.isOnline())ONLINE.pushActionWithState('V4_EFFECT',{kind,data});}
+  function effect(kind,data){
+    // Decorative pulses, movement trails and synthetic blasts are deliberately retired.
+    if(kind!=='nuclear'||!data.centers?.length)return Promise.resolve();
+    return PhaseVisuals.nuclear(currentStepKey()+':nuclear:'+data.centers.join(','),data);
+  }
   function configure(){
     if(!enabled()){for(const key of Object.keys(legacySteps))STEPS[key]=JSON.parse(JSON.stringify(legacySteps[key]));return;}
     STEPS.prep=[{id:'income',title:'1. RECURSOS',detail:'3 Pu por base (Prometeo: 4).',isAuto:true},{id:'nuclear',title:'2. CONSTRUCCIÓN NUCLEAR',detail:'Construye bases por 4 Pu en territorios propios.',isAuto:false},{id:'reinf',title:'3. REFUERZOS REGIONALES',detail:'Cada región conserva su fondo de soldados.',isAuto:false},{id:'upgrade',title:'4. REARME',detail:'Mejora unidades en su territorio.',isAuto:false},{id:'move',title:'5. MOVIMIENTO Y ATAQUES',detail:'Compromete tropas en destinos enemigos. El propietario cambia tras vencer.',isAuto:false},{id:'missileBuild',title:'6. FABRICAR MISILES',detail:'1 Pu por misil, máximo 5.',isAuto:false}];
@@ -30,9 +34,6 @@ const V4Game = (() => {
   function install(){
     const initial=window.initGame;
     window.initGame=function(){configure();initial();if(enabled()){for(const [fk,desc] of Object.entries({imp:'Controla 5 regiones completas al final de tu turno.',lib:'Bases globales ≤ jugadores iniciales al final del turno.',clt:'Elimina la última unidad de un jugador enemigo. Fin de turno.',erb:'Controla al menos la mitad de las bases. Fin de turno.',prm:'Controla al menos la mitad de las bases. Fin de turno.',shn:'Controla 5 regiones completas al final de tu turno.'})){FDATA[fk].goalDesc=desc;G.factions[fk].goalDesc=desc;VICTORY_DETAIL[fk]=desc;}G.initialPlayerCount=G.playerCount;G.baseCaptures=[];G.rewardedCaptures=[];G.eliminations=[];G.missileEvents={};G.missileSequence=0;G.movedUnits={};G.v4Maintenance=null;const f=G.factions.lib;if(f){f.plutonium=5;f.soldiers+=5;f.mechs=RULES.setup.startingAssets[G.playerCount].mechs;f.nukes=0;}}};
-    const upgrade=applyUpgrade;window.applyUpgrade=function(fk,id,type){const ok=upgrade(fk,id,type);if(enabled()&&ok)effect('upgrade',{targetId:id,type});return ok;};
-    const action=doAct;window.doAct=function(kind){const id=G.sel,had=G.territories[id]?.hasNuclear;action(kind);if(enabled()&&kind==='nuke'&&!had&&G.territories[id]?.hasNuclear)effect('nuclearBuild',{targetId:id});};
-    const victory=declareVictory;window.declareVictory=function(goal,fk){victory(goal,fk);if(enabled())effect('victory',{fk:fk||G.result?.winner});};
     wrap('applyIncome',fk=>{
       const f=G.factions[fk];if(G.gameOver||f.alive===false||f._incomeAppliedRound===G.round)return;
       f._incomeAppliedRound=G.round;
@@ -45,7 +46,7 @@ const V4Game = (() => {
     });
     wrap('reinforcementTargets',fk=>Object.values(G.territories).filter(t=>t.owner===fk&&(G.factions[fk].regionalSoldiers?.[t.region]||0)>0));
     wrap('distributeReinforcements',fk=>{const f=G.factions[fk];for(const [reg,n]of Object.entries(f.regionalSoldiers||{})){const ts=Object.values(G.territories).filter(t=>t.owner===fk&&t.region===reg);if(n&&!ts.length)return false;for(let i=0;i<n;i++)ts[i%ts.length].soldiers++;f.regionalSoldiers[reg]=0;}f.pendingSoldiers=0;return true;});
-    wrap('placeReinforcements',(id,qty)=>{const t=G.territories[id],f=G.factions[G.pf];if(G.gameOver||G_step.phase!=='prep'||STEPS.prep[G_step.idx]?.id!=='reinf'||!G_step.isMyTurn||!t||t.owner!==G.pf||!Number.isInteger(qty)||qty<1||qty>(f.regionalSoldiers?.[t.region]||0))return; t.soldiers+=qty;f.regionalSoldiers[t.region]-=qty;f.pendingSoldiers-=qty;effect('reinforcement',{targetId:id,amount:qty});sync('Refuerzos V4');renderStepActions(STEPS.prep[G_step.idx]);showReinforcementUI(f.pendingSoldiers);});
+    wrap('placeReinforcements',(id,qty)=>{const t=G.territories[id],f=G.factions[G.pf];if(G.gameOver||G_step.phase!=='prep'||STEPS.prep[G_step.idx]?.id!=='reinf'||!G_step.isMyTurn||!t||t.owner!==G.pf||!Number.isInteger(qty)||qty<1||qty>(f.regionalSoldiers?.[t.region]||0))return; t.soldiers+=qty;f.regionalSoldiers[t.region]-=qty;f.pendingSoldiers-=qty;sync('Refuerzos V4');renderStepActions(STEPS.prep[G_step.idx]);showReinforcementUI(f.pendingSoldiers);});
     const originalCounter=showReinforcementCounter;
     window.showReinforcementCounter=function(id,evt){if(!enabled())return originalCounter(id,evt);if(G.reinforcementMode)G.reinforcementMode.left=G.factions[G.pf].regionalSoldiers?.[G.territories[id].region]||0;originalCounter(id,evt);};
     wrap('showReinforcementUI',count=>{if(!count){G.reinforcementMode=null;return;}const ts=reinforcementTargets(G.pf);G.reinforcementMode={left:count,validIds:new Set(ts.map(t=>t.id)),callback:(id,evt)=>{if(!reinforcementTargets(G.pf).some(t=>t.id===id))return false;showReinforcementCounter(id,evt);return true;}};updateMap();});
@@ -55,7 +56,7 @@ const V4Game = (() => {
       if(G.gameOver||!G_step.isMyTurn||G_step.phase!=='prep'||STEPS.prep[G_step.idx]?.id!=='move'||G.territories[src]?.owner!==G.pf)return false;
       const moved=G.movedUnits?.[src]||{};
       if(keys.some(k=>(units[k]||0)>(G.territories[src][k]||0)-(moved[k]||0)))return false;
-      try{const result=RulesV4.move(state(),G.pf,src,dst,units,RULES);apply(result);G.movedUnits||={};const arrived=G.movedUnits[dst]||={};for(const k of keys)arrived[k]=(arrived[k]||0)+(units[k]||0);effect('movement',{srcId:src,targetId:dst});sync('Tropas comprometidas V4');return true;}catch(e){addLog(e.message,'sys');return false;}
+      try{const result=RulesV4.move(state(),G.pf,src,dst,units,RULES);apply(result);G.movedUnits||={};const arrived=G.movedUnits[dst]||={};for(const k of keys)arrived[k]=(arrived[k]||0)+(units[k]||0);sync('Tropas comprometidas V4');return true;}catch(e){addLog(e.message,'sys');return false;}
     });
     const clear=clearInteractionModes;window.clearInteractionModes=function(){const moved=G.movedUnits;clear();if(enabled()&&STEPS[G_step.phase]?.[G_step.idx]?.id==='move')G.movedUnits=moved||{};};
     const advance=advanceStep;window.advanceStep=function(){if(enabled()){
@@ -73,7 +74,7 @@ const V4Game = (() => {
       if(step.id==='move')area.insertAdjacentHTML('afterbegin','<p>Terrestres: '+(G.pf==='erb'?4:2)+' saltos. Destino propio o enemigo; tránsito propio. Aeronaves: propias a cualquier distancia, enemigas en frontera.</p>');
       if(step.id==='missile'){const build=area.querySelector('[onclick="doMissileBuild()"]');if(build)build.remove();}
     };
-    function prepareRef(fk){const f=G.factions[fk];if(f._reinforcementAppliedRound===G.round)return;f._reinforcementAppliedRound=G.round;const plan=RulesV4.reinforcements(state(),fk,RULES);f.regionalSoldiers=plan.pools;f.pendingSoldiers=Object.values(plan.pools).reduce((a,b)=>a+b,0);f._reinfIncome=plan.total;for(const [id,n]of Object.entries(plan.fixed)){G.territories[id].soldiers+=n;effect('reinforcement',{targetId:id,amount:n});}sync('Refuerzos nucleares y de frontera');}
+    function prepareRef(fk){const f=G.factions[fk];if(f._reinforcementAppliedRound===G.round)return;f._reinforcementAppliedRound=G.round;const plan=RulesV4.reinforcements(state(),fk,RULES);f.regionalSoldiers=plan.pools;f.pendingSoldiers=Object.values(plan.pools).reduce((a,b)=>a+b,0);f._reinfIncome=plan.total;for(const [id,n]of Object.entries(plan.fixed)){G.territories[id].soldiers+=n;}sync('Refuerzos nucleares y de frontera');}
     const player=executePlayerStep;window.executePlayerStep=function(step){if(enabled()&&step.id==='reinf'){prepareRef(G.pf);renderStepActions(step);}player(step);};
     const cpu=executeCpuStep;window.executeCpuStep=function(step){if(!enabled())return cpu(step);const fk=G_step.currentFk;
       if(step.id==='reinf')prepareRef(fk);
@@ -120,15 +121,21 @@ const V4Game = (() => {
   }
   function button(text,action){const b=document.createElement('button');b.className='abtn';b.textContent=text;b.onclick=action;return b;}
   function dialog(id,title){document.getElementById(id)?.remove();const modal=document.createElement('div');modal.id=id;modal.style.cssText='position:fixed;inset:0;background:#000d;z-index:2100;display:grid;place-items:center';const box=document.createElement('div');box.style.cssText='background:#101018;border:1px solid #777;padding:18px;max-height:88vh;max-width:94vw;overflow:auto;display:flex;flex-direction:column;gap:8px';const h=document.createElement('h3');h.textContent=title;box.appendChild(h);modal.appendChild(box);document.body.appendChild(modal);return box;}
-  function cpuMove(fk){const used=new Set();for(const src of Object.values(G.territories).filter(t=>t.owner===fk&&RulesV4.count(t)>2)){if(used.has(src.id))continue;const target=Object.values(G.territories).filter(t=>t.owner&&t.owner!==fk&&RulesV4.groundPath(state(),fk,src.id,t.id,RULES)).sort((a,b)=>RulesV4.count(a)-RulesV4.count(b)||a.id.localeCompare(b.id))[0];if(!target)continue;const units=RulesV4.army(src);const guard=keys.find(k=>units[k]>0);units[guard]--;try{apply(RulesV4.move(state(),fk,src.id,target.id,units,RULES));used.add(target.id);effect('movement',{srcId:src.id,targetId:target.id});}catch{} }sync('Movimiento CPU V4');}
+  function cpuMove(fk){const used=new Set();for(const src of Object.values(G.territories).filter(t=>t.owner===fk&&RulesV4.count(t)>2)){if(used.has(src.id))continue;const target=Object.values(G.territories).filter(t=>t.owner&&t.owner!==fk&&RulesV4.groundPath(state(),fk,src.id,t.id,RULES)).sort((a,b)=>RulesV4.count(a)-RulesV4.count(b)||a.id.localeCompare(b.id))[0];if(!target)continue;const units=RulesV4.army(src);const guard=keys.find(k=>units[k]>0);units[guard]--;try{apply(RulesV4.move(state(),fk,src.id,target.id,units,RULES));used.add(target.id);}catch{} }sync('Movimiento CPU V4');}
   function cpuBattle(fk){const id=RulesV4.pendingAttacks(state(),fk)[0];if(id)battle(id,fk,()=>cpuBattle(fk));else scheduleStepAction(advanceStep,400);}
   function battle(id,fk,callback){
     if(G.gameOver||G_combat&&!G_combat.done||!RulesV4.pendingAttacks(state(),fk).includes(id))return;
     const target=G.territories[id],before={attacker:RulesV4.army(target.attackers[fk]),defender:RulesV4.army(target)};
-    const ctx=G_combat={srcId:id,targetId:id,attFk:fk,defFk:target.owner,round:1,history:[],initialAtt:RulesV4.count(before.attacker),initialDef:RulesV4.count(before.defender),isPlayerAtt:false,isPlayerDef:target.owner===G.pf,done:false,stepKey:currentStepKey(),callback,before};
+    const ctx=G_combat={srcId:id,targetId:id,attFk:fk,defFk:target.owner,round:1,history:[],initialAtt:RulesV4.count(before.attacker),initialDef:RulesV4.count(before.defender),isPlayerAtt:false,isPlayerDef:target.owner===G.pf,done:false,stepKey:currentStepKey(),callback,before,visualId:currentStepKey()+':'+id};
+    document.getElementById('dmodal').classList.add('open');
+    document.querySelector('#dmodal h2').textContent='BATALLA · '+terName(id);
+    document.getElementById('cdesc').textContent=FDATA[fk].name+' contra '+FDATA[target.owner].name;
+    for(const name of ['btn-roll','btn-cancel','btn-retreat'])document.getElementById(name).style.display='none';
+    document.getElementById('dres').textContent='Preparando ejércitos';
     if(typeof BattleScene!=='undefined')BattleScene.open(ctx,before);
+    publishCombatView(ctx);
     const present=(action,ms)=>{clearTimeout(ctx.presentationTimer);ctx.nextPresentation=action;const duration=ctx.skip?0:typeof BattleScene!=='undefined'&&BattleScene.duration?BattleScene.duration(ms):ms;ctx.presentationTimer=scheduleStepAction(()=>{ctx.nextPresentation=null;action();},duration);};
-    const run=()=>{
+    const run=async()=>{
       if(G_combat!==ctx||ctx.done||G.gameOver)return;
       const t=G.territories[id],att=t.attackers?.[fk];if(!RulesV4.count(att||{})){finish('repelled');return;}
       const prior={attacker:RulesV4.army(att),defender:RulesV4.army(t)};
@@ -136,10 +143,12 @@ const V4Game = (() => {
       Object.assign(t,result.defender);t.attackers[fk]=result.attacker;
       if(result.status==='conquered'){t.owner=fk;Object.assign(t,result.attacker);delete t.attackers[fk];if(t.hasNuclear)(G.baseCaptures||=[]).push({id:G.round+':'+fk+':'+id+':'+G.baseCaptures.length,territory:id,from:ctx.defFk,to:fk});checkElimination(ctx.defFk,fk);}
       if(result.status==='repelled'){delete t.attackers[fk];checkElimination(fk,ctx.defFk);}ctx.history.push(result);ctx.before=prior;G.lastBattle=result;
-      showRound(ctx,result);sync('Ronda de combate V4');
-      if(result.status!=='ongoing')finish(result.status);else present(run,1700);
+      const visual=showRound(ctx,result);sync('Ronda de combate V4');
+      await PhaseVisuals.settle(visual);
+      if(G_combat!==ctx||G.gameOver||currentStepKey()!==ctx.stepKey)return;
+      if(result.status!=='ongoing')finish(result.status);else present(run,0);
     };
-    function finish(status){ctx.done=true;ctx.status=status;publishCombatView(ctx,ctx.history.at(-1));if(status==='conquered'&&G.territories[id].hasNuclear&&fk===G.pf){const box=dialog('v4-capture','BASE NUCLEAR CONQUISTADA');box.appendChild(button('CONSERVAR',()=>{box.parentElement.remove();done();}));box.appendChild(button('DESTRUIR: ACCIDENTE NUCLEAR',()=>{box.parentElement.remove();const r=RulesV4.explode(state(),id,fk);apply(r.state);updateEliminations(fk);effect('nuclear',{targetId:id,centers:r.centers});sync('Base destruida');done();}));}else done();}
+    function finish(status){ctx.done=true;ctx.status=status;publishCombatView(ctx,ctx.history.at(-1));if(status==='conquered'&&G.territories[id].hasNuclear&&fk===G.pf){const box=dialog('v4-capture','BASE NUCLEAR CONQUISTADA');box.appendChild(button('CONSERVAR',()=>{box.parentElement.remove();done();}));box.appendChild(button('DESTRUIR: ACCIDENTE NUCLEAR',async()=>{box.parentElement.remove();const r=RulesV4.explode(state(),id,fk);apply(r.state);updateEliminations(fk);sync('Base destruida');await effect('nuclear',{targetId:id,centers:r.centers,frames:r.frames});if(G_combat===ctx&&!G.gameOver)done();}));}else done();}
     function done(){present(()=>{closeDice();if(typeof BattleScene!=='undefined')BattleScene.close();if(callback)callback();else renderStepActions(STEPS.combat[G_step.idx]);},2200);}
     present(run,700);
   }
@@ -149,24 +158,34 @@ const V4Game = (() => {
     document.getElementById('dlba').textContent=FDATA[ctx.attFk].name;document.getElementById('dlbd').textContent=FDATA[ctx.defFk].name;
     ctx.attSelected=result.attRolls;ctx.defSelected=result.defRolls;renderDicePools();displayBattleResult(ctx,result);
     document.getElementById('btn-roll').style.display='none';document.getElementById('btn-cancel').style.display='none';
-    if(typeof BattleScene!=='undefined')BattleScene.result(ctx,result);publishCombatView(ctx,result);
+    const visual=typeof BattleScene!=='undefined'?BattleScene.result(ctx,result):Promise.resolve();
+    publishCombatView(ctx,result);return visual;
   }
-  function maintenance(fk,callback){
+  async function maintenance(fk,callback){
     const key=currentStepKey();if(G.gameOver||G_step.maintenanceDone===key||G.v4Maintenance?.key===key)return;
     const m=RulesV4.maintenance(state(),fk);const st=G.v4Maintenance={key,fk,rolls:m.rolls,remaining:m.rolls.filter(n=>n===1).length};
     const finish=()=>{G_step.maintenanceDone=key;G.v4Maintenance=null;document.getElementById('maint-modal')?.remove();sync('Mantenimiento completado');if(callback)callback();};
-    const choose=id=>{const t=G.territories[id];if(!t?.hasNuclear||t.owner!==fk||st.remaining<1)return;const r=RulesV4.explode(state(),id);apply(r.state);updateEliminations(null);st.remaining--;effect('nuclear',{targetId:id,centers:r.centers});sync('Accidente nuclear');draw();};
-    const draw=()=>{const bases=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);st.remaining=Math.min(st.remaining,bases.length);if(fk!==G.pf){while(st.remaining){const next=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).sort((a,b)=>RulesV4.count(a)-RulesV4.count(b)||a.id.localeCompare(b.id))[0];if(!next)break;const r=RulesV4.explode(state(),next.id);apply(r.state);updateEliminations(null);st.remaining--;st.remaining=Math.min(st.remaining,Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length);effect('nuclear',{targetId:next.id,centers:r.centers});}finish();return;}
-      const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');const dice=document.createElement('p');dice.className=typeof BattleScene!=='undefined'&&BattleScene.duration(600)===0?'v4-maint-static':'v4-maint-dice';if(m.rolls.length){for(const n of m.rolls){const die=document.createElement('span');die.className='die';die.textContent='D12: '+n;dice.appendChild(die);}}else dice.textContent='Sin bases';box.appendChild(dice);const info=document.createElement('p');info.textContent=st.remaining?'Accidentes pendientes: '+st.remaining+'. Elige qué base explota.':'Todas las tiradas resueltas.';box.appendChild(info);if(st.remaining)for(const t of bases)box.appendChild(button('EXPLOTAR '+terName(t.id),()=>choose(t.id)));else box.appendChild(button('FINALIZAR MANTENIMIENTO',finish));};
+    const choose=async id=>{const t=G.territories[id];if(st.resolving||!t?.hasNuclear||t.owner!==fk||st.remaining<1)return;st.resolving=true;document.getElementById('maint-modal')?.remove();const r=RulesV4.explode(state(),id);apply(r.state);updateEliminations(null);st.remaining--;sync('Accidente nuclear');await effect('nuclear',{targetId:id,centers:r.centers,frames:r.frames});st.resolving=false;if(G.v4Maintenance===st&&!G.gameOver&&currentStepKey()===key)draw();};
+    const draw=async()=>{const bases=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);st.remaining=Math.min(st.remaining,bases.length);if(fk!==G.pf){while(st.remaining){const next=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).sort((a,b)=>RulesV4.count(a)-RulesV4.count(b)||a.id.localeCompare(b.id))[0];if(!next)break;const r=RulesV4.explode(state(),next.id);apply(r.state);updateEliminations(null);st.remaining--;st.remaining=Math.min(st.remaining,Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length);sync('Accidente nuclear');await effect('nuclear',{targetId:next.id,centers:r.centers,frames:r.frames});if(G.v4Maintenance!==st||G.gameOver||currentStepKey()!==key)return;}finish();return;}
+      const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');const dice=document.createElement('div');box.appendChild(dice);if(typeof DiceSequence!=='undefined')DiceSequence.play({dice:m.rolls.map((value,index)=>({kind:'d12',value,raw:value,effective:value,bonus:0,label:'Dado '+(index+1)})),cause:'RESULTADOS DE MANTENIMIENTO',container:dice,speed:'minimal',controls:false});const info=document.createElement('p');info.textContent=st.remaining?'Accidentes pendientes: '+st.remaining+'. Elige qué base explota.':'Todas las tiradas resueltas.';box.appendChild(info);if(st.remaining)for(const t of bases)box.appendChild(button('EXPLOTAR '+terName(t.id),()=>choose(t.id)));else box.appendChild(button('FINALIZAR MANTENIMIENTO',finish));};
+    const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');
+    const host=document.createElement('div');box.appendChild(host);
+    const instructions=document.createElement('p');instructions.textContent='Lanzando todos los D12. Después podrás elegir las bases accidentadas.';box.appendChild(instructions);
+    await PhaseVisuals.dice('maintenance:'+key,m.rolls.map((value,index)=>({kind:'d12',value,raw:value,effective:value,bonus:0,label:'Dado '+(index+1)})),'MANTENIMIENTO NUCLEAR',host,true);
+    if(G.gameOver||G.v4Maintenance!==st||currentStepKey()!==key)return;
     draw();
   }
   async function missile(id,fk,target,callback){
     if(G.waitingMissile||G.gameOver)return;
     const key=currentStepKey();let event;
     try{if(G.pendingMissile){if(G.pendingMissile.attFk!==fk||G.pendingMissile.targetId!==id)throw Error('Resuelve el misil pendiente');event=G.pendingMissile;G.pendingMissile=null;}else{const launched=RulesV4.launchMissile(state(),fk,id,target);apply(launched.state);event=launched.event;}}catch(error){addLog(error.message,'sys');return;}
-    G.waitingMissile=true;effect('missile',{targetId:id});sync('Misil lanzado contra '+terName(id));
+    G.waitingMissile=true;sync('Misil lanzado contra '+terName(id));
     try{
-      let attempts=0;
+      const source=Object.values(G.territories).filter(t=>t.owner===fk).sort((a,b)=>Number(b.hasNuclear)-Number(a.hasNuclear)||a.id.localeCompare(b.id))[0];
+      const missileView=()=>({...event,sourceTerritory:source?.id,targetTerritory:id});
+      await PhaseVisuals.missile('launch',missileView());
+      if(currentStepKey()!==key||G.gameOver)return;
+      let attempts=event.interceptions.length;
       while(event.status==='launched'){
         const human=event.defFk===G.pf||_isOnlineHumanTurn(event.defFk);let wants=(G.factions[event.defFk]?.missiles||0)>0&&(human||attempts<(RULES.combat.cpuInterceptionLimit??5));
         if(wants&&_isOnlineHumanTurn(event.defFk)&&event.defFk!==G.pf){
@@ -175,13 +194,19 @@ const V4Game = (() => {
           wants=await new Promise(resolve=>{const box=dialog('v4-intercept','MISIL ENTRANTE');const p=document.createElement('p');p.textContent='Objetivo: '+(target==='sol'?'hasta 3 soldados':'1 meca')+'. Intercepciones previas: '+(event.interceptions.join(', ')||'ninguna');box.appendChild(p);box.appendChild(button('INTERCEPTAR (1 MISIL)',()=>{box.parentElement.remove();resolve(true);}));box.appendChild(button('NO INTERCEPTAR',()=>{box.parentElement.remove();resolve(false);}));});
         }
         if(currentStepKey()!==key||G.gameOver)return;
+        const previousAttempts=event.interceptions.length;
         const attempt=RulesV4.interceptMissile(state(),event,wants);apply(attempt.state);event=attempt.event;attempts++;
         sync('Intercepción: '+(event.interceptions.at(-1)||'declinada'));
+        if(event.interceptions.length>previousAttempts){const value=event.interceptions.at(-1);await PhaseVisuals.missile('interception',missileView(),{dice:[{kind:'d6',value,raw:value,effective:value,bonus:0,label:'Intercepción '+event.interceptions.length}],success:event.blocked});}
+        if(currentStepKey()!==key||G.gameOver)return;
       }
       const result=RulesV4.impactMissile(state(),event);apply(result.state);event=result.event;
-      if(result.explosion)effect('nuclear',{targetId:id,centers:result.explosion.centers});
       updateEliminations(fk);G.lastMissile={targetId:id,target,interceptions:event.interceptions,blocked:event.blocked,destroyed:event.destroyed||0,accident:event.accidentRoll};
-      effect('missile',{targetId:id,blocked:event.blocked});
+      sync('Estado autoritativo del misil resuelto');
+      if(!event.blocked)await PhaseVisuals.missile('impact',missileView());
+      if(event.accidentRoll!=null){const value=event.accidentRoll;await PhaseVisuals.missile('accident',missileView(),{dice:[{kind:'d12',value,raw:value,effective:value,bonus:0,label:'Accidente nuclear'}],explosion:result.explosion?{centers:result.explosion.centers,frames:result.explosion.frames}:null});}
+      await PhaseVisuals.missile('end',missileView());
+      if(currentStepKey()!==key||G.gameOver)return;
       const summary=(event.blocked?'MISIL INTERCEPTADO':'IMPACTO: '+(event.destroyed||0)+' '+(target==='sol'?'soldados':'meca'))+' · Intercepciones: '+(event.interceptions.join(', ')||'ninguna')+(event.accidentRoll?' · Accidente D12: '+event.accidentRoll:'');
       addLog(summary,'combat');sync(summary);
       if(fk===G.pf){const box=dialog('missile-modal','RESULTADO DEL MISIL');const p=document.createElement('p');p.textContent=summary;box.appendChild(p);box.appendChild(button('CONTINUAR',()=>box.parentElement.remove()));}

@@ -1,0 +1,50 @@
+{
+  "shots": [
+    {
+      "source": "1:imp:combat:1:01_02:def:1",
+      "target": "1:imp:combat:1:01_02:att:0",
+      "winner": "def",
+      "sourceSide": "def",
+      "targetSide": "att"
+    },
+    {
+      "source": "1:imp:combat:1:01_02:att:0",
+      "target": "1:imp:combat:1:01_02:def:1",
+      "winner": "att",
+      "sourceSide": "att",
+      "targetSide": "def"
+    },
+    {
+      "source": "1:imp:combat:1:01_02:att:0",
+      "target": "1:imp:combat:1:01_02:def:1",
+      "winner": "att",
+      "sourceSide": "att",
+      "targetSide": "def"
+    },
+    {
+      "source": "1:imp:combat:1:01_02:att:0",
+      "target": "1:imp:combat:1:01_02:def:1",
+      "winner": "att",
+      "sourceSide": "att",
+      "targetSide": "def"
+    }
+  ],
+  "units": [
+    {
+      "unitId": "1:imp:combat:1:01_02:att:0",
+      "type": "scorp",
+      "side": "att",
+      "alive": "true"
+    },
+    {
+      "unitId": "1:imp:combat:1:01_02:def:1",
+      "type": "scorp",
+      "side": "def",
+      "alive": "true"
+    }
+  ],
+  "owner": "imp",
+  "mechs": 1,
+  "modal": false,
+  "combat": null
+}
