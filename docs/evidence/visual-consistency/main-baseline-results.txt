@@ -1,0 +1,790 @@
+TAP version 13
+# Subtest: sol pierde frente a sol: baja del dado correcto
+ok 1 - sol pierde frente a sol: baja del dado correcto
+  ---
+  duration_ms: 13.855935
+  type: 'test'
+  ...
+# Subtest: sol pierde frente a mech: baja del dado correcto
+ok 2 - sol pierde frente a mech: baja del dado correcto
+  ---
+  duration_ms: 2.026635
+  type: 'test'
+  ...
+# Subtest: sol pierde frente a air: baja del dado correcto
+ok 3 - sol pierde frente a air: baja del dado correcto
+  ---
+  duration_ms: 3.31922
+  type: 'test'
+  ...
+# Subtest: sol pierde frente a scorp: baja del dado correcto
+ok 4 - sol pierde frente a scorp: baja del dado correcto
+  ---
+  duration_ms: 1.766543
+  type: 'test'
+  ...
+# Subtest: mech pierde frente a sol: baja del dado correcto
+ok 5 - mech pierde frente a sol: baja del dado correcto
+  ---
+  duration_ms: 2.615824
+  type: 'test'
+  ...
+# Subtest: mech pierde frente a mech: baja del dado correcto
+ok 6 - mech pierde frente a mech: baja del dado correcto
+  ---
+  duration_ms: 1.674696
+  type: 'test'
+  ...
+# Subtest: mech pierde frente a air: baja del dado correcto
+ok 7 - mech pierde frente a air: baja del dado correcto
+  ---
+  duration_ms: 1.903538
+  type: 'test'
+  ...
+# Subtest: mech pierde frente a scorp: baja del dado correcto
+ok 8 - mech pierde frente a scorp: baja del dado correcto
+  ---
+  duration_ms: 1.701855
+  type: 'test'
+  ...
+# Subtest: air pierde frente a sol: baja del dado correcto
+ok 9 - air pierde frente a sol: baja del dado correcto
+  ---
+  duration_ms: 2.073369
+  type: 'test'
+  ...
+# Subtest: air pierde frente a mech: baja del dado correcto
+ok 10 - air pierde frente a mech: baja del dado correcto
+  ---
+  duration_ms: 5.874813
+  type: 'test'
+  ...
+# Subtest: air pierde frente a air: baja del dado correcto
+ok 11 - air pierde frente a air: baja del dado correcto
+  ---
+  duration_ms: 1.725591
+  type: 'test'
+  ...
+# Subtest: air pierde frente a scorp: baja del dado correcto
+ok 12 - air pierde frente a scorp: baja del dado correcto
+  ---
+  duration_ms: 25.733972
+  type: 'test'
+  ...
+# Subtest: scorp pierde frente a sol: baja del dado correcto
+ok 13 - scorp pierde frente a sol: baja del dado correcto
+  ---
+  duration_ms: 9.307532
+  type: 'test'
+  ...
+# Subtest: scorp pierde frente a mech: baja del dado correcto
+ok 14 - scorp pierde frente a mech: baja del dado correcto
+  ---
+  duration_ms: 21.215525
+  type: 'test'
+  ...
+# Subtest: scorp pierde frente a air: baja del dado correcto
+ok 15 - scorp pierde frente a air: baja del dado correcto
+  ---
+  duration_ms: 10.604727
+  type: 'test'
+  ...
+# Subtest: scorp pierde frente a scorp: baja del dado correcto
+ok 16 - scorp pierde frente a scorp: baja del dado correcto
+  ---
+  duration_ms: 6.197552
+  type: 'test'
+  ...
+# Subtest: empates: defensor gana; dados empatados ordenan caras y mech antes que aircraft
+ok 17 - empates: defensor gana; dados empatados ordenan caras y mech antes que aircraft
+  ---
+  duration_ms: 7.85611
+  type: 'test'
+  ...
+# Subtest: HOLY WAR e IMPERIAL DEFENSE afectan a todos los dados sin recortar el bonus
+ok 18 - HOLY WAR e IMPERIAL DEFENSE afectan a todos los dados sin recortar el bonus
+  ---
+  duration_ms: 1.980099
+  type: 'test'
+  ...
+# Subtest: una unidad blindada sola no puede atacar; defensa usa hasta 4 dados aunque ataque 1
+ok 19 - una unidad blindada sola no puede atacar; defensa usa hasta 4 dados aunque ataque 1
+  ---
+  duration_ms: 12.008451
+  type: 'test'
+  ...
+# Subtest: bajas simultáneas no vuelven a golpear las unidades recién degradadas
+ok 20 - bajas simultáneas no vuelven a golpear las unidades recién degradadas
+  ---
+  duration_ms: 3.833581
+  type: 'test'
+  ...
+# Subtest: ataque inválido, selección duplicada o sin guarnición se rechaza antes de mutar
+ok 21 - ataque inválido, selección duplicada o sin guarnición se rechaza antes de mutar
+  ---
+  duration_ms: 10.158614
+  type: 'test'
+  ...
+# Subtest: combate completo degrada hasta conquista, preserva guarnición y termina en cota finita
+ok 22 - combate completo degrada hasta conquista, preserva guarnición y termina en cota finita
+  ---
+  duration_ms: 4.919399
+  type: 'test'
+  ...
+# Subtest: sin dados defensivos no hay bucle: combate vacío se rechaza
+ok 23 - sin dados defensivos no hay bucle: combate vacío se rechaza
+  ---
+  duration_ms: 3.975594
+  type: 'test'
+  ...
+# Subtest: sol defiende y pierde ante sol: degradación simétrica
+ok 24 - sol defiende y pierde ante sol: degradación simétrica
+  ---
+  duration_ms: 4.15892
+  type: 'test'
+  ...
+# Subtest: sol defiende y pierde ante mech: degradación simétrica
+ok 25 - sol defiende y pierde ante mech: degradación simétrica
+  ---
+  duration_ms: 1.770943
+  type: 'test'
+  ...
+# Subtest: sol defiende y pierde ante air: degradación simétrica
+ok 26 - sol defiende y pierde ante air: degradación simétrica
+  ---
+  duration_ms: 1.680646
+  type: 'test'
+  ...
+# Subtest: sol defiende y pierde ante scorp: degradación simétrica
+ok 27 - sol defiende y pierde ante scorp: degradación simétrica
+  ---
+  duration_ms: 13.945846
+  type: 'test'
+  ...
+# Subtest: mech defiende y pierde ante sol: degradación simétrica
+ok 28 - mech defiende y pierde ante sol: degradación simétrica
+  ---
+  duration_ms: 1.869017
+  type: 'test'
+  ...
+# Subtest: mech defiende y pierde ante mech: degradación simétrica
+ok 29 - mech defiende y pierde ante mech: degradación simétrica
+  ---
+  duration_ms: 2.183829
+  type: 'test'
+  ...
+# Subtest: mech defiende y pierde ante air: degradación simétrica
+ok 30 - mech defiende y pierde ante air: degradación simétrica
+  ---
+  duration_ms: 2.737988
+  type: 'test'
+  ...
+# Subtest: mech defiende y pierde ante scorp: degradación simétrica
+ok 31 - mech defiende y pierde ante scorp: degradación simétrica
+  ---
+  duration_ms: 1.83383
+  type: 'test'
+  ...
+# Subtest: air defiende y pierde ante sol: degradación simétrica
+ok 32 - air defiende y pierde ante sol: degradación simétrica
+  ---
+  duration_ms: 1.62143
+  type: 'test'
+  ...
+# Subtest: air defiende y pierde ante mech: degradación simétrica
+ok 33 - air defiende y pierde ante mech: degradación simétrica
+  ---
+  duration_ms: 1.608192
+  type: 'test'
+  ...
+# Subtest: air defiende y pierde ante air: degradación simétrica
+ok 34 - air defiende y pierde ante air: degradación simétrica
+  ---
+  duration_ms: 4.724629
+  type: 'test'
+  ...
+# Subtest: air defiende y pierde ante scorp: degradación simétrica
+ok 35 - air defiende y pierde ante scorp: degradación simétrica
+  ---
+  duration_ms: 5.422796
+  type: 'test'
+  ...
+# Subtest: scorp defiende y pierde ante sol: degradación simétrica
+ok 36 - scorp defiende y pierde ante sol: degradación simétrica
+  ---
+  duration_ms: 1.747608
+  type: 'test'
+  ...
+# Subtest: scorp defiende y pierde ante mech: degradación simétrica
+ok 37 - scorp defiende y pierde ante mech: degradación simétrica
+  ---
+  duration_ms: 6.300005
+  type: 'test'
+  ...
+# Subtest: scorp defiende y pierde ante air: degradación simétrica
+ok 38 - scorp defiende y pierde ante air: degradación simétrica
+  ---
+  duration_ms: 1.739121
+  type: 'test'
+  ...
+# Subtest: scorp defiende y pierde ante scorp: degradación simétrica
+ok 39 - scorp defiende y pierde ante scorp: degradación simétrica
+  ---
+  duration_ms: 5.648031
+  type: 'test'
+  ...
+# Subtest: guarnición escogida queda fuera del pool y no puede sufrir bajas
+ok 40 - guarnición escogida queda fuera del pool y no puede sufrir bajas
+  ---
+  duration_ms: 2.039733
+  type: 'test'
+  ...
+# [ONLINE] Remote: NEXT_STEP
+# [ONLINE] Remote: FULL_SYNC
+# Subtest: la victoria registra al vencedor y solo muestra un resultado
+ok 41 - la victoria registra al vencedor y solo muestra un resultado
+  ---
+  duration_ms: 11.524455
+  type: 'test'
+  ...
+# Subtest: la eliminación se acredita al atacante una sola vez
+ok 42 - la eliminación se acredita al atacante una sola vez
+  ---
+  duration_ms: 2.33238
+  type: 'test'
+  ...
+# Subtest: la rotación omite eliminados y cuenta la vuelta de ronda
+ok 43 - la rotación omite eliminados y cuenta la vuelta de ronda
+  ---
+  duration_ms: 3.545111
+  type: 'test'
+  ...
+# Subtest: las transiciones pendientes no avanzan una partida finalizada
+ok 44 - las transiciones pendientes no avanzan una partida finalizada
+  ---
+  duration_ms: 2.204679
+  type: 'test'
+  ...
+# Subtest: un invitado online no ejecuta ingresos ni pasos CPU
+ok 45 - un invitado online no ejecuta ingresos ni pasos CPU
+  ---
+  duration_ms: 2.261622
+  type: 'test'
+  ...
+# Subtest: la entrada HTML conserva la función de victoria del motor
+ok 46 - la entrada HTML conserva la función de victoria del motor
+  ---
+  duration_ms: 1.288414
+  type: 'test'
+  ...
+# Subtest: el resultado remoto se muestra sin emitir una victoria de vuelta
+ok 47 - el resultado remoto se muestra sin emitir una victoria de vuelta
+  ---
+  duration_ms: 2.355346
+  type: 'test'
+  ...
+# Subtest: el protocolo remoto aplica NEXT_STEP exactamente una vez
+ok 48 - el protocolo remoto aplica NEXT_STEP exactamente una vez
+  ---
+  duration_ms: 4.884823
+  type: 'test'
+  ...
+# Subtest: el snapshot incluye el resultado y la recepción finaliza sin eco
+ok 49 - el snapshot incluye el resultado y la recepción finaliza sin eco
+  ---
+  duration_ms: 4.979923
+  type: 'test'
+  ...
+# Subtest: la colocación manual no salta al flujo antiguo de soldados
+ok 50 - la colocación manual no salta al flujo antiguo de soldados
+  ---
+  duration_ms: 4.829994
+  type: 'test'
+  ...
+# Subtest: endSetupPhase impide iniciar si queda una central obligatoria
+ok 51 - endSetupPhase impide iniciar si queda una central obligatoria
+  ---
+  duration_ms: 2.914492
+  type: 'test'
+  ...
+# Subtest: la colocación manual rechaza cantidades negativas y territorios ajenos
+ok 52 - la colocación manual rechaza cantidades negativas y territorios ajenos
+  ---
+  duration_ms: 3.246487
+  type: 'test'
+  ...
+# Subtest: setup 3J conserva reservas y coloca centrales automáticamente
+ok 53 - setup 3J conserva reservas y coloca centrales automáticamente
+  ---
+  duration_ms: 13.700954
+  type: 'test'
+  ...
+# Subtest: setup 4J conserva reservas y coloca centrales automáticamente
+ok 54 - setup 4J conserva reservas y coloca centrales automáticamente
+  ---
+  duration_ms: 3.636473
+  type: 'test'
+  ...
+# Subtest: setup 5J conserva reservas y coloca centrales automáticamente
+ok 55 - setup 5J conserva reservas y coloca centrales automáticamente
+  ---
+  duration_ms: 4.342656
+  type: 'test'
+  ...
+# Subtest: setup 6J conserva reservas y coloca centrales automáticamente
+ok 56 - setup 6J conserva reservas y coloca centrales automáticamente
+  ---
+  duration_ms: 5.393847
+  type: 'test'
+  ...
+# Subtest: automatizar centrales no borra reservas imposibles de colocar
+ok 57 - automatizar centrales no borra reservas imposibles de colocar
+  ---
+  duration_ms: 2.137776
+  type: 'test'
+  ...
+# Subtest: victoria imp solo en su turno y momento V3
+ok 58 - victoria imp solo en su turno y momento V3
+  ---
+  duration_ms: 5.716069
+  type: 'test'
+  ...
+# Subtest: facción eliminada imp no gana su objetivo
+ok 59 - facción eliminada imp no gana su objetivo
+  ---
+  duration_ms: 3.812249
+  type: 'test'
+  ...
+# Subtest: victoria lib solo en su turno y momento V3
+ok 60 - victoria lib solo en su turno y momento V3
+  ---
+  duration_ms: 7.278213
+  type: 'test'
+  ...
+# Subtest: facción eliminada lib no gana su objetivo
+ok 61 - facción eliminada lib no gana su objetivo
+  ---
+  duration_ms: 4.860369
+  type: 'test'
+  ...
+# Subtest: victoria clt solo en su turno y momento V3
+ok 62 - victoria clt solo en su turno y momento V3
+  ---
+  duration_ms: 7.231078
+  type: 'test'
+  ...
+# Subtest: facción eliminada clt no gana su objetivo
+ok 63 - facción eliminada clt no gana su objetivo
+  ---
+  duration_ms: 2.609045
+  type: 'test'
+  ...
+# Subtest: victoria erb solo en su turno y momento V3
+ok 64 - victoria erb solo en su turno y momento V3
+  ---
+  duration_ms: 39.623751
+  type: 'test'
+  ...
+# Subtest: facción eliminada erb no gana su objetivo
+ok 65 - facción eliminada erb no gana su objetivo
+  ---
+  duration_ms: 13.936921
+  type: 'test'
+  ...
+# Subtest: victoria prm solo en su turno y momento V3
+ok 66 - victoria prm solo en su turno y momento V3
+  ---
+  duration_ms: 10.0896
+  type: 'test'
+  ...
+# Subtest: facción eliminada prm no gana su objetivo
+ok 67 - facción eliminada prm no gana su objetivo
+  ---
+  duration_ms: 8.538287
+  type: 'test'
+  ...
+# Subtest: victoria shn solo en su turno y momento V3
+ok 68 - victoria shn solo en su turno y momento V3
+  ---
+  duration_ms: 10.12723
+  type: 'test'
+  ...
+# Subtest: facción eliminada shn no gana su objetivo
+ok 69 - facción eliminada shn no gana su objetivo
+  ---
+  duration_ms: 2.642762
+  type: 'test'
+  ...
+# Subtest: condiciones no cumplidas, mitad impar redondeada y cero bases
+ok 70 - condiciones no cumplidas, mitad impar redondeada y cero bases
+  ---
+  duration_ms: 6.724227
+  type: 'test'
+  ...
+# Subtest: turno completo CPU avanza sin intervención hasta el siguiente humano
+ok 71 - turno completo CPU avanza sin intervención hasta el siguiente humano
+  ---
+  duration_ms: 11.292174
+  type: 'test'
+  ...
+# Subtest: temporizador obsoleto y botón humano no saltan turnos CPU
+ok 72 - temporizador obsoleto y botón humano no saltan turnos CPU
+  ---
+  duration_ms: 45.317764
+  type: 'test'
+  ...
+# Subtest: repetir runCurrentStep no duplica CPU o ingresos
+ok 73 - repetir runCurrentStep no duplica CPU o ingresos
+  ---
+  duration_ms: 18.823291
+  type: 'test'
+  ...
+# Subtest: combate CPU–CPU termina y notifica una sola vez sin DOM de dados
+ok 74 - combate CPU–CPU termina y notifica una sola vez sin DOM de dados
+  ---
+  duration_ms: 3.988192
+  type: 'test'
+  ...
+# Subtest: explosión conserva exactamente un soldiers elegido
+ok 75 - explosión conserva exactamente un soldiers elegido
+  ---
+  duration_ms: 2.900203
+  type: 'test'
+  ...
+# Subtest: explosión conserva exactamente un mechs elegido
+ok 76 - explosión conserva exactamente un mechs elegido
+  ---
+  duration_ms: 11.027255
+  type: 'test'
+  ...
+# Subtest: explosión conserva exactamente un scorpions elegido
+ok 77 - explosión conserva exactamente un scorpions elegido
+  ---
+  duration_ms: 5.06052
+  type: 'test'
+  ...
+# Subtest: explosión con aircraft conserva solo los aviones, sin fabricar soldados
+ok 78 - explosión con aircraft conserva solo los aviones, sin fabricar soldados
+  ---
+  duration_ms: 22.730154
+  type: 'test'
+  ...
+# Subtest: mantenimiento CPU usa tirada de cada base y ejecuta callback una vez
+ok 79 - mantenimiento CPU usa tirada de cada base y ejecuta callback una vez
+  ---
+  duration_ms: 3.333123
+  type: 'test'
+  ...
+# Subtest: última unidad blindada protegida y Aircraft impactado con 5
+ok 80 - última unidad blindada protegida y Aircraft impactado con 5
+  ---
+  duration_ms: 12.45805
+  type: 'test'
+  ...
+# Subtest: intercepción usa regla del dado y consume ambos misiles sin bajas
+ok 81 - intercepción usa regla del dado y consume ambos misiles sin bajas
+  ---
+  duration_ms: 3.161288
+  type: 'test'
+  ...
+# Subtest: mejoras consumen tropas del tablero y costes configurados
+ok 82 - mejoras consumen tropas del tablero y costes configurados
+  ---
+  duration_ms: 3.856142
+  type: 'test'
+  ...
+# Subtest: refuerzos fallback no se reparten en dos territorios de la misma región
+ok 83 - refuerzos fallback no se reparten en dos territorios de la misma región
+  ---
+  duration_ms: 3.141252
+  type: 'test'
+  ...
+# Subtest: Erebus puede autorreforzar fuera de bases y el resto solo en bases
+ok 84 - Erebus puede autorreforzar fuera de bases y el resto solo en bases
+  ---
+  duration_ms: 5.150785
+  type: 'test'
+  ...
+# Subtest: Aircraft transporta hasta tres soldados o un mech a territorio distante
+ok 85 - Aircraft transporta hasta tres soldados o un mech a territorio distante
+  ---
+  duration_ms: 3.512736
+  type: 'test'
+  ...
+# Subtest: simulación del motor: partida completa 3J sin UI ni ganador impuesto
+ok 86 - simulación del motor: partida completa 3J sin UI ni ganador impuesto
+  ---
+  duration_ms: 88.703428
+  type: 'test'
+  ...
+# Subtest: simulación del motor: partida completa 4J sin UI ni ganador impuesto
+ok 87 - simulación del motor: partida completa 4J sin UI ni ganador impuesto
+  ---
+  duration_ms: 23.875689
+  type: 'test'
+  ...
+# Subtest: simulación del motor: partida completa 5J sin UI ni ganador impuesto
+ok 88 - simulación del motor: partida completa 5J sin UI ni ganador impuesto
+  ---
+  duration_ms: 24.74567
+  type: 'test'
+  ...
+# Subtest: simulación del motor: partida completa 6J sin UI ni ganador impuesto
+ok 89 - simulación del motor: partida completa 6J sin UI ni ganador impuesto
+  ---
+  duration_ms: 16.307953
+  type: 'test'
+  ...
+# Subtest: ataque con 2 unidades y elección de guarnición no deja territorios vacíos
+ok 90 - ataque con 2 unidades y elección de guarnición no deja territorios vacíos
+  ---
+  duration_ms: 2.676428
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria imp antes de ejecutar otro turno
+ok 91 - hook de transición evalúa victoria imp antes de ejecutar otro turno
+  ---
+  duration_ms: 2.341362
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria lib antes de ejecutar otro turno
+ok 92 - hook de transición evalúa victoria lib antes de ejecutar otro turno
+  ---
+  duration_ms: 2.281651
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria clt antes de ejecutar otro turno
+ok 93 - hook de transición evalúa victoria clt antes de ejecutar otro turno
+  ---
+  duration_ms: 2.3107
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria erb antes de ejecutar otro turno
+ok 94 - hook de transición evalúa victoria erb antes de ejecutar otro turno
+  ---
+  duration_ms: 2.325392
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria prm antes de ejecutar otro turno
+ok 95 - hook de transición evalúa victoria prm antes de ejecutar otro turno
+  ---
+  duration_ms: 2.163478
+  type: 'test'
+  ...
+# Subtest: hook de transición evalúa victoria shn antes de ejecutar otro turno
+ok 96 - hook de transición evalúa victoria shn antes de ejecutar otro turno
+  ---
+  duration_ms: 2.318174
+  type: 'test'
+  ...
+# Subtest: tiradas de setup duplicadas u obsoletas no consumen otro resultado
+ok 97 - tiradas de setup duplicadas u obsoletas no consumen otro resultado
+  ---
+  duration_ms: 2.019565
+  type: 'test'
+  ...
+# Subtest: fases bloquean saltos durante setup, refuerzos pendientes y mantenimiento no resuelto
+ok 98 - fases bloquean saltos durante setup, refuerzos pendientes y mantenimiento no resuelto
+  ---
+  duration_ms: 2.181052
+  type: 'test'
+  ...
+# Subtest: callbacks de setup finalizado no reabren despliegue ni reclaman territorios
+ok 99 - callbacks de setup finalizado no reabren despliegue ni reclaman territorios
+  ---
+  duration_ms: 1.979371
+  type: 'test'
+  ...
+# Subtest: configuración inválida no puede dejar a CPU mejorando indefinidamente
+ok 100 - configuración inválida no puede dejar a CPU mejorando indefinidamente
+  ---
+  duration_ms: 2.077387
+  type: 'test'
+  ...
+# Subtest: editor rechaza dados/cantidades imposibles y no cambia reglas en partida
+ok 101 - editor rechaza dados/cantidades imposibles y no cambia reglas en partida
+  ---
+  duration_ms: 4.759046
+  type: 'test'
+  ...
+# Subtest: reclamación y tiradas fuera del turno/etapa se rechazan
+ok 102 - reclamación y tiradas fuera del turno/etapa se rechazan
+  ---
+  duration_ms: 2.216372
+  type: 'test'
+  ...
+# Subtest: mantenimiento desactivado no tira dados ni abre modal y avanza una vez
+ok 103 - mantenimiento desactivado no tira dados ni abre modal y avanza una vez
+  ---
+  duration_ms: 2.173101
+  type: 'test'
+  ...
+# Subtest: Libertos solo recibe recompensa al destruir una base propia y coloca mech inmediato
+ok 104 - Libertos solo recibe recompensa al destruir una base propia y coloca mech inmediato
+  ---
+  duration_ms: 2.331576
+  type: 'test'
+  ...
+# Subtest: Shinin no gana empatando AP en siete regiones
+ok 105 - Shinin no gana empatando AP en siete regiones
+  ---
+  duration_ms: 4.112495
+  type: 'test'
+  ...
+# Subtest: una unidad no encadena movimientos pero vuelve a estar disponible en reagrupamiento
+ok 106 - una unidad no encadena movimientos pero vuelve a estar disponible en reagrupamiento
+  ---
+  duration_ms: 2.2728
+  type: 'test'
+  ...
+# Subtest: misiles: construir antes de disparar sigue permitido; después de disparar queda bloqueado
+ok 107 - misiles: construir antes de disparar sigue permitido; después de disparar queda bloqueado
+  ---
+  duration_ms: 2.360834
+  type: 'test'
+  ...
+# Subtest: 60 territorios únicos, 7 de Rusia y tamaños regionales coherentes
+ok 108 - 60 territorios únicos, 7 de Rusia y tamaños regionales coherentes
+  ---
+  duration_ms: 1.419589
+  type: 'test'
+  ...
+# Subtest: grafo conectado, sin vecinos inexistentes y con adyacencias recíprocas
+ok 109 - grafo conectado, sin vecinos inexistentes y con adyacencias recíprocas
+  ---
+  duration_ms: 27.370432
+  type: 'test'
+  ...
+# Subtest: los 59 territorios originales son idénticos salvo conexiones autorizadas
+ok 110 - los 59 territorios originales son idénticos salvo conexiones autorizadas
+  ---
+  duration_ms: 3.216936
+  type: 'test'
+  ...
+# Subtest: 60 territorios se reparten por igual entre 3 participantes
+ok 111 - 60 territorios se reparten por igual entre 3 participantes
+  ---
+  duration_ms: 0.548774
+  type: 'test'
+  ...
+# Subtest: 60 territorios se reparten por igual entre 4 participantes
+ok 112 - 60 territorios se reparten por igual entre 4 participantes
+  ---
+  duration_ms: 0.345351
+  type: 'test'
+  ...
+# Subtest: 60 territorios se reparten por igual entre 5 participantes
+ok 113 - 60 territorios se reparten por igual entre 5 participantes
+  ---
+  duration_ms: 0.217105
+  type: 'test'
+  ...
+# Subtest: 60 territorios se reparten por igual entre 6 participantes
+ok 114 - 60 territorios se reparten por igual entre 6 participantes
+  ---
+  duration_ms: 0.143333
+  type: 'test'
+  ...
+# Subtest: dos clientes: espera decisión humana, respuesta única y sin snapshot del defensor
+ok 115 - dos clientes: espera decisión humana, respuesta única y sin snapshot del defensor
+  ---
+  duration_ms: 20.887746
+  type: 'test'
+  ...
+# Subtest: respuesta de otro participante no consume la decisión ni aplica su estado
+ok 116 - respuesta de otro participante no consume la decisión ni aplica su estado
+  ---
+  duration_ms: 5.556769
+  type: 'test'
+  ...
+# Subtest: un remitente que no dirige el turno no solicita decisiones
+ok 117 - un remitente que no dirige el turno no solicita decisiones
+  ---
+  duration_ms: 9.04386
+  type: 'test'
+  ...
+# Subtest: cancelar invalida respuestas tardías y cierra la pregunta remota
+ok 118 - cancelar invalida respuestas tardías y cierra la pregunta remota
+  ---
+  duration_ms: 17.148244
+  type: 'test'
+  ...
+# Subtest: una solicitud histórica no hace retroceder ronda o paso al reconectar
+ok 119 - una solicitud histórica no hace retroceder ronda o paso al reconectar
+  ---
+  duration_ms: 12.074297
+  type: 'test'
+  ...
+# Subtest: CPU dirigida por host solicita intercepción al humano y acepta NO sin automatizar
+ok 120 - CPU dirigida por host solicita intercepción al humano y acepta NO sin automatizar
+  ---
+  duration_ms: 6.914662
+  type: 'test'
+  ...
+# Subtest: fallo al enviar libera la espera sin inventar una defensa
+ok 121 - fallo al enviar libera la espera sin inventar una defensa
+  ---
+  duration_ms: 34.731301
+  type: 'test'
+  ...
+1..121
+# tests 121
+# suites 0
+# pass 121
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 832.379518
+PASS integración Chrome: setup manual, combate/guarnición, mejoras, misil y decisiones remotas por clics (transporte controlado)
+PASS navegador 1440x900: lobby, arranque, territorios y cierre controlado sin errores JS
+PASS navegador 844x390: lobby, arranque, territorios y cierre controlado sin errores JS
+PASS Chrome 2 clientes: combate humano/CPU por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+PASS Chrome 2 clientes: combate humano/CPU por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+PASS UX 1440x900 desktop
+PASS UX 844x390 touch
+PASS UX 667x375 touch
+PASS UX 932x430 touch
+PASS UX 390x844 touch
+AssertionError [ERR_ASSERTION]: {"stage":"map","changedPixelsOutsideIgnored":24}
+
+24 !== 0
+
+    at /Users/sergiopardo/Desktop/nuke3000/tests/desktop-visual.browser.cjs:18:37 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 24,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+PASS comparación desktop: mapa y combate sin diferencias fuera de código de sala, tooltip y LED animado
+E2E 0 {"setup":true,"step":0,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 25 {"setup":true,"step":1,"roll":3,"auto":true,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 50 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":1,"fk":"prm","phase":"prep","idx":2}
+E2E 75 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":2,"fk":"imp","phase":"prep","idx":5}
+E2E 100 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":3,"fk":"lib","phase":"combat","idx":0}
+E2E 125 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":4,"fk":"imp","phase":"combat","idx":0}
+E2E 150 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":5,"fk":"prm","phase":"prep","idx":5}
+E2E 175 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":6,"fk":"prm","phase":"end","idx":0}
+E2E 200 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 225 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 250 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":8,"fk":"imp","phase":"combat","idx":0}
+E2E 275 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":9,"fk":"lib","phase":"combat","idx":0}
+E2E 300 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":11,"fk":"prm","phase":"end","idx":0}
+E2E 325 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":12,"fk":"lib","phase":"prep","idx":1}
+PASS E2E real 1440x900 mouse: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 233 acciones UI; 0 mutaciones del estado desde el test
+E2E 0 {"setup":true,"step":0,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 25 {"setup":true,"step":1,"roll":3,"auto":true,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 50 {"setup":true,"step":1,"roll":3,"auto":true,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 75 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":2,"fk":"prm","phase":"end","idx":0}
+E2E 100 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":3,"fk":"lib","phase":"combat","idx":0}
+E2E 125 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":4,"fk":"imp","phase":"combat","idx":0}
+E2E 150 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":5,"fk":"lib","phase":"prep","idx":2}
+E2E 175 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"prm","phase":"prep","idx":4}
+E2E 200 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 225 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":9,"fk":"prm","phase":"prep","idx":1}
+E2E 250 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":10,"fk":"lib","phase":"prep","idx":1}
+E2E 275 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":12,"fk":"prm","phase":"prep","idx":5}
+PASS E2E real 844x390 touch: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 190 acciones UI; 0 mutaciones del estado desde el test
+PASS suite base desde main (comparación corregida: borde del código aleatorio)

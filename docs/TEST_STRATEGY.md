@@ -1,3 +1,13 @@
+# Revisión visual sobre main — 28/10/2026
+
+Se conservan las 121 pruebas de motor/protocolo. La matriz de UI añade selector oscuro, fuentes locales, controles dentro del viewport y ausencia de scroll principal en preparación a 844×390; correspondencia entre pérdidas del motor y dados marcados, tirada mixta, refuerzos manuales y construcción nuclear. Se mantienen los recorridos de escritorio, táctiles, remotos y las partidas completas.
+
+La evidencia actual se escribe en `evidence/visual-consistency`, conservando `evidence/mobile-ux` como referencia histórica. `NUKE_UX_EVIDENCE` permite elegir una carpeta temporal. La comparación de píxeles ahora contrasta la escena del tablero; el modal cambia intencionadamente y se verifica por geometría, controles y capturas. El comparador inicial excluía incompletamente el borde del código aleatorio de sala (24 píxeles variables); se localizó y corrigió ese borde antes de validar la base. No se ocultó un fallo de motor.
+
+Se comprobó la integridad exacta de engine.js, battle.js, data.js, map.js, assets.js y game.css frente a cd5d921. [Sistema visual y compatibilidad](VISUAL_SYSTEM.md). No se pudo ejecutar WebKit: la versión de Playwright disponible no lo soporta en macOS12. No se certifica Safari real ni PWA/offline.
+
+---
+
 # UX/UI — ampliación 28/10/2026
 
 Las 121 regresiones de motor del bloque A se conservan. `test:browser` añade matriz táctil de 667×375, 844×390, 932×430 y 390×844, escritorio 1440×900 y comparación visual frente a ec9a955. Se comprueban setup manual, selección, movimiento, mejoras, construcción/lanzamiento de misiles, ataque/defensa, conquista, continuación/retirada, gestos/cancelación, orientación, recursos y cierre de paneles/reglas. Los escenarios preparados no son partidas E2E completas.

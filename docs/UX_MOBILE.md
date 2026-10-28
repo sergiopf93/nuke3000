@@ -1,3 +1,7 @@
+# Revisión vigente de coherencia visual
+
+El propietario acepta la simplificación de interacciones y solicita corregir la integración visual. El desarrollo actual se realiza en main local, autorizado expresamente, sin publicación. Ver [VISUAL_SYSTEM.md](VISUAL_SYSTEM.md) y sus comparativas. Este documento conserva a continuación el diseño y conteos de la primera iteración.
+
 # UX móvil — primera iteración, 28/10/2026
 
 Base `ec9a955`, rama `dev/mobile-gameplay-ux`. La rama de estabilización y main se conservan. Referencia conceptual facilitada por el propietario: claridad de origen/destino y rapidez de combate de RISK; se reutiliza el tablero e identidad de NUKE3000, sin copiar su diseño. Skills UX/UI y QA aplicadas directamente por R2, sin subagentes.

@@ -1,0 +1,3 @@
+Intento de QA: Playwright 1.63.0, WebKit en /tmp/nuke-playwright-browsers.
+Resultado: Failed to install browsers. Error: Playwright does not support webkit on mac12.
+No se ejecutaron pruebas Safari/WebKit; validación real pendiente.

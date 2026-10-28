@@ -44,3 +44,7 @@ Evidencia y comparativas en [visual-consistency](evidence/visual-consistency/REA
 ## Git autorizado por el propietario
 
 Se trabaja temporalmente en **main local**, por instrucción explícita del 28/10/2026. Se integró dev/mobile-gameplay-ux por fast-forward: conserva ec9a955 y cd5d921 y las ramas existentes. Los commits nuevos son locales y descriptivos. No hay autorización para push, merge remoto ni despliegue.
+
+Resultados finales: 121 tests pasando y dos E2E completos hasta Libertos ronda12 (233 acciones escritorio, 190 táctiles), sin errores JS. La matriz se repitió tras corregir una prioridad CSS que dejaba gris la acción principal de mejora; se añadió una aserción de contraste entre confirmar/cancelar y se inspeccionaron las capturas finales. No hay discrepancias reglamentarias nuevas.
+
+La defensa pendiente muestra TIRADO en los dados atacantes conocidos; SIN PAR se reserva para dados no emparejados de un resultado ya resuelto. La regresión correspondiente pasa en los cinco tamaños.

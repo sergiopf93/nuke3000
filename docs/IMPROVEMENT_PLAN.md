@@ -1,6 +1,6 @@
 # Plan incremental NUKE3000
 
-Rama UX `dev/mobile-gameplay-ux` desde `ec9a955`. `dev/stabilization-gameplay` se conserva; main `93eba1e` intacta. Sin push/merge/despliegue. Mapa 60/7 Rusia preservado.
+Trabajo actual en **main local**, autorizado expresamente por el propietario el 28/10/2026. Integración fast-forward hasta cd5d921; se conservan dev/mobile-gameplay-ux y dev/stabilization-gameplay como recuperación. Sin push ni despliegue; integración local fast-forward autorizada. Mapa 60/7 Rusia preservado.
 
 ## Bloque A — estabilización técnica preservada
 
@@ -38,3 +38,16 @@ E: autoridad/sincronización, integración Firebase de las decisiones humanas, r
 - [ ] Validación del propietario y dispositivo físico/Safari real antes de dar aceptación móvil definitiva.
 
 No se modifica el tablero ni se amplían las reglas. Evidencia y límites en UX_MOBILE.md y TEST_STRATEGY.md.
+
+## Coherencia visual — revisión posterior
+
+- [x] Verificar historial, integrar por fast-forward y ejecutar la suite base desde main.
+- [x] Identificar y reutilizar paleta, bordes, degradados y familias originales; sistema visual compartido.
+- [x] Selector de guarnición y opciones oscuros; tipografías locales limitadas a UI.
+- [x] Combate dividido en bandos, pares de dados/pérdidas, resultado destacado y acciones fijas.
+- [x] Revisar inspector, recursos, paneles, movimiento, mejoras, setup/refuerzos, misiles, centrales, mensajes y reglas.
+- [x] Regresiones de layout/control oscuro, dados mixtos y representación de bajas; capturas en cinco tamaños.
+- [x] Cerrar validación conjunta y registrar dos partidas completas desde main; matriz repetida tras la corrección de prioridad CSS.
+- [ ] Revisión del propietario; Safari/dispositivo físico pendiente por limitación del entorno.
+
+[Diseño visual](VISUAL_SYSTEM.md). Motor, mapa y reglas se conservan. Sin push ni despliegue.

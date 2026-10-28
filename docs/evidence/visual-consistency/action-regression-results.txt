@@ -1,0 +1,5 @@
+PASS UX 1440x900 desktop
+PASS UX 844x390 touch
+PASS UX 667x375 touch
+PASS UX 932x430 touch
+PASS UX 390x844 touch

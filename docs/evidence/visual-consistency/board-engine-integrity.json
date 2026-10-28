@@ -1,0 +1,35 @@
+{
+  "baseline": "cd5d921",
+  "results": [
+    {
+      "file": "js/data.js",
+      "baseline": "d2923738b9f2490e6a71b9700b016f48a0c6140aeb7a39b1c93d775ca55d0fba",
+      "current": "d2923738b9f2490e6a71b9700b016f48a0c6140aeb7a39b1c93d775ca55d0fba"
+    },
+    {
+      "file": "js/map.js",
+      "baseline": "284ad4e4c3ccc34362699eab1cc950573d7d00185caecf60d883d3a0702fcd92",
+      "current": "284ad4e4c3ccc34362699eab1cc950573d7d00185caecf60d883d3a0702fcd92"
+    },
+    {
+      "file": "js/assets.js",
+      "baseline": "72d091e2283357c40deaab6bb194c336982ecfc085f9e3c6392959334c5f192d",
+      "current": "72d091e2283357c40deaab6bb194c336982ecfc085f9e3c6392959334c5f192d"
+    },
+    {
+      "file": "css/game.css",
+      "baseline": "33ca9c5224f5878ffc1f618eccf587bbd8bd68d66706486166cca6cb9d0f37e9",
+      "current": "33ca9c5224f5878ffc1f618eccf587bbd8bd68d66706486166cca6cb9d0f37e9"
+    },
+    {
+      "file": "js/engine.js",
+      "baseline": "942ccb41c8c3df32604a0704dec631957f4d453c3ad7871470c9e28f13e1d735",
+      "current": "942ccb41c8c3df32604a0704dec631957f4d453c3ad7871470c9e28f13e1d735"
+    },
+    {
+      "file": "js/battle.js",
+      "baseline": "b882f2028082e65a90ab738082105ea2243a3aeb1a24d85566fb40577df51c23",
+      "current": "b882f2028082e65a90ab738082105ea2243a3aeb1a24d85566fb40577df51c23"
+    }
+  ]
+}
