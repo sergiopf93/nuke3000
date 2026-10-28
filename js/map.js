@@ -1,5 +1,7 @@
 function initGame() {
   G.gameOver = false;
+  G.awaitingStart=false;
+  G.maintenance=null;
   G.result = null;
   const pc = G.playerCount;
   const setup = RULES.setup.startingAssets[pc] || SETUP[pc];
@@ -10,7 +12,7 @@ function initGame() {
     const isPlayer = k === G.pf;
     G.factions[k] = {
       ...FDATA[k],
-      plutonium: 0,
+      plutonium: setup.plutonium??0,
       soldiers: setup.soldiers,
       mechs: setup.mechs||0, aircraft: 0, scorpions: 0,
       missiles: setup.missiles,
@@ -23,8 +25,8 @@ function initGame() {
     const libSwap = RULES.setup.libertosSwap;
     if(k==='lib' && libSwap && libSwap.enabled){
       G.factions[k].nukes = 0;
-      G.factions[k].plutonium += (libSwap.plutonium||3);
-      G.factions[k].mechs += (libSwap.mechs||2);
+      G.factions[k].plutonium += (libSwap.plutonium??3);
+      G.factions[k].mechs += (libSwap.mechs??2);
     }
   });
 

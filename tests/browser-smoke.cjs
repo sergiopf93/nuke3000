@@ -49,12 +49,75 @@ const server = http.createServer((req, res) => {
         await page.locator('#tc-06_07').click();
         assert.equal(await page.evaluate(()=>G.sel),'06_07');
       }
+      // Controlled fixtures below are browser integration regressions, not the complete-game E2E.
+      if(viewport.width===1440&&!process.env.NUKE_MAP_BASELINE_DATA){
+        await page.evaluate(()=>{
+          G.setup.order=['imp','lib','clt'];G.setup._stepIdx=2;G.setup._inSetup=true;G.setup.deployIdx=0;
+          G.setup.soldiersLeft={imp:1,lib:0,clt:0};G.setup.nukesLeft={imp:1,lib:0,clt:0};
+          G.factions.imp.mechs=1;G.factions.imp.soldiers=1;G.factions.lib.mechs=G.factions.clt.mechs=0;
+          G.territories['01_01'].owner='imp';G.territories['01_01'].soldiers=1;
+          setupStep_Deploy_ForFaction('imp');updateMap();
+        });
+        await page.locator('#tc-01_01').click();await page.locator('#soldier-counter-popup').getByRole('button',{name:'✓ OK',exact:true}).click();
+        await page.waitForTimeout(150);await page.locator('#tc-01_01').click();
+        await page.locator('#soldier-counter-popup').getByRole('button',{name:'+',exact:true}).last().click();
+        await page.locator('#soldier-counter-popup').getByRole('button',{name:'✓ OK',exact:true}).click();
+        await page.locator('#tc-01_01').click();
+        await page.locator('#game-start-overlay').waitFor();
+        assert.deepEqual(await page.evaluate(()=>({soldiers:G.territories['01_01'].soldiers,mechs:G.territories['01_01'].mechs,nuclear:G.territories['01_01'].hasNuclear})),{soldiers:2,mechs:1,nuclear:true});
+        await page.locator('#game-start-overlay button').click();
+        await page.evaluate(()=>{
+          clearInteractionModes();G.setup._inSetup=false;G.awaitingStart=false;G.phase='combat';G_step={currentFk:'imp',isMyTurn:true,phase:'combat',idx:0};
+          const a=G.territories['01_01'],b=G.territories['01_02'];Object.assign(a,{owner:'imp',soldiers:4,mechs:1,aircraft:0,scorpions:1});Object.assign(b,{owner:'clt',soldiers:1,mechs:0,aircraft:0,scorpions:0});
+          Math.random=()=>0.99;updateStepUI(STEPS.combat[0]);updateMap();
+        });
+        await page.locator('#tc-01_01').click();await page.locator('#tc-01_02').click();await page.locator('#step-actions #ba-attack').click();
+        await page.locator('#combat-guard').selectOption('scorp');await page.locator('#unit-sel-att > button').click();await page.locator('#btn-roll').click();
+        assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,guard:G.territories['01_01'].scorpions,remaining:Battle.count(G.territories['01_01'])})),{owner:'imp',guard:1,remaining:1});
+        await page.locator('#btn-cancel').click();
+        await page.evaluate(()=>{
+          G.phase='prep';G_step={currentFk:'imp',isMyTurn:true,phase:'prep',idx:2};Object.assign(G.territories['01_01'],{soldiers:6,mechs:0,scorpions:0});G.factions.imp.plutonium=10;updateStepUI(STEPS.prep[2]);updateMap();
+        });
+        await page.locator('#tc-01_01').click();await page.locator('#step-actions button').first().click();await page.locator('#upgrade-cancel').click();
+        assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers),6);
+        await page.locator('#step-actions button').first().click();await page.locator('#upgrade-ok').click();
+        assert.deepEqual(await page.evaluate(()=>({soldiers:G.territories['01_01'].soldiers,mechs:G.territories['01_01'].mechs,pu:G.factions.imp.plutonium})),{soldiers:3,mechs:1,pu:9});
+        await page.evaluate(()=>{
+          G_step.idx=4;G.sel=null;Object.assign(G.territories['01_02'],{owner:'clt',soldiers:0,mechs:0,aircraft:2,scorpions:0});G.factions.clt.missiles=0;G.factions.imp.missiles=2;Math.random=()=>0.7;updateStepUI(STEPS.prep[4]);updateMap();
+        });
+        await page.locator('#step-actions').getByRole('button',{name:'Lanzar',exact:true}).click();await page.locator('#tc-01_02').click();
+        await page.locator('[data-missile-target="aircraft"]').click();
+        assert.match(await page.locator('#step-actions').innerText(),/1\/5 misiles/);
+        assert.equal(await page.evaluate(()=>G.territories['01_02'].aircraft),1);
+        await page.locator('#missile-close').click();
+        await page.getByRole('button',{name:'⚙ REGLAS',exact:true}).click();
+        assert.equal(await page.locator('#rules-modal input:enabled').count(),0);
+        await page.locator('#rules-modal').getByRole('button',{name:'CERRAR ▶',exact:true}).click();
+        // Decisiones remotas con transporte controlado: UI real, sin Firebase.
+        await page.evaluate(()=>{
+          G.phase='combat';G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:false};
+          Object.assign(G.territories['01_02'],{owner:'clt',soldiers:3,mechs:0,aircraft:0,scorpions:0});
+          Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:1,aircraft:0,scorpions:0});
+          window.remoteReplies=[];
+          showRemoteDecision({id:'fixture-defense',turn:currentStepKey(),kind:'defense',data:{srcId:'01_02',targetId:'01_01',attFk:'clt',attRolls:[{type:'sol',sides:6,value:4}]}},async choice=>{remoteReplies.push(choice);document.getElementById('online-decision-modal').remove();return true;});
+        });
+        assert.equal(await page.evaluate(()=>remoteReplies.length),0);
+        await page.locator('[data-defense-type="sol"]').fill('0');
+        await page.locator('#remote-defense-confirm').click();
+        assert.deepEqual(await page.evaluate(()=>remoteReplies),[{units:[{type:'mech'}]}]);
+        await page.evaluate(()=>showRemoteDecision({id:'fixture-intercept',turn:currentStepKey(),kind:'intercept',data:{targetId:'01_01',unitType:'mechs'}},async choice=>{remoteReplies.push(choice);document.getElementById('online-decision-modal').remove();return true;}));
+        await page.locator('#remote-pass').click();
+        assert.deepEqual(await page.evaluate(()=>remoteReplies[1]),{intercept:false});
+        console.log('PASS integración Chrome: setup manual, combate/guarnición, mejoras, misil y decisiones remotas por clics (transporte controlado)');
+      }
+
       await page.evaluate(() => {
         G.setup.order=['imp','lib','clt'];
         G.factions.lib.alive=false; G.factions.clt.alive=false;
         checkWinCondition(); checkWinCondition();
       });
       assert.equal(await page.locator('#game-result').count(), 1);
+      assert.equal(await page.locator('#phase-badge').innerText(),'FINAL');
       assert.match(await page.locator('#game-result').innerText(), /IMPERATORS/);
       assert.equal(await page.evaluate(() => G.gameOver && G.result.winner==='imp'), true);
       await page.screenshot({path:`/tmp/nuke3000-${viewport.width}-result.png`});

@@ -287,8 +287,10 @@ const ONLINE = (() => {
           playerId: _userId,
           ts: firebase.firestore.FieldValue.serverTimestamp(),
         });
+      return true;
     } catch(e) {
       console.error('[ONLINE] pushAction error:', e);
+      return false;
     }
   }
 
@@ -323,6 +325,9 @@ const ONLINE = (() => {
   function _handleRemoteAction(action) {
     if(G.gameOver) return;
     const { type, payload } = action;
+    if(type==='DECISION_REQUEST')return _receiveDecision(action);
+    if(type==='DECISION_RESPONSE')return _receiveDecisionResponse(action);
+    if(type==='DECISION_DONE')return _receiveDecisionClosed(action);
     console.log('[ONLINE] Remote:', type);
 
     // Apply full G state first if present
@@ -439,6 +444,8 @@ const ONLINE = (() => {
     const result = remoteG.result;
     const wasFinished = G.gameOver;
     Object.assign(G, remoteG);
+    if(remoteG.rules)RULES=JSON.parse(JSON.stringify(remoteG.rules));
+    if(remoteG.step){Object.assign(G_step,remoteG.step);G_step.isMyTurn=G_step.currentFk===G.pf;}
     if(result && !wasFinished && typeof declareWin === 'function') {
       G.gameOver = false;
       declareWin(result.winner, result.goal, false);
@@ -460,6 +467,8 @@ const ONLINE = (() => {
   function _serializeG() {
     try {
       return JSON.parse(JSON.stringify({
+        step: {phase:G_step.phase,idx:G_step.idx,currentFk:G_step.currentFk},
+        rules: RULES,
         gameOver:       !!G.gameOver,
         result:         G.result || null,
         round:          G.round,
@@ -493,7 +502,72 @@ const ONLINE = (() => {
     if (_unsubActions) { _unsubActions(); _unsubActions = null; }
     localStorage.removeItem('nuke_roomId');
     localStorage.removeItem('nuke_roomCode');
+    _pendingDecisions.clear();_incomingDecisions.clear();_closedDecisions.clear();
+    if(typeof G!=='undefined')G.waitingDecision=null;
+    document.getElementById('online-decision-modal')?.remove();
     _roomId = null; _roomCode = null; _isHost = false; _roomUpdateCb = null;
+  }
+
+  // Human decisions are responses, never state snapshots from the defender.
+  const _pendingDecisions=new Map(),_incomingDecisions=new Map(),_closedDecisions=new Set();
+  function _closeDecisionView(id){
+    const view=document.getElementById('online-decision-modal');
+    if(view?.dataset.decisionId===id)view.remove();
+  }
+  async function requestDecision(kind,toFaction,data,callback){
+    if(!_roomId||G.gameOver)return false;
+    const key=currentStepKey();
+    const marker=G.waitingDecision={id:'loading',kind,toFaction};
+    let players;
+    try{players=await getPlayersInRoom();}catch(error){G.waitingDecision=null;callback(null,error);return false;}
+    if(G.waitingDecision!==marker||G.gameOver||key!==currentStepKey())return false;
+    const recipient=Object.keys(players).find(uid=>players[uid].faction===toFaction);
+    if(!recipient){G.waitingDecision=null;callback(null,new Error('Jugador remoto no disponible'));return false;}
+    const id=_userId+':'+crypto.randomUUID();
+    const entry={id,recipient,callback,key:currentStepKey()};
+    _pendingDecisions.set(id,entry);G.waitingDecision={id,kind,toFaction};
+    const sent=await _pushActionRaw('DECISION_REQUEST',{id,kind,toFaction,recipient,data:JSON.parse(JSON.stringify(data)),turn:currentStepKey(),_G:_serializeG()});
+    if(sent===false){_pendingDecisions.delete(id);G.waitingDecision=null;callback(null,new Error('No se pudo enviar la decisión'));return false;}
+    return true;
+  }
+  async function _receiveDecision(action){
+    const p=action.payload;
+    if(!p||p.recipient!==_userId||p.toFaction!==G.pf||_incomingDecisions.has(p.id)||_closedDecisions.has(p.id))return;
+    if(!['defense','intercept'].includes(p.kind)||!String(p.id).startsWith(action.playerId+':'))return;
+    _incomingDecisions.set(p.id,{sender:action.playerId});
+    try{
+      const snap=await _db.collection('rooms').doc(_roomId).get(),meta=snap.data().meta;
+      const fk=p._G?.step?.currentFk;
+      const human=Object.keys(meta.players||{}).find(uid=>meta.players[uid].faction===fk);
+      if((human?human!==action.playerId:meta.host!==action.playerId)||meta.players?.[_userId]?.faction!==p.toFaction){_incomingDecisions.delete(p.id);return;}
+      if(_closedDecisions.has(p.id)||G.gameOver||p.data?.attFk!==fk)return;
+      const position=(round,step)=>((round-1)*G.setup.order.length+G.setup.order.indexOf(step.currentFk))*10+({prep:0,combat:6,end:7}[step.phase]??0)+step.idx;
+      if(position(p._G.round,p._G.step)<position(G.round,G_step)){_incomingDecisions.delete(p.id);return;}
+      _applyRemoteG(p._G);
+      if(currentStepKey()!==p.turn)return;
+      showRemoteDecision(p,async choice=>{
+        if(_closedDecisions.has(p.id)||G.gameOver)return false;
+        const sent=await _pushActionRaw('DECISION_RESPONSE',{id:p.id,choice});
+        if(sent===false)return false;
+        _closedDecisions.add(p.id);_incomingDecisions.delete(p.id);_closeDecisionView(p.id);return true;
+      });
+    }catch(error){_incomingDecisions.delete(p.id);addLog('No se pudo recibir la decisión: '+error.message,'sys');}
+  }
+  function _receiveDecisionResponse(action){
+    const p=action.payload,entry=_pendingDecisions.get(p?.id);
+    if(!entry||entry.recipient!==action.playerId||entry.key!==currentStepKey()||G.gameOver)return;
+    _pendingDecisions.delete(entry.id);G.waitingDecision=null;
+    try{entry.callback(p.choice,null);}catch(error){addLog('Respuesta remota inválida: '+error.message,'sys');}
+    _pushActionRaw('DECISION_DONE',{id:entry.id});
+  }
+  function _receiveDecisionClosed(action){
+    const p=action.payload,entry=_incomingDecisions.get(p?.id);
+    if(p&&String(p.id).startsWith(action.playerId+':')&&(!entry||entry.sender===action.playerId)){_closedDecisions.add(p.id);_incomingDecisions.delete(p.id);_closeDecisionView(p.id);}
+  }
+  function cancelPendingDecision(){
+    const id=G.waitingDecision?.id;
+    if(!id)return;
+    _pendingDecisions.delete(id);G.waitingDecision=null;if(id==='loading')return;_pushActionRaw('DECISION_DONE',{id});
   }
 
   // ── Public API ────────────────────────────────────────────
@@ -506,6 +580,8 @@ const ONLINE = (() => {
     getPlayersInRoom,
     onRoomUpdate,
     signalGameStart,
+    requestDecision,
+    cancelPendingDecision,
     signalGameEnd,
     pushAction,
     pushActionWithState,

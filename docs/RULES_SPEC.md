@@ -11,30 +11,28 @@ Originales en Desktop; no se duplican los PDF (≈82 MB) en Git. El reglamento s
 
 **Decisión explícita del propietario:** prevalece el texto principal sobre el resumen: central por **4 Pu** y misil contra Aircraft con **D6≥5**. La página 12 indica 5 Pu y 6 respectivamente; no aplicar esos valores.
 
-## Reglas verificadas y diferencias del motor
+## Implementación del bloque A
 
-Fuentes efectivas: js/data.js (DEFAULT_RULES/RULES), js/setup.js, js/engine.js y js/combat.js, cargadas por index.html. Standalone, js/state.js y setup.js raíz siguen siendo variantes históricas intactas.
+| Referencia V3 | Estado actual |
+|---|---|
+| Mapa p.6 | 60 territorios/7 Rusia, sin cambios en esta iteración |
+| Setup p.8 | Reparto circular, reservas y centrales; primer jugador conserva orden de asientos; salida única tras COMENZAR. Pruebas con 60 territorios en 3–6J |
+| Economía/refuerzos p.9 | applyIncome idempotente por ronda; elegibilidad compartida por humano/automático/CPU, Erebus y fallback regional |
+| Mejoras p.9 | applyUpgrade usa costes de RULES y tropas del tablero; humano confirma con coste/resultado; CPU aplica la misma conversión |
+| Movimiento pp.9/11 | BFS propio terrestre hasta RULES.prep.movementRange; aircraft a cualquier destino propio, transporta un mech o hasta tres soldados por avión; guarnición por número de unidades. Cada unidad mueve una vez por fase y vuelve a estar disponible en reagrupamiento, confirmado por propietario |
+| Misiles p.9 | launchMissile protege última unidad, consume/refresca recursos y usa dado configurable de intercepción. Elegir tipo antes del D6 de impacto. Aircraft ≥5 y central 4 Pu confirmados por propietario |
+| Combate p.10 | js/battle.js puro: dados con tipo, caras, valor bruto y bonus; orden por resultado/caras/tipo, mech antes que aircraft; empate defensor; pérdidas simultáneas y degradaciones. CPU y humano usan el mismo cálculo. Hasta 5 dados ataque/4 defensa independientes; elegir guarnición y mantener ocupación |
+| Mantenimiento p.11 | Dado individual por base; explosión en la base correspondiente; aircraft sobreviven, o se escoge un terrestre existente. Callback único. CPU automática |
+| Habilidades p.7 | IMP/TAL-MAUT +1 a todos los dados de su lado; PRM/SHN ingreso por base; Erebus distribución libre. Libertos recibe recompensa solo al destruir una base propia; mech inmediato en ese territorio, confirmado por propietario |
+| Victorias p.7 | checkWinCondition(moment,fk): IMP al inicio propio antes de ingresos; LIB/CLT/ERB/PRM/SHN al final propio tras mantenimiento. Extinción inmediata. Sin evaluar objetivos de otra facción tras una conquista |
 
-| Área / página PDF | Especificación | Estado de implementación |
-|---|---|---|
-| Mapa / 6 | 60 territorios; 12 regiones; 3 territorios antárticos dobles; conexión extremos Norteamérica–Rusia | Corregido: 06_07 en r06, centro (1136,136.2), vecinos 06_06 y 01_01 recíprocos; Rusia=7. Se conserva mapa original |
-| Setup / 8 | 3–6J; un soldado por reclamación rotativa; recursos iniciales 60/45/36/30 soldados, 4/3/2/2 mechs, 2 misiles y 4/3/2/2 bases; Libertos cambia sus bases por 3 Pu y 2 mechs | Reservas existentes; corregida ruta manual y barrera de finalización. Reparto con 60: 20/15/12/10 territorios. Faltan E2E completos |
-| Economía / 9 | 2 Pu/base; 1 soldado por dos territorios, por dos territorios regionales controlados y por base | applyIncome existente; comprobar distribución automática y límites |
-| Refuerzos / 9 | En bases; sin bases, un territorio de elección por región; Erebus puede colocarlos en cualquier territorio propio | Manual y automático divergen; pendiente |
-| Mejoras / 9 | 3 soldados + 1 Pu a mech/aircraft; 2 mechs + 1 Pu a scorpion; máximo 5 aircraft | Valores ejecutados coinciden por defecto; editor ignorado y confirmación pendientes |
-| Movimiento / 9 y 11 | Terrestres hasta dos territorios propios; Aircraft a cualquier territorio propio y transporta 1 mech o hasta 3 soldados | BFS actual limita también Aircraft; transporte pendiente |
-| Misiles / 9 | Coste 1 Pu, máximo 5; intercepción con misil y D6≥4; soldado automático, mech/aircraft ≥5, scorpion 6; última unidad protegida | Reparar contador, parámetros ignorados y protección por número de unidades; orden fabricar/disparar no está establecido explícitamente por V3 |
-| Combate / 10 | Reservar al menos una unidad de elección; hasta 5 dados de ataque y 4 de defensa, uno por unidad; dados D6/D12/D12/D20; empate defensor | El motor limita defensa por dados atacantes y usa AP en comprobaciones de unidades. Pendiente |
-| Emparejamiento / 10 | Orden descendente de resultado; en igualdad del mismo bando, más caras primero; mech antes que aircraft si ambos D12 | Tiradas numéricas pierden identidad de unidad. Pendiente |
-| Bajas / 10 | Pierde la unidad del dado emparejado: scorpion→mech, mech→soldado, aircraft/soldado desaparecen | **Divergencia crítica confirmada**: applyLoss elimina primero unidades baratas sin degradaciones. Requiere resolver con dados tipados comunes en CPU/humano |
-| Conquista / 10 | Ocupar con al menos una unidad atacante y conservar guarnición de origen; base cambia de dueño | Revisar movimiento automático y guard por AP; no certificado |
-| Mantenimiento / 11 | D12 por base, explota en 1; elimina base/terrestres, sobreviven aircraft; sin aircraft, elegir un terrestre superviviente | Fórmula actual de soldados incorrecta, elección y flags pendientes |
-| Habilidades / 7 | IMP +1 todos dados defensivos; TAL-MAUT +1 todos ofensivos; LIB gana misil/mech/2 Pu por base destruida; ERB distribución libre; PRM +1 Pu/base; SHN +1 soldado/base | TAL-MAUT diverge y LIB no se invoca. Pendiente resolver ubicación del mech LIB cuando el territorio no le pertenece |
-| Victoria / 7 | IMP 5 regiones al inicio propio; LIB bases globales≤jugadores al final propio; TAL-MAUT elimina 2 enemigos al final propio; ERB base en 7 regiones al final propio; PRM mitad bases al final propio; SHN mayor AP en 7 regiones al final propio | Cierre idempotente corregido, momentos actuales tras conquista no respetan V3; falta reparar y probar |
+API de combate: Battle.round devuelve copias, tiradas tipadas, comparaciones, pérdidas y estado; Battle.fight itera con cota derivada del daño restante. Battle.occupy conserva la guarnición elegida. No usa DOM ni temporizadores. El adaptador en combat.js representa el resultado; CPU–CPU resuelve todo sin observación obligatoria.
+
+Los textos de lobby y objetivos se corrigen sin rediseño visual. El editor existente queda de solo lectura al iniciar; setRule hace validación básica, pero aún no es el sistema versionado/persistente del bloque D. Online transmite solicitudes/respuestas de defensa/intercepción: decide el humano remoto y resuelve el actor activo (host si CPU). Probado con transporte local; no se certifica Firebase real ni reconexión.
 
 ## Dudas restantes
 
-Orden de participantes tras determinar primer jugador (V3 dice horario, motor ordena tiradas); regla en empate de AP regional; redondeo de mitad de bases y caso cero; victoria simultánea; representación de un mech Libertos en territorio enemigo después de explosión; acumulación de movimiento por unidad/fase. Mantenerlas separadas de errores confirmados. No se necesita inventar balance para reparar dados tipados y degradaciones.
+Sin decisiones pendientes entre las discrepancias detectadas. El propietario confirma: Shinin debe superar a todos (empate no vale); Libertos solo obtiene recompensa por nuclear propia, con mech inmediato; una vez por unidad/fase, con nueva disponibilidad al reagrupar; construir misiles antes de disparar, sin construcción posterior al primer disparo. Estas decisiones tienen regresiones deterministas. Mitad de bases se interpreta matemáticamente como al menos ceil(total/2), exigiendo total>0; no se concede victoria vacía por cero bases. Al evaluar solo la facción activa en su momento desaparece la competencia entre objetivos simultáneos de distintos turnos. Mantenerlas separadas de errores confirmados. No se necesita inventar balance para reparar dados tipados y degradaciones.
 
 ## Configuración y futuras versiones
 

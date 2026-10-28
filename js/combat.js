@@ -1,183 +1,131 @@
+function showRemoteDecision(packet,reply){
+  const data=packet.data;
+  if(packet.turn!==currentStepKey()||G.gameOver)return;
+  document.getElementById('online-decision-modal')?.remove();
+  const modal=document.createElement('div');modal.id='online-decision-modal';modal.dataset.decisionId=packet.id;
+  modal.style.cssText='position:fixed;inset:0;background:#000d;z-index:2200;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');box.style.cssText='background:#08080c;border:1px solid #4488bb;padding:24px;max-height:85vh;overflow:auto';modal.appendChild(box);
+  if(packet.kind==='intercept'){
+    const target=G.territories[data.targetId];if(target?.owner!==G.pf)return;
+    box.innerHTML='<h3>MISIL ENTRANTE</h3><p>'+terName(data.targetId)+' · objetivo '+data.unitType+'</p><button id="remote-intercept">INTERCEPTAR (1 MISIL)</button> <button id="remote-pass">NO INTERCEPTAR</button>';
+    box.querySelector('#remote-intercept').disabled=!(G.factions[G.pf].missiles>0);
+    for(const [id,value]of [['remote-intercept',true],['remote-pass',false]])box.querySelector('#'+id).onclick=async()=>{
+      const ok=await reply({intercept:value});if(!ok)addLog('No se envió la decisión. Vuelve a intentarlo.','sys');
+    };
+  }else{
+    if(!validAttack(data.srcId,data.targetId,data.attFk)||G.territories[data.targetId].owner!==G.pf)return;
+    const pool=buildPool(G.territories[data.targetId]),max=Math.min(pool.length,RULES.combat.maxDefenseDice),defaults={};
+    pool.slice(0,max).forEach(u=>defaults[u.type]=(defaults[u.type]||0)+1);
+    box.innerHTML='<h3>ELIGE TU DEFENSA</h3><p>'+terName(data.srcId)+' → '+terName(data.targetId)+'</p><p>Tirada atacante: '+data.attRolls.map(d=>d.type+' D'+d.sides+'='+d.value).join(' · ')+'</p>'+Object.keys(Battle.keys).filter(type=>pool.some(u=>u.type===type)).map(type=>'<label style="display:block">'+type+' <input data-defense-type="'+type+'" type="number" min="0" max="'+pool.filter(u=>u.type===type).length+'" value="'+(defaults[type]||0)+'"></label>').join('')+'<p>Hasta '+max+' dados</p><button id="remote-defense-confirm">CONFIRMAR DEFENSA</button>';
+    box.querySelector('#remote-defense-confirm').onclick=async()=>{
+      const units=[];let valid=true;
+      box.querySelectorAll('[data-defense-type]').forEach(input=>{const n=Number(input.value);if(!Number.isInteger(n)||n<0||n>Number(input.max))valid=false;else for(let i=0;i<n;i++)units.push({type:input.dataset.defenseType});});
+      if(!valid||!units.length||units.length>max){addLog('Selecciona entre 1 y '+max+' unidades disponibles.','sys');return;}
+      if(!await reply({units}))addLog('No se envió la defensa. Vuelve a intentarlo.','sys');
+    };
+  }
+  document.body.appendChild(modal);
+}
+function requestRemoteDefense(ctx){
+  if(G.gameOver||G_combat!==ctx||ctx.done||ctx.awaitingDefense)return;
+  const key=currentStepKey(),src=G.territories[ctx.srcId];
+  if(!ctx.isPlayerAtt)ctx.attSelected=buildPool(src).slice(0,Math.min(Battle.count(src)-1,RULES.combat.maxAttackDice));
+  ctx._attRolls ||= Battle.roll(ctx.attSelected,ctx.attFk,'attacker');
+  ctx.awaitingDefense=true;ctx.resolving=true;
+  const failed=error=>{if(G_combat!==ctx||ctx.done)return;ctx.awaitingDefense=false;ctx.resolving=false;addLog('Defensa remota pendiente: '+error.message,'sys');
+    if(ctx.isPlayerAtt){const btn=document.getElementById('btn-roll');btn.disabled=false;btn.textContent='REINTENTAR DEFENSA REMOTA';}
+    else {const area=document.getElementById('step-actions');if(area){const retry=document.createElement('button');retry.textContent='REINTENTAR SOLICITUD DE DEFENSA';retry.onclick=()=>requestRemoteDefense(ctx);area.appendChild(retry);}}
+  };
+  ONLINE.requestDecision('defense',ctx.defFk,{srcId:ctx.srcId,targetId:ctx.targetId,attFk:ctx.attFk,round:ctx.round,attRolls:ctx._attRolls},(choice,error)=>{
+    if(key!==currentStepKey()||G_combat!==ctx||G.gameOver||ctx.done)return;
+    if(error){failed(error);return;}
+    try{if(!Array.isArray(choice?.units)||!choice.units.length)throw Error('Defensa sin unidades');ctx.defSelected=Battle.select(G.territories[ctx.targetId],choice?.units,RULES.combat.maxDefenseDice,RULES.combat);}
+    catch(error){failed(error);return;}
+    ctx.awaitingDefense=false;ctx.resolving=false;ctx.remoteDefenseReady=true;resolveCombatRound();
+  }).catch(failed);
+}
 
 function applyLibertosScorchedEarth(terId) {
-  // SCORCHED EARTH: gain 1 Missile + 1 Mech + 2 Pu when any Nuclear is destroyed; Mech on that territory
-  if(!G.factions['lib'] || G.factions['lib'].alive===false) return;
-  const libF = G.factions['lib'];
-  const R = RULES.prep;
-  libF.missiles = Math.min(R.maxMissiles||5, (libF.missiles||0)+1);
-  libF.mechs = (libF.mechs||0)+1;
-  libF.plutonium = (libF.plutonium||0)+2;
-  const t = G.territories[terId];
-  if(t && t.owner==='lib') t.mechs=(t.mechs||0)+1;
-  addLog('SCORCHED EARTH: Libertos +1 Misil +1 Mech +2 Pu ('+terName(terId)+')','res');
-  refreshCards();
+  const lib=G.factions.lib,t=G.territories[terId];
+  if(!lib||lib.alive===false||!G.setup.order.includes('lib')||!t||t.owner!=='lib')return;
+  lib.missiles=Math.min(RULES.prep.maxMissiles,(lib.missiles||0)+1);
+  lib.plutonium=(lib.plutonium||0)+2;t.mechs++;
+  addLog('SCORCHED EARTH: +1 misil, +1 mech en '+terName(terId)+' y +2 Pu','res');
 }
-let G_combat = null;
+let G_combat=null;
 
-// Called when PLAYER attacks
+function validAttack(srcId,targetId,fk) {
+  const src=G.territories[srcId],tgt=G.territories[targetId];
+  return !!(src && tgt && src.owner===fk && tgt.owner && tgt.owner!==fk &&
+    src.adj.includes(targetId) && Battle.canAttack(src) && Battle.count(tgt)>0);
+}
 function openDice(targetId) {
-  if(G.gameOver) return;
-  const srcId=G.sel;
-  if(!srcId){addLog('Selecciona tu territorio origen primero','sys');return;}
-  const src=G.territories[srcId], tgt=G.territories[targetId];
-  if(!src||!tgt||src.owner!==G.pf){addLog('Selecciona tu territorio','sys');return;}
-  if(armyPoints(src)===0){addLog('Sin unidades en origen','sys');return;}
-  if(armyPoints(src)<=1){addLog('Necesitas al menos 2 unidades para atacar (1 se queda en origen).','sys');return;}
-  if(!tgt.owner||tgt.owner===G.pf){addLog('Selecciona territorio enemigo','sys');return;}
-
-  G_combat={srcId,targetId,attFk:G.pf,defFk:tgt.owner,round:1,done:false,isPlayerAtt:true,isPlayerDef:false};
-  openCombatModal('player-att');
+  if(G.gameOver || G.setup?._inSetup || G_step.phase!=='combat' || !G_step.isMyTurn || G_combat&&!G_combat.done) return;
+  if(!validAttack(G.sel,targetId,G.pf)){addLog('Necesitas un origen propio adyacente y al menos dos unidades.','sys');return;}
+  beginCombat(G.sel,targetId,G.pf);
 }
-
-// Called when CPU attacks player
-function openDiceCpu(srcId, targetId, cpuFk, callback) {
+function beginCombat(srcId,targetId,attFk,callback) {
+  const src=G.territories[srcId],tgt=G.territories[targetId];
+  G_combat={srcId,targetId,attFk,defFk:tgt.owner,round:1,done:false,
+    initialAtt:Battle.count(src),initialDef:Battle.count(tgt),history:[],
+    isPlayerAtt:attFk===G.pf,isPlayerDef:tgt.owner===G.pf,callback};
+  if(_isOnlineHumanTurn(tgt.owner)&&tgt.owner!==G.pf&&!G_combat.isPlayerAtt)requestRemoteDefense(G_combat);
+  else openCombatModal();
+}
+function openDiceCpu(srcId,targetId,cpuFk,callback) {
   if(G.gameOver) return;
-  const src=G.territories[srcId], tgt=G.territories[targetId];
-  const isPlayerDef=(tgt.owner===G.pf);
-  G_combat={srcId,targetId,attFk:cpuFk,defFk:tgt.owner,round:1,done:false,
-            isPlayerAtt:false,isPlayerDef,callback};
-  if(isPlayerDef) {
-    // Player defends — wait for click on hex
-    // G_combat stored, flashAttackedTerritory already called
-  } else {
-    // CPU vs CPU — flash hex, player can click to watch, auto-resolves after delay
-    if(!G.pendingCpuAttack) G.pendingCpuAttack = {};
-    G.pendingCpuAttack[targetId] = { srcId, attFk: cpuFk, spectator: true, callback };
-    const attFd = FDATA[cpuFk]||{name:cpuFk,color:'#888'};
-    const defFd = FDATA[tgt.owner]||{name:tgt.owner,color:'#888'};
-    const ex = document.getElementById('attack-banner');
-    if(ex) ex.remove();
-    const banner = document.createElement('div');
-    banner.id = 'attack-banner';
-    banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:800;'+
-      'background:#0a0010;border:2px solid #6644aa;padding:8px 20px;font-family:Orbitron,sans-serif;'+
-      'text-align:center;box-shadow:0 0 16px #6644aa88;cursor:pointer;';
-    banner.innerHTML = '<div style="font-size:10px;color:#9966cc;letter-spacing:2px;">COMBATE RIVAL</div>'+
-      '<div style="font-size:9px;color:#aaa;margin-top:3px;">'+
-      '<span style="color:'+attFd.color+'">'+attFd.name+'</span> ataca <span style="color:'+defFd.color+'">'+defFd.name+'</span> en '+terName(targetId)+
-      '</div><div style="font-size:8px;color:#666;margin-top:2px;">Pulsa el hexágono para ver — auto-resuelve en 5s</div>';
-    banner.onclick = () => { banner.remove(); };
-    document.body.appendChild(banner);
-    // Auto-resolve after 5s if player didn't open spectator view
-    const autoTimer = setTimeout(()=>{
-      const b=document.getElementById('attack-banner');if(b)b.remove();
-      if(G.pendingCpuAttack && G.pendingCpuAttack[targetId]) {
-        // Player didn't watch — resolve silently
-        delete G.pendingCpuAttack[targetId];
-        clearAttackFlash(targetId);
-        resolveCpuCpuSilent(srcId, targetId, cpuFk, callback);
-      }
-    }, 5000);
-    G.pendingCpuAttack[targetId]._timer = autoTimer;
+  if(!validAttack(srcId,targetId,cpuFk)){if(callback)callback();return;}
+  if(G.territories[targetId].owner===G.pf||_isOnlineHumanTurn(G.territories[targetId].owner)) beginCombat(srcId,targetId,cpuFk,callback);
+  else resolveCpuCpuSilent(srcId,targetId,cpuFk,callback);
+}
+function completeCombat(ctx,status) {
+  if(ctx.done) return;
+  ctx.done=true;ctx.status=status;
+  if(typeof ONLINE!=='undefined'&&ONLINE.isOnline())ONLINE.cancelPendingDecision();
+  clearAttackFlash(ctx.targetId);
+  _syncNow('Combate: '+terName(ctx.srcId)+' → '+terName(ctx.targetId)+' — '+status,'combat');
+  const callback=ctx.callback;ctx.callback=null;
+  if(callback&&!G.gameOver) callback();
+}
+function openCombatModal() {
+  const ctx=G_combat;if(!ctx||G.gameOver||ctx.done)return;
+  const src=G.territories[ctx.srcId],tgt=G.territories[ctx.targetId];
+  const af=FDATA[ctx.attFk],df=FDATA[ctx.defFk];
+  ctx.attPool=buildPool(src);ctx.defPool=buildPool(tgt);
+  if(ctx.isPlayerAtt){
+    ctx.guardType ||= ctx.attPool.at(-1).type;
+    ctx.attPool.splice(ctx.attPool.findIndex(u=>u.type===ctx.guardType),1);
   }
-}
-
-function openCombatModal(mode) {
-  const Rc=RULES.combat, ctx=G_combat;
-  const src=G.territories[ctx.srcId], tgt=G.territories[ctx.targetId];
-  const af=FDATA[ctx.attFk]||{name:ctx.attFk,color:'#C8A800'};
-  const df=FDATA[ctx.defFk]||{name:ctx.defFk,color:'#4488ff'};
-
-  // Build attack pool: must leave 1 unit in origin (cheapest stays behind)
-  const attFull=buildPool(src);
-  // Remove 1 cheapest unit from the attack pool (it stays in origin)
-  const attAvail = attFull.slice(); // copy
-  // Cheapest = last in pool (buildPool adds: scorp, mech, air, sol — sol is last)
-  const leaveIdx = attAvail.length - 1; // remove last (cheapest = soldier)
-  if(leaveIdx >= 0) attAvail.splice(leaveIdx, 1);
-  const defFull=buildPool(tgt);
-  const attN=Math.min(attAvail.length,Rc.maxAttackDice);
-  const defN=Math.min(Rc.maxDefenseDice,defFull.length); // Defender always up to maxDefenseDice
-  ctx.attPool=attAvail; ctx.defPool=defFull;
-  ctx.attSelected=attAvail.slice(0,attN);
-  ctx.defSelected=defFull.slice(0,defN);
-
-  document.querySelector('#dmodal h2').innerHTML='⚔ COMBATE — Ronda '+ctx.round;
-  document.getElementById('cdesc').innerHTML=
-    '<span style="color:'+af.color+'">'+af.name+'</span> ⚔ <span style="color:'+df.color+'">'+df.name+'</span><br>'+
-    '<span style="font-size:10px;color:#777;">'+ctx.srcId+' → '+ctx.targetId+'  |  '+attN+' dados ataque vs '+defN+' dados defensa</span>';
-  document.getElementById('dlba').innerHTML='<span style="color:'+af.color+'">'+af.name+'</span>';
-  document.getElementById('dlbd').innerHTML='<span style="color:'+df.color+'">'+df.name+'</span>';
-  document.getElementById('dtot-a').textContent='';
-  document.getElementById('dtot-d').textContent='';
-  document.getElementById('dres').textContent='';
-  document.getElementById('btn-retreat').style.display='none';
-
+  const maxAtt=Math.min(Battle.count(src)-1,RULES.combat.maxAttackDice);
+  if(maxAtt<1||Battle.count(tgt)===0){completeCombat(ctx,'repelled');return;}
+  ctx.attSelected=ctx.attPool.slice(0,maxAtt);
+  ctx.defSelected=ctx.defPool.slice(0,RULES.combat.maxDefenseDice);
+  document.querySelector('#dmodal h2').textContent='⚔ COMBATE — Ronda '+ctx.round;
+  document.getElementById('cdesc').textContent=af.name+' → '+df.name+' | '+terName(ctx.srcId)+' → '+terName(ctx.targetId);
+  if(ctx.isPlayerAtt){
+    const guard=document.createElement('select');guard.id='combat-guard';guard.setAttribute('aria-label','Unidad que permanece en origen');
+    for(const type of Object.keys(Battle.keys).filter(type=>src[Battle.keys[type]]>0)){const option=document.createElement('option');option.value=type;option.textContent='Guarnición: '+type;option.selected=type===ctx.guardType;guard.appendChild(option);}
+    guard.onchange=()=>{ctx.guardType=guard.value;openCombatModal();};document.getElementById('cdesc').appendChild(guard);
+  }
+  document.getElementById('dlba').textContent=af.name;
+  document.getElementById('dlbd').textContent=df.name;
+  for(const id of ['unit-sel-att','unit-sel-def'])document.getElementById(id)?.remove();
+  document.getElementById('dtot-a').textContent='';document.getElementById('dtot-d').textContent='';
+  const info='Iniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restantes '+Battle.count(src)+' / '+Battle.count(tgt);
+  document.getElementById('dres').textContent=info;
   renderDicePools();
-
-  const rollBtn=document.getElementById('btn-roll');
-  const cancelBtn=document.getElementById('btn-cancel');
-  const retreatBtn=document.getElementById('btn-retreat');
-
-  if(mode==='player-att') {
-    document.getElementById('dres').innerHTML=
-      '<div style="color:#C8A800;font-size:12px;">TU ATAQUE — elige unidades</div>';
-    rollBtn.style.display='none'; // hidden until units selected
-    cancelBtn.textContent='CANCELAR'; cancelBtn.style.display='inline-block';
-    cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};
-    if(ctx.round>1){
-      retreatBtn.style.display='inline-block';
-      retreatBtn.textContent='↩ RETIRAR';
-      retreatBtn.onclick=()=>retreatCombat();
-    }
-    // Show unit selector for attacker
-    if(RULES.combat.allowUnitSelection && ctx.attPool.length>0) {
-      const attN = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
-      showUnitSelectorInModal('att', ctx.attPool, attN, (chosen)=>{
-        ctx.attSelected = chosen;
-        // Defender is CPU — auto-select defense dice
-        const defN = Math.min(RULES.combat.maxDefenseDice, ctx.defPool.length);
-        ctx.defSelected = ctx.defPool.slice(0, defN);
-        rollBtn.textContent='⚄ LANZAR DADOS';
-        rollBtn.style.display='inline-block';
-        rollBtn.onclick=()=>resolveCombatRound(false);
-      });
-    } else {
-      rollBtn.textContent='⚄ LANZAR DADOS';
-      rollBtn.style.display='inline-block';
-      rollBtn.onclick=()=>resolveCombatRound(false);
-    }
-  } else if(mode==='cpu-att-player-def') {
-    // Flash the attacked territory red
-    const _ring=document.getElementById('tr-'+ctx.targetId);
-    if(_ring){_ring.setAttribute('stroke','#ff2222');_ring.setAttribute('stroke-width','4');_ring.setAttribute('filter','url(#fx-glow)');}
-    G.sel=ctx.targetId; updateMap();
-    // Highlight the territory being attacked on the map
-    const ring=document.getElementById('tr-'+ctx.targetId);
-    if(ring){ring.setAttribute('stroke','#ff4444');ring.setAttribute('stroke-width','3.5');ring.setAttribute('filter','url(#fx-glow)');}
-    document.getElementById('dres').innerHTML=
-      '<div style="color:#ff4444;font-size:13px;margin-bottom:4px;">⚠ ¡'+af.name+' ATACA '+ctx.targetId+'!</div>'+
-      '<div style="font-size:10px;color:#888;">Tu territorio bajo ataque desde '+ctx.srcId+'</div>'+
-      '<div style="font-size:10px;color:#C8A800;margin-top:6px;">Primero verás la tirada del atacante</div>';
-    rollBtn.textContent='⚄ VER TIRADA ATACANTE'; rollBtn.style.display='inline-block';
-    rollBtn.onclick=()=>rollAttackerThenDefend();
-    cancelBtn.style.display='none';
-    retreatBtn.style.display='none';
-  } else {
-    document.getElementById('dres').innerHTML='<div style="color:#888;">CPU vs CPU...</div>';
-    rollBtn.style.display='none';
-    cancelBtn.textContent='CERRAR'; cancelBtn.style.display='inline-block';
-    cancelBtn.onclick=()=>{closeDice();if(ctx.callback)ctx.callback();};
-    setTimeout(()=>resolveCombatRound(true),800);
-  }
+  const roll=document.getElementById('btn-roll'),cancel=document.getElementById('btn-cancel'),retreat=document.getElementById('btn-retreat');
+  roll.disabled=false;roll.style.display='none';
+  cancel.textContent='CANCELAR';cancel.style.display=ctx.isPlayerAtt?'inline-block':'none';cancel.onclick=retreatCombat;
+  retreat.style.display='none';
+  if(ctx.isPlayerAtt) {
+    const chosen=units=>{if(G_combat!==ctx||ctx.done)return;ctx.attSelected=units;renderDicePools();roll.textContent='⚄ LANZAR DADOS';roll.style.display='inline-block';roll.onclick=()=>resolveCombatRound();};
+    if(RULES.combat.allowUnitSelection)showUnitSelectorInModal('att',ctx.attPool,maxAtt,chosen);else chosen(ctx.attSelected);
+  } else rollAttackerThenDefend();
   document.getElementById('dmodal').classList.add('open');
 }
-
-
-function buildPool(terr, maxN) {
-  const Rc=RULES.combat;
-  const pool=[];
-  for(let i=0;i<(terr.scorpions||0);i++) pool.push({type:'scorp',sides:Rc.unitDice.scorpion,label:'🦂'});
-  for(let i=0;i<(terr.mechs||0);i++)     pool.push({type:'mech', sides:Rc.unitDice.mech,   label:'🤖'});
-  for(let i=0;i<(terr.aircraft||0);i++)  pool.push({type:'air',  sides:Rc.unitDice.aircraft,label:'✈'});
-  for(let i=0;i<(terr.soldiers||0);i++)  pool.push({type:'sol',  sides:Rc.unitDice.soldier, label:'🪖'});
-  return pool; // caller slices to maxN
-}
-
-function defDiceCount(attCount, maxDef, defUnits) {
-  // Risk-style: defender uses min(attCount, maxDef, available units)
-  return Math.min(attCount, maxDef, defUnits);
-}
+function buildPool(territory) { return Battle.pool(territory,RULES.combat); }
+function defDiceCount(attCount,maxDef,defUnits) { return Math.min(maxDef,defUnits); }
 
 function renderDicePools() {
   const ctx=G_combat;
@@ -240,243 +188,70 @@ function uselInlineConfirm(side){
   delete window['_usel_'+side];
 }
 
-function doPlayerAttackRoll() {
-  if(G.gameOver) return;
-  const ctx=G_combat;
-  if(!ctx.attSelected||ctx.attSelected.length===0){ctx.attSelected=ctx.attPool.slice(0,RULES.combat.maxAttackDice);}
-  if(!ctx.defSelected||ctx.defSelected.length===0){ctx.defSelected=ctx.defPool.slice(0,RULES.combat.maxDefenseDice);}
-  resolveCombatRound(false);
-}
-
-function doPlayerDefendRoll() {
-  if(G.gameOver) return;
-  const ctx=G_combat;
-  if(!ctx.defSelected||ctx.defSelected.length===0){ctx.defSelected=ctx.defPool.slice(0,RULES.combat.maxDefenseDice);}
-  if(!ctx.attSelected||ctx.attSelected.length===0){ctx.attSelected=ctx.attPool.slice(0,RULES.combat.maxAttackDice);}
-  resolveCombatRound(false);
-}
-
-
-function applyLoss(terr) {
-  // Remove one unit from territory (worst unit first: sol → mech → air → scorp going up)
-  // Actually remove BEST unit to be fair: scorp → mech/air → sol
-  if(terr.soldiers > 0) { terr.soldiers--; return 'sol'; }
-  if(terr.mechs > 0)    { terr.mechs--;    return 'mech'; }
-  if(terr.aircraft > 0) { terr.aircraft--; return 'air'; }
-  if(terr.scorpions > 0){ terr.scorpions--; return 'scorp'; }
-  return null;
-}
-
-function resolveCombatRound(auto) {
-  if(G.gameOver) return;
-  const Rc=RULES.combat, ctx=G_combat;
-  if(!ctx) return;
-  const src=G.territories[ctx.srcId], tgt=G.territories[ctx.targetId];
-  const att=ctx.attSelected||ctx.attPool.slice(0,Rc.maxAttackDice);
-  const def=ctx.defSelected||ctx.defPool.slice(0,Rc.maxDefenseDice);
-  const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
-  const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.attFk==='clt'){const mi=aR.indexOf(Math.min(...aR));if(mi>=0)aR[mi]++;}
-  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
-  att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
-  def.forEach((_,i)=>{const el=document.getElementById('dd'+i);if(el){el.textContent=dR[i];el.className='die def spin';setTimeout(()=>el.classList.remove('spin'),500);}});
-  document.getElementById('dtot-a').textContent=aR.join(' · ');
-  document.getElementById('dtot-d').textContent=dR.join(' · ');
-  setTimeout(()=>applyBattleResult(aR,dR),800);
-}
-
-function rollCombat(){ doPlayerAttackRoll(); }
-
+function doPlayerAttackRoll(){resolveCombatRound();}
+function doPlayerDefendRoll(){resolveCombatRound();}
+function rollCombat(){resolveCombatRound();}
 function rollAttackerThenDefend() {
-  if(G.gameOver) return;
-  const Rc=RULES.combat, ctx=G_combat; if(!ctx) return;
-  const att=ctx.attSelected;
-  const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.attFk==='clt'){aR.forEach((_,i)=>aR[i]++);}
-  att.forEach((_,i)=>{const el=document.getElementById('da'+i);if(el){el.textContent=aR[i];el.className='die att spin';setTimeout(()=>el.classList.remove('spin'),500);}});
-  document.getElementById('dtot-a').textContent=aR.join(' · ');
-  ctx._attRolls=aR;
-  const rollBtn=document.getElementById('btn-roll');
-  setTimeout(()=>{
-    document.getElementById('dres').innerHTML=
-      '<div style="color:#ff4444;margin-bottom:6px;">Atacante tiró: '+aR.join(', ')+'</div>'+
-      '<div style="font-size:10px;color:#C8A800;">Elige tus unidades de defensa</div>';
-    // Let defender choose their units
-    const defN=Math.min(Rc.maxDefenseDice, ctx.defPool.length);
-    if(Rc.allowUnitSelection && ctx.defPool.length>0){
-      showUnitSelectorInModal('def', ctx.defPool, defN, (defChosen)=>{
-        ctx.defSelected=defChosen;
-        if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
-      });
-      if(rollBtn) rollBtn.style.display='none';
-    } else {
-      ctx.defSelected=ctx.defPool.slice(0,defN);
-      if(rollBtn){rollBtn.textContent='🛡 LANZAR DEFENSA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>resolveDefenseRoll(aR);}
-    }
-  },800);
+  const ctx=G_combat;if(!ctx||ctx.done||G.gameOver)return;
+  ctx._attRolls=Battle.roll(ctx.attSelected,ctx.attFk,'attacker');
+  document.getElementById('dtot-a').textContent=ctx._attRolls.map(d=>d.value).join(' · ');
+  const ready=chosen=>{
+    if(G_combat!==ctx||ctx.done)return;ctx.defSelected=chosen;renderDicePools();
+    const btn=document.getElementById('btn-roll');btn.textContent='🛡 LANZAR DEFENSA';btn.disabled=false;
+    btn.style.display='inline-block';btn.onclick=()=>resolveCombatRound();
+  };
+  if(RULES.combat.allowUnitSelection)showUnitSelectorInModal('def',ctx.defPool,Math.min(RULES.combat.maxDefenseDice,ctx.defPool.length),ready);
+  else ready(ctx.defSelected);
 }
-
-function resolveDefenseRoll(aR) {
-  if(G.gameOver) return;
-  const ctx=G_combat; if(!ctx) return;
-  const def=ctx.defSelected;
-  const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
-  if(ctx.defFk==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
-  def.forEach((_,i)=>{const el=document.getElementById('dd'+i);if(el){el.textContent=dR[i];el.className='die def spin';setTimeout(()=>el.classList.remove('spin'),500);}});
-  document.getElementById('dtot-d').textContent=dR.join(' · ');
-  setTimeout(()=>applyBattleResult(aR,dR),800);
-}
-
-function applyBattleResult(aR,dR) {
-  if(G.gameOver) return;
-  const Rc=RULES.combat, ctx=G_combat; if(!ctx) return;
-  const src=G.territories[ctx.srcId], tgt=G.territories[ctx.targetId];
-  const aS=[...aR].sort((a,b)=>b-a), dS=[...dR].sort((a,b)=>b-a);
-  const pairs=Math.min(aS.length,dS.length);
-  let aL=0,dL=0;
-  for(let i=0;i<pairs;i++){if(Rc.tieBreakerDefender?aS[i]>dS[i]:aS[i]>=dS[i])dL++;else aL++;}
-  for(let i=0;i<dL;i++) applyLoss(tgt);
-  for(let i=0;i<aL;i++) applyLoss(src);
-  const res=document.getElementById('dres');
-  const rollBtn=document.getElementById('btn-roll');
-  const retreatBtn=document.getElementById('btn-retreat');
-  const cancelBtn=document.getElementById('btn-cancel');
-  const conquered=armyPoints(tgt)===0;
-  if(conquered||armyPoints(src)===0){
-    if(conquered){
+function resolveDefenseRoll(){resolveCombatRound();}
+function resolveCombatRound() {
+  const ctx=G_combat;if(G.gameOver||!ctx||ctx.done||ctx.resolving)return;
+  if(_isOnlineHumanTurn(ctx.defFk)&&ctx.defFk!==G.pf&&!ctx.remoteDefenseReady){requestRemoteDefense(ctx);return;}
+  ctx.resolving=true;
+  const btn=document.getElementById('btn-roll');btn.disabled=true;
+  const src=G.territories[ctx.srcId],tgt=G.territories[ctx.targetId];
+  const result=Battle.round(src,tgt,{rules:RULES.combat,attFk:ctx.attFk,defFk:ctx.defFk,
+    attUnits:ctx.attSelected,defUnits:ctx.defSelected,attRolls:ctx._attRolls,guardType:ctx.guardType});
+  ctx._attRolls=null;ctx.remoteDefenseReady=false;
+  Object.assign(src,result.attacker);Object.assign(tgt,result.defender);
+  ctx.history.push(result);G.lastBattle=result;
+  if(result.status==='conquered') {
+    const occupied=Battle.occupy(src,tgt,result.guard);
+    Object.assign(src,occupied.attacker);Object.assign(tgt,occupied.defender);
     tgt.owner=ctx.attFk;
     G.factions[ctx.attFk].conqueredThisTurn=(G.factions[ctx.attFk].conqueredThisTurn||0)+1;
-    // Move attacking units to conquered territory, leave 1 unit in origin
-    const apSrc=armyPoints(src);
-    if(apSrc>1){
-      // Move all to conquered, leave 1 cheapest unit in origin
-      // Cheapest = soldier > mech > aircraft > scorpion
-      const leaveUnit = src.soldiers>0?'soldiers':src.mechs>0?'mechs':src.aircraft>0?'aircraft':'scorpions';
-      // Move everything to tgt first
-      tgt.soldiers+=src.soldiers; src.soldiers=0;
-      tgt.mechs+=src.mechs; src.mechs=0;
-      tgt.aircraft+=src.aircraft; src.aircraft=0;
-      tgt.scorpions+=src.scorpions; src.scorpions=0;
-      // Put 1 cheapest unit back in origin
-      if(leaveUnit==='soldiers'&&tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
-      else if(leaveUnit==='mechs'&&tgt.mechs>0){src.mechs=1;tgt.mechs--;}
-      else if(leaveUnit==='aircraft'&&tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
-      else if(leaveUnit==='scorpions'&&tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
-    } else {
-      // src has exactly 1 unit — MUST stay in origin (can't occupy AND defend origin)
-      // This shouldn't happen (openDice/executeCpuAttack block attacks with <=1 unit)
-      // Safety net: don't move the unit, tgt stays conquered but empty (assign owner only)
-      // Ensure src keeps its unit
-      addLog('⚠ Conquista sin refuerzos — origen mantiene su unidad','combat');
-    }
-    // SAFETY: src must never be empty after conquest
-    if(armyPoints(src)===0){
-      // Emergency: move 1 unit back from tgt to src
-      if(tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
-      else if(tgt.mechs>0){src.mechs=1;tgt.mechs--;}
-      else if(tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
-      else if(tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
-      addLog('⚠ Unidad de guardia asignada a '+terName(ctx.srcId),'sys');
-    }
-    // SAFETY: tgt must have owner set
-    if(!tgt.owner) tgt.owner=ctx.attFk;
-    res.innerHTML='<div style="color:#88cc44;font-size:13px;">✅ CONQUISTA: '+ctx.targetId+'</div><div style="font-size:10px;color:#777;">Atq-'+aL+' Def-'+dL+'</div>';
-    addLog('⚔ CONQUISTA '+ctx.targetId,'combat');
-    checkElimination(ctx.defFk, ctx.attFk);checkWinCondition();
+    checkElimination(ctx.defFk,ctx.attFk);checkWinCondition();
   }
-    else{res.innerHTML='<div style="color:#cc4444;">Sin unidades atacantes</div>';addLog('⚔ Sin unidades.','combat');}
-    if(rollBtn)rollBtn.style.display='none';if(retreatBtn)retreatBtn.style.display='none';
-    if(cancelBtn){cancelBtn.textContent='CERRAR';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;if(ctx.callback)ctx.callback();};}
-  } else {
-    ctx.round++;
-    const ap1=armyPoints(src),ap2=armyPoints(tgt);
-    res.innerHTML='<div style="color:#C8A800;">R'+(ctx.round-1)+': Atq-'+aL+' Def-'+dL+'</div><div style="font-size:10px;color:#888;">AP Atq:'+ap1+' Def:'+ap2+'</div>';
-    addLog('⚔ R'+(ctx.round-1)+': Atq-'+aL+' Def-'+dL+'. AP:'+ap1+' vs '+ap2,'combat');
-    // Rebuild pools - always leave 1 unit in origin
-    const attRebuild=buildPool(src);
-    if(attRebuild.length>0) attRebuild.splice(attRebuild.length-1,1); // remove cheapest
-    ctx.attPool=attRebuild; ctx.defPool=buildPool(tgt);
-    const aN=Math.min(ctx.attPool.length,Rc.maxAttackDice);
-    const dN=Math.min(Rc.maxDefenseDice,ctx.defPool.length);
-    ctx.attSelected=ctx.attPool.slice(0,aN);ctx.defSelected=ctx.defPool.slice(0,dN);
-    renderDicePools();
-    if(ctx.isPlayerAtt){
-      const canContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
-      // Always hide roll button first — re-show only if canContinue
-      if(rollBtn) rollBtn.style.display='none';
-      if(!canContinue) {
-        // Attacker exhausted (only 1 unit left must stay) — close combat
-        if(retreatBtn) retreatBtn.style.display='none';
-        if(cancelBtn){cancelBtn.textContent='CERRAR';cancelBtn.style.display='inline-block';
-          cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;if(ctx.callback)ctx.callback();};}
-        res.innerHTML='<div style="color:#4488cc;font-size:13px;">🛡 DEFENSA EXITOSA</div><div style="font-size:10px;color:#777;">El atacante no tiene más unidades disponibles</div>';
-        addLog('⚔ Defensa exitosa — atacante sin unidades','combat');
-        updateMap(); refreshCards();
-        return;
-      }
-      if(retreatBtn){retreatBtn.style.display='inline-block';retreatBtn.onclick=()=>retreatCombat();}
-      if(cancelBtn){cancelBtn.textContent='TERMINAR COMBATE';cancelBtn.style.display='inline-block';cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;};}
-      if(canContinue && rollBtn) {
-        rollBtn.style.display='none';
-        // Re-show unit selector for next round
-        if(RULES.combat.allowUnitSelection) {
-          const attN2 = Math.min(ctx.attPool.length, RULES.combat.maxAttackDice);
-          showUnitSelectorInModal('att', ctx.attPool, attN2, (chosen)=>{
-            ctx.attSelected = chosen;
-            const defN2 = Math.min(RULES.combat.maxDefenseDice, ctx.defPool.length);
-            if(RULES.combat.allowUnitSelection) {
-              showUnitSelectorInModal('def', ctx.defPool, defN2, (defChosen)=>{
-                ctx.defSelected = defChosen;
-                rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-                rollBtn.style.display='inline-block';
-                rollBtn.disabled=false;
-                rollBtn.onclick=()=>resolveCombatRound(false);
-              });
-            } else {
-              ctx.defSelected = ctx.defPool.slice(0,defN2);
-              rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-              rollBtn.style.display='inline-block';
-              rollBtn.disabled=false;
-              rollBtn.onclick=()=>resolveCombatRound(false);
-            }
-          });
-        } else {
-          rollBtn.textContent='⚄ CONTINUAR ATAQUE';
-          rollBtn.style.display='inline-block';
-          rollBtn.disabled=false;
-          rollBtn.onclick=()=>resolveCombatRound(false);
-        }
-      } else if(rollBtn) {
-        rollBtn.textContent='⚠ Sin unidades para continuar';
-        rollBtn.style.display='inline-block';
-        rollBtn.disabled=true;
-      }
-    } else if(ctx.isPlayerDef){
-      // Check if attacker still has units to continue
-      const canAttContinue = armyPoints(src) > 1 && ctx.attPool && ctx.attPool.length > 0;
-      if(!canAttContinue) {
-        // Attacker wiped — defender wins
-        if(rollBtn) rollBtn.style.display='none';
-        if(retreatBtn) retreatBtn.style.display='none';
-        if(cancelBtn){cancelBtn.textContent='CERRAR';cancelBtn.style.display='inline-block';
-          cancelBtn.onclick=()=>{closeDice();G.attackSrc=null;if(ctx.callback)ctx.callback();};}
-        res.innerHTML='<div style="color:#88cc44;font-size:13px;">🛡 DEFENSA EXITOSA</div><div style="font-size:10px;color:#777;">El atacante ha sido repelido</div>';
-        addLog('🛡 Defensa exitosa — atacante repelido', 'combat');
-        updateMap(); refreshCards();
-      } else {
-        // Player is defender - see attacker roll then defend
-        if(rollBtn){rollBtn.textContent='⚄ VER SIGUIENTE TIRADA ATACANTE';rollBtn.style.display='inline-block';rollBtn.onclick=()=>rollAttackerThenDefend();}
-        if(cancelBtn)cancelBtn.style.display='none';
-      }
-    } else {
-      // Spectator - CPU vs CPU, auto-resolve
-      if(rollBtn){rollBtn.textContent='▶ VER SIGUIENTE RONDA';rollBtn.style.display='inline-block';rollBtn.onclick=()=>setTimeout(()=>resolveCombatRound(true),400);}
-      if(cancelBtn)cancelBtn.style.display='none';
-    }
-  }
+  displayBattleResult(ctx,result);
+  ctx.resolving=false;
+  _syncNow('Ronda de combate resuelta','combat');
+  if(result.status!=='ongoing') completeCombat(ctx,result.status);
+  else if(!ctx.isPlayerAtt&&!ctx.isPlayerDef)setTimeout(()=>{if(G_combat===ctx&&!ctx.done&&!G.gameOver)requestRemoteDefense(ctx);},300);
   updateMap();refreshCards();
 }
-
+function displayBattleResult(ctx,result) {
+  document.getElementById('dtot-a').textContent=result.attRolls.map(d=>d.value).join(' · ');
+  document.getElementById('dtot-d').textContent=result.defRolls.map(d=>d.value).join(' · ');
+  const changes=list=>list.map(c=>c.from+' → '+(c.to||'eliminado')).join(', ')||'ninguna';
+  const src=G.territories[ctx.srcId],tgt=G.territories[ctx.targetId];
+  document.getElementById('dres').textContent=
+    'Ronda '+ctx.round+' · '+(result.status==='conquered'?'CONQUISTA':result.status==='repelled'?'DEFENSA EXITOSA':'CONTINÚA')+
+    '\nBajas ataque: '+changes(result.losses.attacker)+'\nBajas defensa: '+changes(result.losses.defender)+
+    '\nComparaciones: '+result.pairs.map(p=>p.att.type+' D'+p.att.sides+'='+p.att.value+' vs '+p.def.type+' D'+p.def.sides+'='+p.def.value+' ('+p.loser+' pierde)').join('; ')+
+    '\nIniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restantes '+Battle.count(src)+' / '+Battle.count(tgt);
+  document.getElementById('dres').style.whiteSpace='pre-line';
+  addLog('⚔ '+terName(ctx.srcId)+' → '+terName(ctx.targetId)+': '+result.status+'; bajas '+changes(result.losses.attacker)+' / '+changes(result.losses.defender),'combat');
+  const roll=document.getElementById('btn-roll'),cancel=document.getElementById('btn-cancel');
+  document.getElementById('btn-retreat').style.display='none';
+  if(result.status==='ongoing') {
+    ctx.round++;
+    roll.textContent=ctx.isPlayerAtt?'CONTINUAR ATAQUE':'ELEGIR DEFENSA';
+    roll.disabled=false;roll.style.display='inline-block';roll.onclick=()=>openCombatModal();
+    cancel.style.display=ctx.isPlayerAtt?'inline-block':'none';cancel.textContent='RETIRAR';cancel.onclick=retreatCombat;
+  } else {
+    roll.style.display='none';cancel.style.display='inline-block';cancel.textContent='CERRAR';cancel.onclick=closeDice;
+  }
+}
 
 
 function showMoveUnitsPopup(srcId,dstId,evt){
@@ -556,13 +331,8 @@ function mvConfirm(srcId,dstId){
   const p=window._mvPopup;if(!p)return;
   const src=G.territories[srcId],dst=G.territories[dstId];
   const c=p._chosen;
-  const total=Object.values(c).reduce((s,v)=>s+v,0);
-  if(total===0){addLog('Elige al menos 1 unidad','sys');return;}
-  if(total>=armyPoints(src)){addLog('Deja al menos 1 unidad en origen','sys');return;}
-  src.soldiers-=(c.soldiers||0);dst.soldiers+=(c.soldiers||0);
-  src.mechs-=(c.mechs||0);dst.mechs+=(c.mechs||0);
-  src.aircraft-=(c.aircraft||0);dst.aircraft+=(c.aircraft||0);
-  src.scorpions-=(c.scorpions||0);dst.scorpions+=(c.scorpions||0);
+  const total=Object.values(c).reduce((n,v)=>n+v,0);
+  if(!transferUnits(srcId,dstId,c)){addLog('Movimiento inválido: comprueba guarnición, alcance y capacidad de transporte.','sys');return;}
   addLog('Movidos '+total+' uds: '+terName(srcId)+' → '+terName(dstId),'move');
   p.remove();window._mvPopup=null;
   G.moveSrc=null;G.moveMode=false;G.moveTargets=null;
@@ -574,19 +344,18 @@ function mvConfirm(srcId,dstId){
 }
 
 function retreatCombat(){
-  addLog('↩ Retirada. Combate terminado.','combat');
-  closeDice();
+  const ctx=G_combat;
+  if(!ctx||ctx.done){closeDice();return;}
+  if(!ctx.isPlayerAtt||!RULES.combat.allowRetreat)return;
+  completeCombat(ctx,'retreated');closeDice();
 }
-
 function closeDice(){
+  const ctx=G_combat;
+  if(ctx&&!ctx.done){if(ctx.isPlayerAtt)retreatCombat();return;}
   document.getElementById('dmodal').classList.remove('open');
-  if(G_combat && G_combat.targetId){
-    clearAttackFlash(G_combat.targetId);
-  }
-  G_combat=null;
+  for(const side of ['att','def']){document.getElementById('unit-sel-'+side)?.remove();window['_usel_'+side]=null;}
+  G_combat=null;G.attackSrc=null;
 }
-
-
 
 // ── PHASES ────────────────────────────────────────────────────
 const PHASES = ['prep','combat','end'];
@@ -604,38 +373,16 @@ function nextPhase() {
 // ════════════════════════════════════════════════════════════════
 
 // ── PREP PHASE ────────────────────────────────────────────────
-function runPrepPhase() {
-  // Legacy: called from game-start overlay
-  // Income is applied by step engine (executeAutoStep), don't call again
-  // Just ensure step engine is running
-  if(!G_step || !G_step.currentFk) {
-    startPhase('prep', G.setup.order[0]||G.pf);
-  }
+function runPrepPhase(){
+  if(G.gameOver)return;
+  const wasWaiting=G.awaitingStart;
+  G.awaitingStart=false;
+  if(wasWaiting||!G_step.currentFk)startPhase('prep',G.setup.order[0]);
 }
 
 function showReinforcementUI(count) {
   if(count <= 0) { addLog('Sin refuerzos este turno.','res'); return; }
-  const R = RULES.prep;
-  const myF = G.factions[G.pf];
-  const myTers = Object.values(G.territories).filter(t=>t.owner===G.pf);
-  const nucTers = myTers.filter(t=>t.hasNuclear);
-
-  let validTers;
-  if(G.pf==='erb' && R.placement.ereubsAnywhereOverride) {
-    validTers = myTers;
-  } else if(!R.placement.onlyInNuclearTerritories) {
-    validTers = myTers;
-  } else if(nucTers.length > 0) {
-    validTers = nucTers;
-  } else if(R.placement.fallbackOnePerRegion) {
-    // One territory per region
-    const byRegion = {};
-    myTers.forEach(t=>{ if(!byRegion[t.region]) byRegion[t.region]=t; });
-    validTers = Object.values(byRegion);
-  } else {
-    validTers = myTers;
-  }
-
+  const validTers=reinforcementTargets(G.pf);
   // Highlight valid territories
   validTers.forEach(t=>{
     const ring = document.getElementById('tr-'+t.id);
@@ -709,7 +456,10 @@ function showReinforcementCounter(id, evt) {
 
 function placeReinforcements(id, qty) {
   if(G.gameOver) return;
+  if(!G.reinforcementMode||!Number.isInteger(qty)||qty<1||qty>G.reinforcementMode.left||!reinforcementTargets(G.pf).some(t=>t.id===id))return;
   const t = G.territories[id];
+  const f=G.factions[G.pf];
+  if(!Object.values(G.territories).some(t=>t.owner===G.pf&&t.hasNuclear)&&G.pf!=='erb'&&RULES.prep.placement.fallbackOnePerRegion){(f.reinforcementRegions||={})[t.region]=id;}
   t.soldiers += qty;
   G.reinforcementMode.left -= qty;
   G.factions[G.pf].pendingSoldiers = Math.max(0,(G.factions[G.pf].pendingSoldiers||0)-qty);
@@ -737,202 +487,60 @@ function placeReinforcements(id, qty) {
 }
 
 // ── END PHASE ─────────────────────────────────────────────────
-function runEndPhase() {
-  const R = RULES.end;
-  if(!R.maintenanceEnabled){ addLog('Mantenimiento desactivado.','sys'); return; }
-  const myTerrs = Object.values(G.territories).filter(t=>t.owner===G.pf&&t.hasNuclear);
-  let explosions = 0;
-  myTerrs.forEach(t=>{
-    const roll = Math.floor(Math.random()*R.maintenanceDie)+1;
-    addLog(`🎲 Mantenimiento ${t.id}: D${R.maintenanceDie}=${roll}`, 'sys');
-    if(roll===R.maintenanceExplosionOn){
-      explosions++;
-      t.hasNuclear = false;
-      const hasAir = t.aircraft > 0;
-      if(hasAir){
-        // Aircraft survive, all ground units eliminated
-        t.soldiers=0; t.mechs=0; t.scorpions=0;
-      } else {
-        // All ground eliminated except 1 minimum
-        const total = t.soldiers+t.mechs+t.scorpions;
-        t.soldiers = Math.max(1, t.soldiers-(t.soldiers>0?t.soldiers:0));
-        t.mechs=0; t.scorpions=0;
-        if(t.soldiers===0) t.soldiers=1;
-      }
-      addLog(`💥 EXPLOSIÓN NUCLEAR en ${t.id}! Roll=${roll}`, 'combat');
-        showNuclearExplosionBanner(t.id, FDATA[fk]||{name:fk,color:'#88cc44'});
-    }
-  });
-  if(explosions===0) addLog('☢ Mantenimiento completado. Sin explosiones.','res'); markStepDone('maint');
-  refreshCards(); updateMap();
-}
+function runEndPhase(){runMaintenanceRolls();}
 
 // ── MISSILES ──────────────────────────────────────────────────
-function doMissileBuild() {
-  if(G.gameOver) return;
-  const myF = G.factions[G.pf];
-  const R = RULES.prep;
-  if(R.buildBeforeFire && (myF.missilesFiredThisTurn||0)>0){
-    addLog('⚠ Ya has disparado misiles este turno. No puedes construir más.','sys'); return;
-  }
-  if(myF.missiles>=R.maxMissiles){ addLog('⚠ Máximo de misiles alcanzado.','sys'); return; }
-  if(myF.plutonium<R.missileBuildCost){ addLog('⚠ Plutonium insuficiente.','sys'); return; }
-  myF.plutonium-=R.missileBuildCost;
-  myF.missiles=Math.min(R.maxMissiles,myF.missiles+1);
-  myF.missilesBuiltThisTurn=(myF.missilesBuiltThisTurn||0)+1;
-  addLog('Misil construido. '+myF.missiles+'/'+R.maxMissiles+'. -'+R.missileBuildCost+' PLU.','res');
-  refreshCards(); updateMap();
-  // Force re-render missile step UI to update pip bar
-  if(G_step && STEPS[G_step.phase]) {
-    const _s=(STEPS[G_step.phase]||[])[G_step.idx];
-    if(_s) { const a=document.getElementById('step-actions'); if(a) renderStepActions(_s); }
-  }
+function refreshMissileState(){
+  refreshCards();updateMissilePips();
+  const step=STEPS[G_step.phase]?.[G_step.idx];if(step?.id==='missile')renderStepActions(step);
+  _syncNow('Estado de misiles actualizado','combat');
 }
-
-function doMissileFire() {
-  if(G.gameOver) return;
-  const id = G.sel;
-  const myF = G.factions[G.pf];
-  const R = RULES.prep, Rc = RULES.combat;
-  if(!id){ addLog('Selecciona territorio enemigo objetivo.','sys'); return; }
-  const t = G.territories[id];
-  if(!t||!t.owner||t.owner===G.pf){ addLog('Selecciona un territorio ENEMIGO.','sys'); return; }
-  if(myF.missiles<1){ addLog('Sin misiles disponibles.','sys'); return; }
-
-  // Show missile popup
-  const ex = document.getElementById('missile-modal');
-  if(ex) ex.remove();
-  const fd = FDATA[G.pf]||{name:G.pf,color:'#C8A800'};
-  const defFd = FDATA[t.owner]||{name:t.owner,color:'#888'};
-
-  const modal = document.createElement('div');
-  modal.id = 'missile-modal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;display:flex;align-items:center;justify-content:center;';
-
-  const box = document.createElement('div');
-  box.style.cssText = 'background:#08080c;border:1px solid #cc4433;padding:24px 32px;min-width:360px;font-family:Orbitron,sans-serif;text-align:center;';
-  box.innerHTML = `
-    <div style="font-size:13px;letter-spacing:3px;color:#cc4433;margin-bottom:6px;">🚀 LANZAMIENTO DE MISIL</div>
-    <div style="font-size:11px;color:#aaa;margin-bottom:16px;">
-      <span style="color:${fd.color}">${fd.name}</span> → ${id} 
-      (<span style="color:${defFd.color}">${defFd.name}</span>)
-    </div>
-    <div id="miss-intercept-info" style="font-size:11px;color:#888;margin-bottom:16px;">
-      ${G.factions[t.owner]?.missiles>0 ? `⚠ ${defFd.name} tiene ${G.factions[t.owner].missiles} misil(es) de intercepción` : '✓ Sin misiles de intercepción'}
-    </div>
-    <div id="miss-result" style="font-size:14px;min-height:28px;margin-bottom:16px;"></div>
-    <button id="miss-fire-btn" style="background:#0a0a0d;border:1px solid #cc4433;color:#cc4433;padding:12px 28px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;">
-      🚀 LANZAR MISIL
-    </button>`;
-
-  modal.appendChild(box);
+function doMissileBuild(){
+  if(G.gameOver||!G_step.isMyTurn||STEPS[G_step.phase]?.[G_step.idx]?.id!=='missile')return;
+  const f=G.factions[G.pf],R=RULES.prep;
+  if(R.buildBeforeFire&&f.missilesFiredThisTurn>0||f.missiles>=R.maxMissiles||f.plutonium<R.missileBuildCost)return;
+  f.plutonium-=R.missileBuildCost;f.missiles++;f.missilesBuiltThisTurn=(f.missilesBuiltThisTurn||0)+1;
+  refreshMissileState();
+}
+function launchMissile(fk,id,type,intercept=true,random=Math.random){
+  const t=G.territories[id],f=G.factions[fk],R=RULES.combat;
+  if(G.gameOver||!t||!f||!t.owner||t.owner===fk||f.missiles<1||Battle.count(t)<=1||!['soldiers','mechs','aircraft','scorpions'].includes(type)||!(t[type]>0))return null;
+  f.missiles--;f.missilesFiredThisTurn=(f.missilesFiredThisTurn||0)+1;
+  const defender=G.factions[t.owner];
+  let interceptRoll=null;
+  if(intercept&&defender?.missiles>0){defender.missiles--;interceptRoll=Math.floor(random()*R.missileInterceptDie)+1;}
+  if(interceptRoll!==null&&interceptRoll>=R.missileInterceptThreshold)return {intercepted:true,interceptRoll,killed:false};
+  const thresholds={soldiers:0,mechs:R.missileTargets.mech,aircraft:R.missileTargets.aircraft,scorpions:R.missileTargets.scorpion};
+  const roll=type==='soldiers'?null:Math.floor(random()*6)+1;
+  const killed=type==='soldiers'||roll>=thresholds[type];
+  if(killed)t[type]--;
+  return {intercepted:false,interceptRoll,roll,killed,type};
+}
+function doMissileFire(){
+  if(G.gameOver||!G_step.isMyTurn||STEPS[G_step.phase]?.[G_step.idx]?.id!=='missile')return;
+  const id=G.sel,t=G.territories[id],fk=G.pf,key=currentStepKey();
+  if(!t||!t.owner||t.owner===fk||Battle.count(t)<=1||G.factions[fk].missiles<1)return;
+  document.getElementById('missile-modal')?.remove();
+  const modal=document.createElement('div');modal.id='missile-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:1000;background:#000d;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML='<div style="padding:24px;background:#08080c;border:1px solid #cc4433"><h3>LANZAR MISIL — '+terName(id)+'</h3><p>Elige el objetivo antes de tirar. El defensor CPU intentará interceptar si tiene misiles.</p><div id="miss-result"></div>'+Object.values(Battle.keys).filter(type=>t[type]>0).map(type=>'<button data-missile-target="'+type+'">'+type+'</button>').join(' ')+'<button id="missile-close">CANCELAR</button></div>';
   document.body.appendChild(modal);
-
-  document.getElementById('miss-fire-btn').onclick = () => {
-    const btn = document.getElementById('miss-fire-btn');
-    if(armyPoints(t)<=1){
-      addLog('⚠ No se puede eliminar la última unidad. Misil conservado.','sys');
-      modal.remove(); return;
-    }
-    btn.disabled=true; btn.style.opacity='0.4';
-
-    myF.missiles--;
-    myF.missilesFiredThisTurn=(myF.missilesFiredThisTurn||0)+1;
-    G.missileFiringMode=false;
-
-    const defF = G.factions[t.owner];
-    const Rc = RULES.combat, MT = Rc.missileTargets;
-    const resEl = document.getElementById('miss-result');
-
-    // ── FASE 1: DEFENSOR TIRA PARA INTERCEPTAR ──────────────────
-    let intercepted = false;
-    const impactLines = [];
-    const targetable  = [];
-
-    if(defF && defF.missiles > 0) {
-      defF.missiles--;
-      const defRoll = Math.floor(Math.random()*6)+1;
-      const interceptOk = defRoll >= Rc.missileInterceptThreshold;
-      addLog(`🛡 Dado defensor: D6=${defRoll} (necesita ≥${Rc.missileInterceptThreshold}) → ${interceptOk?'INTERCEPTADO':'fallida'}`, 'combat');
-      if(interceptOk) {
-        intercepted = true;
-        resEl.innerHTML =
-          `<div style="color:#88cc44;font-size:12px;margin-bottom:8px;">🛡 INTERCEPTADO</div>` +
-          `<div style="font-size:10px;color:#aaa;">Dado defensor: D6=${defRoll} ≥${Rc.missileInterceptThreshold}</div>`;
-        updateMap(); refreshCards();
-        setTimeout(()=>{ modal.remove(); }, 2500);
-        return;
-      }
-      resEl.innerHTML = `<div style="color:#cc8833;font-size:10px;margin-bottom:6px;">Intercepción fallida — D6=${defRoll} &lt;${Rc.missileInterceptThreshold}</div>`;
-    }
-
-    // ── FASE 2: ATACANTE TIRA PARA DETERMINAR BAJAS ──────────────
-    const attRoll = Math.floor(Math.random()*6)+1;
-    addLog(`🚀 Dado atacante: D6=${attRoll}`, 'combat');
-
-    if(t.soldiers > 0) {
-      targetable.push({ type:'soldiers', label:'🪖 Soldado', diceInfo:'' });
-    }
-    if(t.mechs > 0) {
-      const ok = attRoll >= MT.mech;
-      impactLines.push(`🤖 Mech: D6=${attRoll} vs ≥${MT.mech} → ${ok?'✓ alcanzable':'✗ resistió'}`);
-      if(ok) targetable.push({ type:'mechs', label:'🤖 Mech', diceInfo:`D6=${attRoll}` });
-    }
-    if(t.aircraft > 0) {
-      const ok = attRoll >= MT.aircraft;
-      impactLines.push(`✈ Aircraft: D6=${attRoll} vs ≥${MT.aircraft} → ${ok?'✓ alcanzable':'✗ resistió'}`);
-      if(ok) targetable.push({ type:'aircraft', label:'✈ Aircraft', diceInfo:`D6=${attRoll}` });
-    }
-    if(t.scorpions > 0) {
-      const ok = attRoll >= MT.scorpion;
-      impactLines.push(`🦂 Scorpion: D6=${attRoll} vs ≥${MT.scorpion} → ${ok?'✓ alcanzable':'✗ resistió'}`);
-      if(ok) targetable.push({ type:'scorpions', label:'🦂 Scorpion', diceInfo:`D6=${attRoll}` });
-    }
-    impactLines.forEach(l => addLog(l, 'combat'));
-
-    if(targetable.length === 0) {
-      addLog('🛡 IMPACTO SIN EFECTO — todas las unidades blindadas resistieron', 'combat');
-      resEl.innerHTML =
-        `<div style="color:#888;font-size:12px;margin-bottom:8px;">🛡 IMPACTO SIN EFECTO</div>` +
-        `<div style="font-size:10px;color:#666;line-height:1.8;">${impactLines.map(l=>`<div>${l}</div>`).join('')}</div>`;
-      updateMap(); refreshCards();
-      setTimeout(()=>{ modal.remove(); }, 3000);
-      return;
-    }
-
-    // ── ELECCIÓN DE UNIDAD (SIEMPRE, aunque sea solo soldado) ─
-    const applyKill = (unitType) => {
-      window._missileKillFn = null;
-      t[unitType]--;
-      const killed = targetable.find(u=>u.type===unitType);
-      const killLabel = killed ? killed.label + (killed.diceInfo ? ` (${killed.diceInfo})` : '') : unitType;
-      addLog(`💥 IMPACTO — ${killLabel} eliminado en ${terName(id)}`, 'combat');
-      updateMap(); refreshCards();
-      const step = (STEPS[G_step.phase]||[])[G_step.idx];
-      if(step) renderStepActions(step);
-      setTimeout(()=>{ modal.remove(); }, 1500);
-    };
-
-    // Build dice summary
-    const diceHtml = impactLines.length
-      ? `<div style="font-size:10px;color:#888;line-height:1.8;margin-bottom:10px;text-align:left;">${impactLines.map(l=>`<div>${l}</div>`).join('')}</div>`
-      : '';
-
-    // Always show picker, even for a single option
-    window._missileKillFn = applyKill;
-    resEl.innerHTML =
-      `<div style="color:#cc4433;font-size:11px;margin-bottom:8px;">💥 IMPACTO — elige unidad a eliminar:</div>` +
-      diceHtml +
-      targetable.map(u =>
-        `<button onclick="window._missileKillFn('${u.type}')"
-          style="display:block;width:100%;margin-bottom:6px;background:#0a0a0d;
-          border:1px solid #cc4433;color:#cc4433;padding:8px;font-family:Orbitron,sans-serif;
-          font-size:10px;letter-spacing:1px;cursor:pointer;">
-          ${u.label}${u.diceInfo ? ' <span style="color:#888;font-size:9px;">('+u.diceInfo+')</span>' : ''}
-        </button>`
-      ).join('');
-    btn.style.display = 'none';
+  modal.querySelector('#missile-close').onclick=()=>{if(typeof ONLINE!=='undefined'&&ONLINE.isOnline())ONLINE.cancelPendingDecision();modal.remove();};
+  let fired=false;
+  const applyImpact=(unitType,intercept)=>{
+    if(key!==currentStepKey()||G.gameOver)return;
+    const result=launchMissile(fk,id,unitType,intercept);
+    if(!result){modal.remove();return;}fired=true;
+    modal.querySelectorAll('[data-missile-target]').forEach(button=>button.disabled=true);
+    modal.querySelector('#miss-result').textContent=result.intercepted?'INTERCEPTADO — D'+RULES.combat.missileInterceptDie+'='+result.interceptRoll:result.killed?'IMPACTO: '+result.type+' eliminado'+(result.roll?' — D6='+result.roll:''):'SIN EFECTO — D6='+result.roll;
+    modal.querySelector('#missile-close').textContent='CERRAR';refreshMissileState();updateMap();
   };
+  modal.querySelectorAll('[data-missile-target]').forEach(btn=>btn.onclick=()=>{
+    if(fired||key!==currentStepKey()){return;}
+    if(_isOnlineHumanTurn(t.owner)&&G.factions[t.owner].missiles>0){
+      fired=true;modal.querySelector('#miss-result').textContent='Esperando decisión de intercepción del defensor…';
+      const failed=error=>{fired=false;modal.querySelector('#miss-result').textContent='No se pudo solicitar la decisión. Reintenta o cancela.';addLog(error.message,'sys');};
+      ONLINE.requestDecision('intercept',t.owner,{attFk:fk,targetId:id,unitType:btn.dataset.missileTarget},(choice,error)=>{if(error){failed(error);return;}if(typeof choice?.intercept!=='boolean'){failed(new Error('Intercepción inválida'));return;}applyImpact(btn.dataset.missileTarget,choice.intercept);}).catch(failed);
+    }else applyImpact(btn.dataset.missileTarget,true);
+  });
 }
-
-

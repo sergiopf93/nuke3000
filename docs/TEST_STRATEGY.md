@@ -1,42 +1,46 @@
-# Pruebas NUKE3000
+# Estado actual — bloque A, 28/10/2026
 
-## Infraestructura inicial
+**121 pruebas Node pasan** (sin porcentaje de cobertura inventado): motor, combate puro, integración aislada, simulaciones de partidas completas 3–6J, mapa y validaciones básicas del editor.
 
-Node >=22 y node:test sin dependencias para regresiones. tests/engine.test.cjs carga fuentes reales con node:vm y DOM/temporizadores sustituidos. Incluye protocolo online instrumentado solo en memoria: no expone helpers privados en producción ni contacta Firebase.
+- Bajas/degradaciones: matriz 4×4 de atacantes contra defensores y 4×4 inversa; empates por caras/tipo, bonos de todos los dados, guarnición, selección inválida, simultaneidad y combates hasta terminar.
+- Victorias: seis facciones, positivos/negativos, momentos propios/ajenos, facciones eliminadas y hooks de transición; fin inmutable.
+- Turnos/CPU: turno completo automático, callback único CPU–CPU, timers obsoletos, pasos repetidos, eliminación/rotación/ronda y simulaciones hasta victoria real con semillas 103–106.
+- Setup/economía: reservas 3–6J, barrera de pendientes, callbacks viejos, despliegue manual; refuerzos de base/Erebus/fallback, costes y límites.
+- Reglas confirmadas: Libertos recompensa propia/mech inmediato, Shinin sin empate, una vez por fase/reagrupamiento y construir misiles antes de disparar.
+- Protocolo remoto: siete casos de espera humana, duplicados, remitente incorrecto, cancelación, historial obsoleto, CPU del host y fallo de red sin defensa inventada.
+- Nuclear/misiles: elección de todos los tipos terrestres, aircraft, tiradas por base, una resolución por paso; intercepción/dado configurable, impacto Aircraft en 5 y última unidad blindada.
+
+## Navegador y evidencia
+
+`test:browser`: Chrome 1440×900 y 844×390. Incluye fixtures controlados de setup manual soldado→solo mech→central, conquista con guarnición elegida, cancelar/confirmar mejora y contador de misil actualizado mientras su modal permanece abierto; defensa/intercepción remotas por clics. **Son integraciones con estado preparado, no partidas completas.** El viewport horizontal no certifica usabilidad móvil ni dispositivo físico.
+
+`test:e2e`: Chrome real, 3J y valores predeterminados V3; lobby/facción/nombre, tiradas/desempates, auto-reclamación mediante botón, reparto 60, despliegue de unidades/centrales, COMENZAR, refuerzos y turnos, defensas humanas y mantenimiento hasta un ganador real. El test solo inyecta PRNG con semilla y aceleración de timers; observa G, pero no modifica territorios, recursos, fases, reglas ni resultado. Todas las acciones de partida usan clics de navegador. Se acepta cualquier ganador cuyo objetivo se cumple en el estado final.
+
+Recorrido final, con todas las decisiones confirmadas: Libertos ronda 12 (233 acciones UI), semilla 123, cero errores JS. Es la evidencia actual guardada en `evidence/block-a/`: informe JSON, captura final y traza Playwright compacta. Primeros intentos de desarrollo se interrumpieron para corregir selectores del conductor (CONFIRMAR defensa y botones desactivados); no se contabilizan como partidas superadas.
+
+`test:browser` también ejecuta `online-combat.browser.cjs`: dos páginas Chrome, ataque humano contra humano, CPU contra humano en dos rondas, intercepción humana, callback único y estados/recursos coincidentes. Se prepara el estado inicial y se sustituye Firestore por una cola local: integración de navegador, no partida online E2E.
+
+Firebase/configuración externa, fuentes y service workers bloqueados en navegador: ninguna escritura de producción. La traza no equivale a una prueba de Firebase.
 
 ```sh
+# Node >=22; Playwright 1.63.0 y Chrome instalado
 npm test
 npm run test:engine
-npm install
 npm run test:browser
+npm run test:e2e
+npm run test:all
+# En esta máquina se reutiliza Playwright ya instalado, sin modificar el proyecto vecino:
+PLAYWRIGHT_MODULE=/Users/sergiopardo/Desktop/language-trainer/node_modules/playwright npm run test:e2e
+# Abrir evidencia
+npx playwright show-trace docs/evidence/block-a/full-game-trace.zip
 ```
 
-Playwright 1.63.0 es dependencia de desarrollo gratuita para Chrome instalado. En esta máquina se reutilizó la instalación ya disponible, sin npm install ni cambios al proyecto vecino:
+El PATH original tiene Node 13: activar Node 22 con nvm o ejecutar los scripts con `/Users/sergiopardo/.nvm/versions/node/v22.23.3/bin/node`. No se ha ejecutado instalación limpia ni generado lockfile. Se añade únicamente código JS clásico y pruebas, sin framework ni dependencia de producción.
 
-```sh
-PLAYWRIGHT_MODULE=/Users/sergiopardo/Desktop/language-trainer/node_modules/playwright /Users/sergiopardo/.nvm/versions/node/v22.23.3/bin/node tests/browser-smoke.cjs
-```
+## Cobertura pendiente
 
-El PATH original usa Node 13: usar Node 22 instalado o activar nvm. No se ha generado lockfile ni comprobado instalación limpia de dependencias.
+Firebase real/emulador, reconexión y recuperación de decisiones en vuelo; E2E de victorias de todas las facciones y partidas navegador 4/5/6J; más escenarios manuales de movimiento/transporte y elección de superviviente nuclear; dispositivos reales; service worker/offline y reconexión. Las simulaciones 3–6J no sustituyen esos E2E. No hay build/lint/typecheck configurados; se comprueba sintaxis de scripts activos e inline, más git diff --check.
 
-## Evidencia inicial
+## Evidencia previa de Rusia
 
-Cinco regresiones fallaban antes de corregir código; después pasan. Suite ampliada a 17 pruebas (incluye despliegue y reservas 3–6J): victoria idempotente, atribución/eliminación, rotación/ronda, parada de transiciones, autoridad CPU, ausencia de wrapper recursivo, resultado remoto sin eco, NEXT_STEP y snapshot final.
-
-Chrome real: 1440×900 y 844×390; seleccionar facción y comenzar por botones, comprobar 59 nodos, preparar condición final controlada y comprobar resultado único, sin errores JS. Capturas: /tmp/nuke3000-{1440,844}-{setup,result}.png.
-
-**Clasificación:** regresiones de motor/protocolo aislado y smoke de integración en navegador. La victoria del smoke usa estado preparado; no es una partida completa ni un E2E de lobby a victoria legítima. No certifica jugabilidad móvil. Todas las solicitudes externas, SDK/configuración Firebase y service workers están bloqueados durante navegador.
-
-## Pendiente obligatorio
-
-Dados/azar inyectables, combate/setup/economía/misiles/habilidades con límites; simulaciones completas 3/4/5/6J; E2E reales de acciones y al menos una partida completa; emulación táctil/zoom/orientación/móvil pequeño; comparación visual antes/después del cambio de mapa. Firebase Emulator y multicliente: no implementados ni ejecutados. Dispositivos físicos: pendientes.
-
-No existe todavía suite completa, comando E2E ni lint/build/typecheck del proyecto. Mantener esta distinción en entregas.
-
-## Evidencia de Rusia — 28/10/2026
-
-24 pruebas Node pasan. tests/map.test.cjs verifica 60 IDs únicos, 7 Rusia, tamaños, conectividad, reciprocidad y hash de datos originales sin las dos conexiones nuevas; reparto 3–6J. Los tests de reservas existentes se ejecutan también con 60 territorios.
-
-Chrome aislado en 1440×900 y 844×390: ejecución antes con datos de HEAD previo y después con datos actuales, capturas en evidence/russia/{before,after}-{1440,844}.png. Los 59 grupos SVG originales tienen outerHTML idéntico; se añade únicamente tg-06_07. El renderer, fondo, assets y CSS no se modifican. Clic real en el nuevo territorio confirma G.sel=06_07 en ambos tamaños. No equivale a completar partidas ni a probar red real o dispositivos táctiles físicos.
-
-Reproducir baseline: extraer js/data.js del commit 8475104 a un archivo temporal y pasar NUKE_MAP_BASELINE_DATA=/ruta/archivo a test:browser. Sin esta variable se comprueba la versión actual con 60 territorios.
+Fingerprint de los 59 originales y grafo con 60 se mantienen. Capturas originales/completadas en evidence/russia. El mapa, fondo, coordenadas y paleta no se modifican en la estabilización actual; map.js solo cambia inicialización de estado/recursos.

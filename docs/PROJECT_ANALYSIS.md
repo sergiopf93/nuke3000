@@ -316,3 +316,7 @@ Comenzada estabilización en dev/stabilization-gameplay. Diagnóstico histórico
 ## 13. Referencias originales recibidas — 28/10/2026
 
 Reglamento V3 y lore V1 disponibles; páginas/contradicciones y diferencias reales en RULES_SPEC.md. Corregida Rusia según p.6 sin alterar 59 territorios originales. Nuevas evidencias de combate exigen bajas tipadas/degradaciones, no eliminar la unidad más barata. El análisis inicial de 59 territorios y de ausencia de PDF se conserva como registro histórico.
+
+## 14. Estabilización del motor — 28/10/2026
+
+Se incorpora battle.js puro, compartido por CPU/humanos, y se corrigen bajas/degradaciones V3, guarnición, momentos de victoria, turnos, callbacks/setup, mantenimiento, mejoras, misiles, refuerzos y transporte. 121 regresiones y simulaciones 3–6J; E2E real con reglas finales 3J hasta Libertos ronda 12 con 233 acciones UI. Ver TEST_STRATEGY.md para distinguir integración con fixtures, simulación y partida E2E. Sin cambios gráficos del mapa ni rediseño móvil. Decisiones reglamentarias detectadas resueltas y protocolo de decisiones humanas probado en dos páginas Chrome con transporte local. Estabilización local lista para validación del propietario; Firebase real/reconexión pendientes. Estado actual en KNOWN_ISSUES.md. Diagnóstico inicial preservado.

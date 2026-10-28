@@ -1,3 +1,11 @@
+## Estabilización V3 en desarrollo (28/10/2026)
+
+Rama `dev/stabilization-gameplay`; estabilización local del Bloque A validada automáticamente y lista para validación del propietario, sin publicación. El motor activo se carga desde index.html: data → setup → map → **battle** → engine → combat → ui → online. battle.js contiene el cálculo puro de combate. El mapa actual conserva 60 territorios (7 Rusia). Central nuclear: 4 Pu; misil contra Aircraft: D6≥5.
+
+Pruebas con Node >=22: `npm test`, `npm run test:browser`, `npm run test:e2e`, `npm run test:all`. Navegador: Playwright 1.63.0 (dependencia de desarrollo) y Chrome instalado; todas las peticiones externas/Firebase se bloquean en QA. [Estrategia y límites](docs/TEST_STRATEGY.md), [reglas contrastadas](docs/RULES_SPEC.md), [incidencias abiertas](docs/KNOWN_ISSUES.md). 121 tests de motor/protocolo y una partida real completa en Chrome hasta victoria. Las decisiones remotas se prueban entre dos páginas con transporte local; Firebase real, reconexión y experiencia móvil quedan pendientes. La versión standalone es histórica y no se ha actualizado con el motor activo.
+
+La descripción siguiente es histórica y puede diferir de V3; para mecánicas vigentes usar RULES_SPEC.md.
+
 # NUKE 3000 — ARMAGEDDON PROTOCOL
 ### Strategic Board Game · Online Playtester v0.3
 

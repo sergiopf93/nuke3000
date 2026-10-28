@@ -1,25 +1,27 @@
 # Plan incremental NUKE3000
 
-Base: main `93eba1e`. Rama: `dev/stabilization-gameplay`. Sin push, merge ni despliegue.
+Rama `dev/stabilization-gameplay`, base main `93eba1e`. Sin push/merge/despliegue. Mapa 60/7 Rusia preservado.
 
-## Estado — 28/10/2026
+## Bloque A — estabilización local validada; pendiente de aceptación del propietario
 
-Bloque A **en curso**, no aceptado como completo. Primera iteración: regresiones de cierre, eliminación, rotación, despliegue manual/centrales y defectos del protocolo online. 17 pruebas de motor/protocolo/reservas y smoke de navegador. Se conserva el análisis inicial y los archivos locales existentes.
+- [x] Resolución común de combate tipado, bajas simultáneas/degradaciones, bonos V3, guarnición y conquista.
+- [x] CPU–CPU sin botones de ronda ni límite arbitrario de diez rondas; terminación por progreso real.
+- [x] Seis objetivos con momento por facción, eliminación idempotente, rotación viva y estado final estable.
+- [x] Callbacks de pasos/tiradas acotados al contexto; setup sin dobles arranques, despliegue manual/mechs/centrales.
+- [x] Superviviente nuclear real de elección; automatización CPU sin modales.
+- [x] Mejoras confirmadas con costes aplicados a tropas reales; contador y última unidad de misil.
+- [x] Elegibilidad común de refuerzos; rango terrestre, guarnición y transporte aéreo.
+- [x] Pruebas deterministas, simulaciones completas 3/4/5/6J y partida E2E real hasta ganador.
+- [x] Integrar y probar las decisiones de Libertos, Shinin, movimiento y orden de misiles; 4 Pu/Aircraft ≥5 preservados.
+- [x] Decisiones remotas implementadas y probadas con dos páginas Chrome y transporte local. Firebase real no certificado.
+- [x] Revisar el diff y guardar evidencia de la partida con las reglas finales.
+- [ ] Validación del propietario antes de aceptar el bloque; sin push/merge/despliegue.
 
-| Bloque | Pendiente para validarlo |
-|---|---|
-| A | Unificar combate/dados/bajas; evitar callbacks obsoletos y bucles; reparar setup manual/mixto, mantenimiento, misiles y confirmación de mejoras; comprobar momentos de victoria |
-| B | Rusia y grafo corregidos según p.6 (no supone cierre del bloque); E2E reales y partidas completas 3–6J; capturas comparativas |
-| C | Diseño e implementación móvil horizontal, acciones contextuales y combate claro; regresión escritorio |
-| D | Reglas versionadas/validadas, copia por partida, editor soportado por motor, presets/importación/exportación |
-| E | Autoridad, deduplicación, reconexión, setup online y pruebas multicliente en entorno seguro; seguridad/persistencia |
+Resultados y límites en TEST_STRATEGY.md; incidencias/causas en KNOWN_ISSUES.md; referencias V3 en RULES_SPEC.md. 121 tests Node y partida real 3J: Libertos ronda 12, 233 acciones UI, sin bloqueos ni errores JS. Las reglas detectadas ya están aclaradas; el alcance no incluye certificar Firebase, PWA ni todos los recorridos de navegador.
 
-Orden siguiente: reproducciones deterministas de combate y setup; corregir antes de avanzar de bloque. No interpretar los smoke tests como partidas completas.
+## Siguientes bloques
 
-## Dependencias externas
-
-Recibidos reglamento V3 y lore V1. Rusia confirmada e incorporada; mapa/paleta conservados. El futuro reglamento definitivo no se da por recibido: V3 es la referencia actual; divergencias y decisiones en RULES_SPEC.md. Firebase de producción queda fuera de pruebas.
-
-## Iteración de referencia física
-
-24 tests pasan, incluyendo siete del mapa/reparto y las regresiones de reservas ahora sobre 60 territorios. Chrome verifica 59 antes y 60 después en dos tamaños, clic real en 06_07 y DOM idéntico de los 59 originales. Siguiente prioridad A: resolución común de dados tipados con degradaciones y guard de una unidad, según V3 p.10; no avanzar dando por cerrado el motor.
+B: mapa/grafo incorporados previamente; ampliar E2E de otras acciones/configuraciones después de A.
+C: UX móvil horizontal y combate visual; no iniciado.
+D: esquema validado/versionado, reglas por partida, editor completo/presets/importación/exportación; no iniciado. La protección básica del editor pertenece a estabilidad.
+E: autoridad/sincronización, integración Firebase de las decisiones humanas, reconexión/deduplicación, emuladores/multicliente y seguridad; validación integral pendiente.

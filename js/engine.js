@@ -10,13 +10,13 @@ const STEPS = {
       detail:'Convierte soldados en unidades más potentes pagando Plutonio.',
       isAuto: false },
     { id:'move',     title:'4. MOVER UNIDADES (opcional)',
-      detail:'Selecciona un territorio tuyo, luego un destino. Terrestres: hasta 3 saltos. Aircraft: cualquier destino tuyo.',
+      detail:'Selecciona un territorio tuyo, luego un destino. Terrestres: hasta 2 saltos. Aircraft: cualquier destino tuyo.',
       isAuto: false },
     { id:'missile',  title:'5. MISILES (opcional)',
       detail:'Construye misiles (antes de disparar). Lanza a territorios enemigos.',
       isAuto: false },
     { id:'nuclear',  title:'6. CONSTRUIR NUCLEARES (opcional)',
-      detail:'Construye nuevos Nuclear Complexes en tus territorios (5 Pu cada uno).',
+      detail:'Construye nuevos Nuclear Complexes en tus territorios (4 Pu cada uno).',
       isAuto: false },
   ],
   combat: [
@@ -29,18 +29,18 @@ const STEPS = {
       detail:'Mueve unidades entre tus territorios.',
       isAuto: false },
     { id:'maint',    title:'2. MANTENIMIENTO NUCLEAR',
-      detail:'D20 por cada Nuclear Complex. Si sale 1: explosión nuclear.',
+      detail:'D12 por cada Nuclear Complex. Si sale 1: explosión nuclear.',
       isAuto: false },
   ],
 };
 
 const VICTORY_DETAIL = {
-  imp: 'Controla <b>5 regiones completas</b> al inicio de tu turno.<br>O controla <b>30 territorios</b> al inicio de tu turno.',
-  lib: '<b>6 regiones sin Nuclear Complex</b> en el tablero.<br>O <b>4 regiones sin Nuclear</b> + eliminar ejército Erebus.',
-  clt: '<b>10 territorios conquistados</b> + eliminar 1 ejército en el mismo turno.<br>O <b>1 Nuclear por enemigo</b> conquistado en el mismo turno.',
-  erb: 'Eliminar <b>2 ejércitos</b> completos.<br>O <b>1 ejército</b> + más Pu que el resto juntos.',
-  prm: 'Nuclear en <b>7 regiones distintas</b>.<br>O <b>el doble de Nucleares</b> que el segundo.',
-  shn: 'Mayor ejército (AP) en <b>6 regiones</b>.<br>O <b>el doble de AP</b> que el segundo.',
+  imp:'Controla 5 regiones completas al inicio de tu turno.',
+  lib:'Nucleares en tablero ≤ número de jugadores al final de tu turno.',
+  clt:'Elimina dos jugadores enemigos; se comprueba al final de tu turno.',
+  erb:'Controla una Nuclear en 7 regiones distintas al final de tu turno.',
+  prm:'Controla al menos la mitad de las Nucleares al final de tu turno.',
+  shn:'Mayor ejército en AP en 7 regiones al final de tu turno.',
 };
 
 // ── Online helpers ────────────────────────────────────────────
@@ -64,7 +64,9 @@ function _syncNow(logMsg, logType) {
 let G_step = { idx:0, phase:'prep', isMyTurn:true, cpuQueue:[] };
 
 function startPhase(phase, fk) {
-  if(G.gameOver) return;
+  if(G.gameOver || G.awaitingStart || G.setup?._inSetup || G.factions[fk]?.alive===false) return;
+  clearInteractionModes();
+  if(phase==='prep'){ checkWinCondition('start',fk); if(G.gameOver)return; }
   G.currentFaction = fk;
   G.phase = phase;
   G_step.phase     = phase;
@@ -98,6 +100,9 @@ function updateTurnOrderBar() {
 
 function updatePhaseBanner(fk) {
   updateTurnOrderBar(); refreshCards();
+  const badge=document.getElementById('phase-badge');if(badge)badge.textContent=G.gameOver?'FINAL':G.setup?._inSetup?'SETUP':G_step.phase.toUpperCase();
+  const turn=document.getElementById('curturn');if(turn)turn.textContent=FDATA[fk]?.name||'—';
+  const next=document.getElementById('btn-next');if(next)next.disabled=!!(G.gameOver||G.awaitingStart||G.setup?._inSetup||!G_step.isMyTurn);
   const labels={prep:'PREPARACIÓN',combat:'COMBATE',end:'FIN DE TURNO'};
   const el=document.getElementById('pg-phase');
   if(el) el.textContent=labels[G_step.phase]||G_step.phase.toUpperCase();
@@ -115,7 +120,7 @@ function updatePhaseBanner(fk) {
       return `<div title="${s.title}" style="width:8px;height:8px;border-radius:50%;
         background:${done?'#446644':active?'#C8A800':'#1a1a1a'};
         border:1px solid ${done?'#446644':active?'#C8A800':'#333'};cursor:pointer;"
-        onclick="if(${done}) jumpToStep(${i});"></div>`;
+        aria-label="${s.title}"></div>`;
     }).join('');
   }
   showObjective(G.pf);
@@ -133,6 +138,10 @@ function showObjective(fk) {
 
 function runCurrentStep() {
   if(G.gameOver) return;
+  if(G.awaitingStart||G.setup?._inSetup)return;
+  const key=currentStepKey();
+  if(G_step.startedKey===key)return;
+  G_step.startedKey=key;
   const steps=STEPS[G_step.phase]||[];
   if(G_step.idx>=steps.length){ endPhaseForFaction(); return; }
   const step=steps[G_step.idx];
@@ -177,13 +186,36 @@ function _showSpectatorStep(step) {
     </div>`;
 }
 
-function nextStep() {
-  if(G.gameOver) return;
+function currentStepKey(){return [G.round,G_step.currentFk,G_step.phase,G_step.idx].join(':');}
+function scheduleStepAction(action,delay=400){
+  const key=currentStepKey();
+  return setTimeout(()=>{if(!G.gameOver&&!G.awaitingStart&&currentStepKey()===key)action();},delay);
+}
+function clearInteractionModes(){
+  G.movedUnits={};
+  G.sel=G.attackSrc=G.moveSrc=G.moveTargets=G.reinforcementMode=null;
+  G.moveMode=G.nuclearMode=G.missileFiringMode=false;
+  for(const id of ['move-popup','soldier-counter-popup','reinf-counter-popup','upgrade-confirm','missile-modal'])document.getElementById(id)?.remove();
+  if(typeof window!=='undefined')window._mvPopup=null;
+  document.getElementById('map-wrap')?.classList.remove('moving');
+  if(typeof G_combat!=='undefined' && G_combat?.done)closeDice();
+}
+function nextStep(expectedKey){
+  if(G.gameOver||G.setup?._inSetup||G.awaitingStart||!G_step.isMyTurn)return;
+  if(typeof expectedKey==='string'&&expectedKey!==currentStepKey())return;
+  if(G.waitingDecision||typeof G_combat!=='undefined'&&G_combat&&!G_combat.done)return;
+  const step=(STEPS[G_step.phase]||[])[G_step.idx];
+  if(step?.id==='reinf'&&(G.factions[G_step.currentFk].pendingSoldiers||0)>0)return;
+  if(step?.id==='maint'&&RULES.end.maintenanceEnabled&&
+    Object.values(G.territories).some(t=>t.owner===G_step.currentFk&&t.hasNuclear)&&G_step.maintenanceDone!==currentStepKey())return;
+  advanceStep();
+}
+function advanceStep(){
+  if(G.gameOver||G.setup?._inSetup||G.awaitingStart)return;
+  if(typeof ONLINE!=='undefined'&&ONLINE.isOnline()&&!G_step.isMyTurn&&!ONLINE.isHost())return;
+  clearInteractionModes();
   G_step.idx++;
-  // Online: if it's my turn, push NEXT_STEP with new idx so observers advance too
-  if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && G_step.isMyTurn) {
-    ONLINE.pushActionWithState('NEXT_STEP', { idx: G_step.idx });
-  }
+  if(typeof ONLINE!=='undefined'&&ONLINE.isOnline())ONLINE.pushActionWithState('NEXT_STEP',{idx:G_step.idx});
   runCurrentStep();
 }
 
@@ -257,29 +289,30 @@ function renderStepActions(step) {
         ${left} soldados por colocar</div>
       <div style="font-size:11px;color:#888;margin-bottom:10px;">Haz clic en tus territorios resaltados (verde)</div>
       ${left===0?nextBtn():`<button class="abtn" onclick="autoDistributeReinf()" style="width:100%;margin-bottom:6px;border-color:#336633;color:#448844;">AUTO-DISTRIBUIR</button>`}
-      ${left>0?nextBtn('SIGUIENTE (dejar sin colocar)'):''}`;
+`;
   } else if(sid==='upgrade') {
     G.sel=null; G.attackSrc=null;
     const f=G.factions[fk];
     const myTersU=Object.values(G.territories).filter(t=>t.owner===fk);
     const totalSol=myTersU.reduce((s,t)=>s+t.soldiers,0);
     const totalMech=myTersU.reduce((s,t)=>s+t.mechs,0);
-    const canMech =totalSol>=3&&f.plutonium>=1;
-    const canAir  =totalSol>=3&&f.plutonium>=1&&totalAircraft()<5;
-    const canScorp=totalMech>=2&&f.plutonium>=1;
+    const upgrades=RULES.prep.upgrades;
+    const canMech =totalSol>=upgrades.mechCost.soldiers&&f.plutonium>=upgrades.mechCost.plutonium;
+    const canAir=totalSol>=upgrades.aircraftCost.soldiers&&f.plutonium>=upgrades.aircraftCost.plutonium&&totalAircraft()<upgrades.maxAircraft;
+    const canScorp=totalMech>=upgrades.scorpionCost.mechs&&f.plutonium>=upgrades.scorpionCost.plutonium;
     area.innerHTML=`
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
         <button class="abtn" onclick="doUpgrade('mech')" ${canMech?'':'disabled'} style="display:flex;align-items:center;gap:8px;padding:8px;">
           <img src="${getAsset('mech')}" style="width:24px;height:24px;object-fit:contain;">
-          <div><div style="font-size:11px;">Mech</div><div style="font-size:10px;color:#888;">3 Sol + 1 Pu</div></div>
+          <div><div style="font-size:11px;">Mech</div><div style="font-size:10px;color:#888;">${upgrades.mechCost.soldiers} Sol + ${upgrades.mechCost.plutonium} Pu</div></div>
         </button>
         <button class="abtn" onclick="doUpgrade('air')" ${canAir?'':'disabled'} style="display:flex;align-items:center;gap:8px;padding:8px;">
           <img src="${getAsset('aircraft')}" style="width:24px;height:24px;object-fit:contain;">
-          <div><div style="font-size:11px;">Aircraft</div><div style="font-size:10px;color:#888;">3 Sol + 1 Pu (máx 5)</div></div>
+          <div><div style="font-size:11px;">Aircraft</div><div style="font-size:10px;color:#888;">${upgrades.aircraftCost.soldiers} Sol + ${upgrades.aircraftCost.plutonium} Pu (máx ${upgrades.maxAircraft})</div></div>
         </button>
         <button class="abtn" onclick="doUpgrade('sco')" ${canScorp?'':'disabled'} style="display:flex;align-items:center;gap:8px;padding:8px;">
           <img src="${getAsset('scorpion')}" style="width:24px;height:24px;object-fit:contain;">
-          <div><div style="font-size:11px;">Scorpion</div><div style="font-size:10px;color:#888;">2 Mech + 1 Pu</div></div>
+          <div><div style="font-size:11px;">Scorpion</div><div style="font-size:10px;color:#888;">${upgrades.scorpionCost.mechs} Mech + ${upgrades.scorpionCost.plutonium} Pu</div></div>
         </button>
       </div>
       ${nextBtn('SIGUIENTE (sin mejoras)')}`;
@@ -287,7 +320,7 @@ function renderStepActions(step) {
     area.innerHTML=`
       <div style="font-size:11px;color:#888;margin-bottom:10px;">
         Selecciona un territorio tuyo → luego clic en destino.<br>
-        Terrestres: hasta <b>3 territorios</b>. Aircraft: cualquier territorio tuyo.
+        Terrestres: hasta <b>${RULES.prep.movementRange} territorios</b>. Aircraft: cualquier territorio tuyo.
       </div>
       <button class="abtn" id="ba-move-btn" onclick="startMoveMode()" style="width:100%;margin-bottom:6px;border-color:#336699;color:#4488bb;">
         ↗ ACTIVAR MODO MOVIMIENTO
@@ -299,13 +332,13 @@ function renderStepActions(step) {
     const canBuild=!RULES.prep.buildBeforeFire||mFired===0;
     area.innerHTML=`
       <div style="display:flex;gap:4px;margin-bottom:8px;">
-        ${Array.from({length:5},(_,i)=>`<div style="width:16px;height:16px;border-radius:2px;
+        ${Array.from({length:RULES.prep.maxMissiles},(_,i)=>`<div style="width:16px;height:16px;border-radius:2px;
           background:${i<mCount?'#C8A800':'#111'};border:1px solid ${i<mCount?'#C8A800':'#222'};"></div>`).join('')}
-        <span style="font-size:11px;color:#999;margin-left:4px;">${mCount}/5 misiles</span>
+        <span style="font-size:11px;color:#999;margin-left:4px;">${mCount}/${RULES.prep.maxMissiles} misiles</span>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <button class="abtn" onclick="doMissileBuild()" ${canBuild&&mCount<5?'':'disabled'} style="flex:1;">
-          Construir <span class="acost">1 Pu</span>
+        <button class="abtn" onclick="doMissileBuild()" ${canBuild&&mCount<RULES.prep.maxMissiles?'':'disabled'} style="flex:1;">
+          Construir <span class="acost">${RULES.prep.missileBuildCost} Pu</span>
         </button>
         <button class="abtn" onclick="activateMissileFire()" ${mCount>0?'':'disabled'} style="flex:1;border-color:#cc4433;color:#cc4433;">
           Lanzar
@@ -336,7 +369,7 @@ function renderStepActions(step) {
       <button class="abtn" id="ba-attack" onclick="doAct('attack')" disabled style="width:100%;margin-bottom:6px;border-color:#cc4433;color:#cc4433;">
         ⚔ ATACAR TERRITORIO SELECCIONADO
       </button>
-      ${nextBtn('PASAR AL MOVIMIENTO')}`;
+      ${nextBtn('PASAR A FASE FINAL')}`;
   } else if(sid==='maint') {
     const nukes=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length;
     area.innerHTML=isMe?
@@ -357,7 +390,7 @@ function renderStepActions(step) {
 }
 
 function nextBtn(label) {
-  return `<button class="abtn" onclick="nextStep()" style="width:100%;margin-top:4px;border-color:#999;color:#888;font-size:10px;">
+  return `<button class="abtn" onclick="nextStep('${currentStepKey()}')" style="width:100%;margin-top:4px;border-color:#999;color:#888;font-size:10px;">
     ${label||'SIGUIENTE ▶'}</button>`;
 }
 
@@ -368,7 +401,7 @@ function getAsset(key) {
 function executeAutoStep(step) {
   if(step.id==='income'){
     applyIncome(G_step.currentFk);
-    if(!G_step.isMyTurn) setTimeout(nextStep, 800);
+    if(!G_step.isMyTurn) scheduleStepAction(advanceStep, 800);
     else {
       // Sync income to observers
       _syncNow(`[${FDATA[G_step.currentFk]?.name}] recibe ingresos`, 'res');
@@ -379,14 +412,15 @@ function executeAutoStep(step) {
 function applyIncome(fk) {
   const R=RULES.prep, myF=G.factions[fk];
   // Guard against double application in same round
-  if(myF._incomeAppliedRound === G.round) { addLog('[DEBUG] Income ya aplicado esta ronda','sys'); return; }
+  if(G.gameOver||myF.alive===false||myF._incomeAppliedRound === G.round) { addLog('[DEBUG] Income ya aplicado esta ronda','sys'); return; }
   myF._incomeAppliedRound = G.round;
+  myF.reinforcementRegions={};
   const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
   const nukes=myTers.filter(t=>t.hasNuclear).length;
   const rc=R.reinforcements||{};
 
   // Plutonium: +2 per Nuclear Base (PDF V3)
-  let plutIncome=nukes*(R.plutoniumPerNuclear||2);
+  let plutIncome=nukes*(R.plutoniumPerNuclear??2);
   if(fk==='prm') plutIncome+=nukes; // ADVANCED REACTOR: +1 Pu per Nuclear
   myF.plutonium+=plutIncome;
 
@@ -413,41 +447,35 @@ function applyIncome(fk) {
 function executeCpuStep(step) {
   if(G.gameOver) return;
   const fk=G_step.currentFk;
+  if(_isOnlineHumanTurn(fk)||typeof ONLINE!=='undefined'&&ONLINE.isOnline()&&!ONLINE.isHost())return;
   const desc=document.getElementById('cpu-action-desc');
   const delay=800;
   if(step.id==='reinf'){
     if(desc) desc.textContent='Colocando refuerzos...';
-    const myF=G.factions[fk];
-    const n=myF.pendingSoldiers||0;
-    const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
-    const nucTers=myTers.filter(t=>t.hasNuclear);
-    const validTers=nucTers.length>0?nucTers:myTers;
-    for(let s=0;s<n;s++){const p=validTers[s%validTers.length];if(p)p.soldiers++;}
-    myF.pendingSoldiers=0;
-    addLog(`[${FDATA[fk]?.name||fk}] Coloca ${n} refuerzos`,'res');
-    updateMap(); setTimeout(nextStep, delay);
+    distributeReinforcements(fk);
+    updateMap(); scheduleStepAction(advanceStep, delay);
   } else if(step.id==='upgrade'){
-    const myF=G.factions[fk]; let upgraded=0;
-    while(myF.soldiers>=3&&myF.plutonium>=1&&myF.mechs<6){myF.soldiers-=3;myF.plutonium-=1;myF.mechs++;upgraded++;}
+    let upgraded=0;
+    Object.values(G.territories).filter(t=>t.owner===fk).forEach(t=>{while(applyUpgrade(fk,t.id,'mech'))upgraded++;});
     if(upgraded>0) addLog(`[${FDATA[fk]?.name||fk}] Mejora ${upgraded} Mech`,'res');
     if(desc) desc.textContent=upgraded>0?`Mejora ${upgraded} unidades.`:'Sin mejoras.';
-    updateMap(); setTimeout(nextStep, delay);
+    updateMap(); scheduleStepAction(advanceStep, delay);
   } else if(step.id==='move'||step.id==='cmove'||step.id==='regroup'){
     if(desc) desc.textContent='Sin movimiento.';
-    setTimeout(nextStep, 500);
+    scheduleStepAction(advanceStep, 500);
   } else if(step.id==='missile'){
     if(desc) desc.textContent='Sin misiles.';
-    setTimeout(nextStep, 400);
+    scheduleStepAction(advanceStep, 400);
   } else if(step.id==='nuclear'){
     if(desc) desc.textContent='Sin construcciones.';
-    setTimeout(nextStep, 400);
+    scheduleStepAction(advanceStep, 400);
   } else if(step.id==='attack'){
     if(desc) desc.textContent='Evaluando ataques...';
-    setTimeout(()=>executeCpuAttack(fk, desc), 1200);
+    scheduleStepAction(()=>executeCpuAttack(fk, desc), 1200);
   } else if(step.id==='maint'){
-    runMaintenanceRollsFor(fk, ()=>setTimeout(nextStep,600));
+    runMaintenanceRollsFor(fk, ()=>scheduleStepAction(advanceStep,600));
   } else {
-    setTimeout(nextStep, 400);
+    scheduleStepAction(advanceStep, 400);
   }
 }
 
@@ -461,73 +489,6 @@ function executePlayerStep(step) {
   }
 }
 
-
-function confirmNukeDestroy() {
-  const st=window._nukeDestroyState;
-  if(!st||st.chosen.size!==st.needed) return;
-  G.nukeDestroyMode=false;
-  const banner=document.getElementById('nuke-destroy-banner');
-  if(banner) banner.remove();
-  // Clear orange highlights
-  (st.validIds||new Set()).forEach(id=>{
-    const ring=document.getElementById('tr-'+id);
-    if(ring){ring.setAttribute('stroke','');ring.setAttribute('stroke-width','1.5');}
-  });
-  st.chosen.forEach(tid=>{
-    const t=G.territories[tid]; if(!t) return;
-    t.hasNuclear=false;
-    if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
-    else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
-    addLog('EXPLOSION: '+terName(tid)+' destruido','combat');
-    showNuclearExplosionBanner(tid, st.fd);
-  });
-  window._nukeDestroyState=null;
-  updateMap(); refreshCards();
-  if(st.callback) st.callback();
-}
-
-function applyExplosions(box, modal, fk, nucTers, rolls, R, explosionCount, isMyMaint, callback) {
-  const fd=FDATA[fk]||{name:fk,color:'#888'};
-  const explodedIndices=rolls.map((v,i)=>v===R.maintenanceExplosionOn?i:-1).filter(i=>i>=0);
-  if(!isMyMaint){
-    explodedIndices.forEach(i=>{
-      const t=nucTers[i]; t.hasNuclear=false;
-      if(t.aircraft>0){t.soldiers=0;t.mechs=0;t.scorpions=0;}
-      else{t.soldiers=Math.max(1,t.soldiers);t.mechs=0;t.scorpions=0;}
-      addLog('EXPLOSION en '+terName(t.id),'combat');
-      showNuclearExplosionBanner(t.id, fd);
-    });
-    updateMap(); refreshCards();
-    setTimeout(()=>{modal.remove();if(callback)callback();},3000);
-    return;
-  }
-  // Close modal — player selects on MAP
-  modal.remove();
-  const allMyNucs=Object.values(G.territories).filter(t=>t.owner===G.pf&&t.hasNuclear);
-  const chosen=new Set();
-
-  // Show instruction banner
-  const instrBanner=document.createElement('div');
-  instrBanner.id='nuke-destroy-banner';
-  instrBanner.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:900;'+
-    'background:#1a0000;border:2px solid #ff4444;padding:10px 24px;font-family:Orbitron,sans-serif;text-align:center;';
-  instrBanner.innerHTML='<div style="font-size:11px;color:#ff4444;letter-spacing:2px;margin-bottom:4px;">ELIGE '+explosionCount+' NUCLEAR A DESTRUIR</div>'+
-    '<div style="font-size:9px;color:#888;">Pulsa los hexágonos naranjas en el mapa</div>'+
-    '<div id="nuke-destroy-count" style="font-size:10px;color:#ff8800;margin-top:4px;">Seleccionados: 0 / '+explosionCount+'</div>'+
-    '<button id="nuke-destroy-confirm" disabled onclick="confirmNukeDestroy()" '+
-    'style="margin-top:8px;background:#0a0a0d;border:1px solid #ff4444;color:#ff4444;padding:6px 18px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;opacity:0.4;">CONFIRMAR</button>';
-  document.body.appendChild(instrBanner);
-
-  // Highlight selectable nuclears orange on map
-  allMyNucs.forEach(t=>{
-    const ring=document.getElementById('tr-'+t.id);
-    if(ring){ring.setAttribute('stroke','#ff8800');ring.setAttribute('stroke-width','4');}
-  });
-
-  // Store state for click handler
-  window._nukeDestroyState={chosen,needed:explosionCount,validIds:new Set(allMyNucs.map(t=>t.id)),fd,callback};
-  G.nukeDestroyMode=true;
-}
 
 function showNuclearExplosionBanner(terId, fd) {
   const ring=document.getElementById('tr-'+terId);
@@ -604,65 +565,26 @@ function clearAttackFlash(tgtId) {
   const b=document.getElementById('attack-banner'); if(b) b.remove();
 }
 
-function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
-  if(G.gameOver) return;
-  const src=G.territories[srcId], tgt=G.territories[targetId];
-  if(!src||!tgt){if(callback)callback();return;}
-  const Rc=RULES.combat;
-  const prevDefOwner=tgt.owner;
-  let round=0;
-  function doRound(){
-    if(round++>10||armyPoints(src)<=1||armyPoints(tgt)===0){
-      if(armyPoints(tgt)===0){
-        // Conquest: move units from src to tgt, leave 1 in src
-        tgt.owner=cpuFk;
-        const apSrc=armyPoints(src);
-        if(apSrc>1){
-          // Move all units to tgt, put 1 cheapest back in src
-          const leaveUnit=src.soldiers>0?'soldiers':src.mechs>0?'mechs':src.aircraft>0?'aircraft':'scorpions';
-          tgt.soldiers+=src.soldiers; src.soldiers=0;
-          tgt.mechs+=src.mechs; src.mechs=0;
-          tgt.aircraft+=src.aircraft; src.aircraft=0;
-          tgt.scorpions+=src.scorpions; src.scorpions=0;
-          if(leaveUnit==='soldiers'&&tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
-          else if(leaveUnit==='mechs'&&tgt.mechs>0){src.mechs=1;tgt.mechs--;}
-          else if(leaveUnit==='aircraft'&&tgt.aircraft>0){src.aircraft=1;tgt.aircraft--;}
-          else if(leaveUnit==='scorpions'&&tgt.scorpions>0){src.scorpions=1;tgt.scorpions--;}
-        } else {
-          // Only 1 unit — stays in src, tgt gets 0 (attacker stays put)
-          addLog('⚠ Conquista sin refuerzos — origen mantiene su unidad','combat');
-        }
-        // Safety: src must never be empty
-        if(armyPoints(src)===0){
-          if(tgt.soldiers>0){src.soldiers=1;tgt.soldiers--;}
-          else if(tgt.mechs>0){src.mechs=1;tgt.mechs--;}
-        }
-        addLog('['+(FDATA[cpuFk]?.name||cpuFk)+'] conquista '+terName(targetId),'combat');
-        checkElimination(prevDefOwner, cpuFk);
-        checkWinCondition();
-      }
-      updateMap();refreshCards();if(callback)callback();return;
-    }
-    const attP=buildPool(src);if(attP.length>0)attP.splice(attP.length-1,1);
-    const defP=buildPool(tgt);
-    const aN=Math.min(attP.length,Rc.maxAttackDice);
-    const dN=Math.min(aN,Rc.maxDefenseDice,defP.length);
-    const aR=attP.slice(0,aN).map(d=>Math.floor(Math.random()*d.sides)+1);
-    const dR=defP.slice(0,dN).map(d=>Math.floor(Math.random()*d.sides)+1);
-    if(cpuFk==='clt'){aR.forEach((_,i)=>aR[i]++);} // HOLY WAR: +1 ALL attack dice
-    if(tgt.owner==='imp'){dR.forEach((_,i)=>dR[i]++);} // IMPERIAL DEFENSE: +1 ALL defense dice
-    const aS=[...aR].sort((a,b)=>b-a),dS=[...dR].sort((a,b)=>b-a);
-    for(let i=0;i<Math.min(aS.length,dS.length);i++){
-      if(Rc.tieBreakerDefender?aS[i]>dS[i]:aS[i]>=dS[i])applyLoss(tgt);else applyLoss(src);
-    }
-    doRound();
+function resolveCpuCpuSilent(srcId,targetId,cpuFk,callback) {
+  if(G.gameOver)return;
+  if(!validAttack(srcId,targetId,cpuFk)){if(callback)callback();return;}
+  const src=G.territories[srcId],tgt=G.territories[targetId],defFk=tgt.owner;
+  const result=Battle.fight(src,tgt,{rules:RULES.combat,attFk:cpuFk,defFk});
+  Object.assign(src,result.attacker);Object.assign(tgt,result.defender);
+  if(result.status==='conquered') {
+    tgt.owner=cpuFk;G.factions[cpuFk].conqueredThisTurn=(G.factions[cpuFk].conqueredThisTurn||0)+1;
+    checkElimination(defFk,cpuFk);checkWinCondition();
   }
-  doRound();
+  G.lastBattle=result;
+  clearAttackFlash(targetId);
+  addLog('⚔ '+FDATA[cpuFk].name+' → '+terName(targetId)+': '+result.status+' ('+result.rounds.length+' rondas)','combat');
+  updateMap();refreshCards();
+  if(callback&&!G.gameOver)callback();
 }
 
 function executeCpuAttack(fk, descEl) {
   if(G.gameOver) return;
-  const myTers=Object.values(G.territories).filter(t=>t.owner===fk&&armyPoints(t)>1);
+  const myTers=Object.values(G.territories).filter(t=>t.owner===fk&&Battle.canAttack(t));
   let attacked=false;
   for(const src of myTers){
     const adjEnemies=(src.adj||[]).map(id=>G.territories[id]).filter(t=>t&&t.owner&&t.owner!==fk&&armyPoints(t)>0);
@@ -675,106 +597,116 @@ function executeCpuAttack(fk, descEl) {
       openDiceCpu(src.id,tgt.id,fk,()=>{
         // Sync after CPU attack
         _syncNow(`[${FDATA[fk]?.name||fk}] atacó ${terName(tgt.id)}`, 'combat');
-        setTimeout(()=>nextStep(),1000);
+        scheduleStepAction(advanceStep,1000);
       });
       return;
     }
   }
-  if(!attacked){if(descEl)descEl.textContent='Sin ataques posibles.';setTimeout(nextStep,500);}
+  if(!attacked){if(descEl)descEl.textContent='Sin ataques posibles.';scheduleStepAction(advanceStep,500);}
 }
 
-function runMaintenanceRolls() {
-  runMaintenanceRollsFor(G.pf, () => {
-    _syncNow('Mantenimiento resuelto', 'sys');
-    nextStep();
-  });
+function resolveNuclearExplosion(t,survivor){
+  if(!t.hasNuclear)return false;
+  if(!t.aircraft && Battle.count(t)>0 && (!['soldiers','mechs','scorpions'].includes(survivor)||!t[survivor]))throw Error('Elige una unidad terrestre superviviente');
+  const keepAir=t.aircraft||0;
+  t.hasNuclear=false;t.soldiers=t.mechs=t.scorpions=0;
+  if(!keepAir&&survivor)t[survivor]=1;
+  applyLibertosScorchedEarth(t.id);
+  return true;
 }
-
-function runMaintenanceRollsFor(fk, callback) {
-  if(G.gameOver) return;
-  const R=RULES.end;
-  const nucTers=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);
-  if(nucTers.length===0){if(callback)callback();return;}
-  openMaintenanceModal(fk,nucTers,R,callback);
+function runMaintenanceRolls(){
+  if(G.gameOver||G_step.currentFk!==G.pf||G_step.phase!=='end'||G_step.idx!==1)return;
+  runMaintenanceRollsFor(G.pf,()=>scheduleStepAction(advanceStep,200));
 }
-
-function openMaintenanceModal(fk,nucTers,R,callback){
-  const ex=document.getElementById('maint-modal');if(ex)ex.remove();
-  const fd=FDATA[fk]||{name:fk,color:'#888'};
-  const modal=document.createElement('div');
-  modal.id='maint-modal';
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;display:flex;align-items:center;justify-content:center;';
-  const box=document.createElement('div');
-  box.style.cssText='background:#08080c;border:1px solid #333;padding:28px 36px;min-width:380px;font-family:Orbitron,sans-serif;text-align:center;';
-  const isMyMaint=(fk===G.pf);
-  const btnLabel=isMyMaint?`🎲 LANZAR D${R.maintenanceDie}`:`▶ VER RESULTADO`;
-  const btnColor=isMyMaint?'#C8A800':'#555';
-  box.innerHTML=`
-    <div style="font-size:13px;letter-spacing:3px;color:#C8A800;margin-bottom:6px;">☢ MANTENIMIENTO NUCLEAR</div>
-    <div style="font-size:11px;color:${fd.color};margin-bottom:16px;">${fd.name}</div>
-    <div style="font-size:11px;color:#888;margin-bottom:20px;">
-      ${nucTers.length} Nuclear Complex${nucTers.length!==1?'es':''} — D${R.maintenanceDie} por cada uno<br>
-      <span style="color:#cc4444;font-size:10px;">Si sale ${R.maintenanceExplosionOn} → EXPLOSIÓN</span>
-    </div>
-    <div id="maint-dice" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;">
-      ${nucTers.map((_,i)=>`<div id="md${i}" style="width:50px;height:50px;border:2px solid #333;display:flex;align-items:center;justify-content:center;font-size:22px;color:#555;">?</div>`).join('')}
-    </div>
-    <div id="maint-result" style="font-size:13px;color:#888;min-height:24px;margin-bottom:16px;"></div>
-    <button id="maint-roll-btn" style="background:#0a0a0d;border:1px solid ${btnColor};color:${btnColor};padding:12px 28px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;">
-      ${btnLabel}
-    </button>`;
-  modal.appendChild(box); document.body.appendChild(modal);
-  const doRoll=()=>{
-    const btn=document.getElementById('maint-roll-btn');
-    if(btn){btn.disabled=true;btn.style.opacity='0.4';}
-    const rolls=nucTers.map(()=>Math.floor(Math.random()*R.maintenanceDie)+1);
-    let explosions=0;
-    rolls.forEach((v,i)=>{
-      const el=document.getElementById('md'+i);
-      if(el){el.textContent=v;el.style.borderColor=v===R.maintenanceExplosionOn?'#ff4444':'#446644';el.style.color=v===R.maintenanceExplosionOn?'#ff4444':'#88cc44';el.style.fontSize='24px';}
-      if(v===R.maintenanceExplosionOn) explosions++;
-      else addLog(`☢ ${terName(nucTers[i].id)}: D${R.maintenanceDie}=${v} — seguro`,'res');
-    });
-    const res=document.getElementById('maint-result');
-    if(res){res.textContent=explosions>0?`${explosions} EXPLOSIÓN${explosions>1?'ES':''}!`:'Sin explosiones ✓';res.style.color=explosions>0?'#ff4444':'#88cc44';}
-    const rollBtn2=document.getElementById('maint-roll-btn');if(rollBtn2)rollBtn2.style.display='none';
-    if(explosions===0){
-      updateMap();refreshCards();
-      if(isMyMaint){
-        const closeBtn=document.createElement('button');
-        closeBtn.textContent='CERRAR ▶';
-        closeBtn.style.cssText='background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-top:8px;';
-        closeBtn.onclick=()=>{modal.remove();if(callback)callback();};
-        box.appendChild(closeBtn);
-      } else {setTimeout(()=>{modal.remove();if(callback)callback();},2500);}
-    } else {
-      applyExplosions(box,modal,fk,nucTers,rolls,R,explosions,isMyMaint,callback);
-    }
+function runMaintenanceRollsFor(fk,callback){
+  if(G.gameOver)return;
+  const key=currentStepKey();
+  if(G.maintenance?.key===key || G_step.maintenanceDone===key)return;
+  const bases=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);
+  if(!RULES.end.maintenanceEnabled||!bases.length){G_step.maintenanceDone=key;if(callback)callback();return;}
+  const rolls=RULES.end.maintenanceEnabled?bases.map(t=>({id:t.id,roll:Math.floor(Math.random()*RULES.end.maintenanceDie)+1})):[];
+  const exploded=rolls.filter(r=>r.roll===RULES.end.maintenanceExplosionOn).map(r=>r.id);
+  const st=G.maintenance={key,fk,rolls,exploded,choices:{},callback};
+  const finish=()=>{
+    if(G.gameOver||G.maintenance!==st||currentStepKey()!==key)return;
+    for(const id of exploded){const t=G.territories[id];resolveNuclearExplosion(t,st.choices[id]);addLog('💥 Explosión en '+terName(id),'combat');}
+    G_step.maintenanceDone=key;G.maintenance=null;
+    updateMap();refreshCards();_syncNow('Mantenimiento: '+exploded.length+' explosiones','combat');
+    document.getElementById('maint-modal')?.remove();
+    if(callback)callback();
   };
-  document.getElementById('maint-roll-btn').onclick=doRoll;
-  if(!isMyMaint) setTimeout(doRoll,600);
+  const choices=exploded.filter(id=>{const t=G.territories[id];return !t.aircraft&&Battle.count(t)>0;});
+  choices.forEach(id=>{const t=G.territories[id];st.choices[id]=['scorpions','mechs','soldiers'].find(type=>t[type]>0);});
+  if(fk!==G.pf){finish();return;}
+  const modal=document.createElement('div');modal.id='maint-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML='<div style="background:#08080c;border:1px solid #555;padding:24px;max-height:85vh;overflow:auto"><h3>MANTENIMIENTO NUCLEAR</h3>'+
+    rolls.map(r=>'<p>'+terName(r.id)+': D'+RULES.end.maintenanceDie+' = '+r.roll+(exploded.includes(r.id)?' — EXPLOSIÓN':' — seguro')+'</p>').join('')+
+    choices.map(id=>'<p>'+terName(id)+' — conserva <select data-survivor="'+id+'">'+['scorpions','mechs','soldiers'].filter(type=>G.territories[id][type]>0).map(type=>'<option value="'+type+'">'+type+'</option>').join('')+'</select></p>').join('')+
+    '<button id="maint-confirm">CONFIRMAR Y CONTINUAR</button></div>';
+  document.body.appendChild(modal);
+  modal.querySelector('#maint-confirm').onclick=()=>{
+    modal.querySelectorAll('[data-survivor]').forEach(select=>st.choices[select.dataset.survivor]=select.value);
+    finish();
+  };
 }
 
-function autoDistributeReinf() {
-  const fk=G.pf, myF=G.factions[fk];
-  const n=myF.pendingSoldiers||0;
-  const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
-  const nucTers=myTers.filter(t=>t.hasNuclear);
-  const validTers=nucTers.length>0?nucTers:myTers;
-  for(let s=0;s<n;s++){const p=validTers[s%validTers.length];if(p)p.soldiers++;}
-  myF.pendingSoldiers=0;
-  Object.values(G.territories).forEach(t=>{
-    const ring=document.getElementById('tr-'+t.id);
-    if(ring){ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}
-  });
-  G.reinforcementMode=null;
-  addLog(`Auto-distribuidos ${n} refuerzos`,'res');
-  updateMap(); refreshCards();
-  _syncNow(`[${FDATA[fk]?.name}] coloca refuerzos`, 'res');
-  nextStep();
+function reinforcementTargets(fk){
+  const my=Object.values(G.territories).filter(t=>t.owner===fk),bases=my.filter(t=>t.hasNuclear),R=RULES.prep.placement;
+  if(fk==='erb'&&R.ereubsAnywhereOverride||!R.onlyInNuclearTerritories)return my;
+  if(bases.length)return bases;
+  const chosen=G.factions[fk].reinforcementRegions||{};
+  return R.fallbackOnePerRegion?my.filter(t=>!chosen[t.region]||chosen[t.region]===t.id):my;
+}
+function distributeReinforcements(fk){
+  const f=G.factions[fk],n=f.pendingSoldiers||0;
+  let targets=reinforcementTargets(fk);
+  if(!targets.length)return false;
+  const R=RULES.prep.placement;
+  if(!(fk==='erb'&&R.ereubsAnywhereOverride)&&R.onlyInNuclearTerritories&&!targets.some(t=>t.hasNuclear)&&R.fallbackOnePerRegion){
+    const perRegion={};targets.forEach(t=>{if(!perRegion[t.region])perRegion[t.region]=t;});targets=Object.values(perRegion);
+  }
+  for(let i=0;i<n;i++)targets[i%targets.length].soldiers++;
+  f.pendingSoldiers=0;return true;
+}
+function autoDistributeReinf(){
+  if(G.gameOver||!G_step.isMyTurn||STEPS[G_step.phase]?.[G_step.idx]?.id!=='reinf')return;
+  if(!distributeReinforcements(G.pf))return;
+  G.reinforcementMode=null;updateMap();refreshCards();_syncNow('Refuerzos distribuidos','res');nextStep();
+}
+function upgradeSpec(type){
+  const R=RULES.prep.upgrades;
+  return {mech:{source:'soldiers',target:'mechs',cost:R.mechCost},air:{source:'soldiers',target:'aircraft',cost:R.aircraftCost},sco:{source:'mechs',target:'scorpions',cost:R.scorpionCost}}[type];
+}
+function applyUpgrade(fk,id,type){
+  const t=G.territories[id],f=G.factions[fk],spec=upgradeSpec(type);
+  if(G.gameOver||!t||t.owner!==fk||!spec)return false;
+  const quantity=spec.cost[spec.source],pu=spec.cost.plutonium;
+  if(!Number.isInteger(quantity)||quantity<1||!Number.isFinite(pu)||pu<0)return false;
+  const aircraft=Object.values(G.territories).filter(t=>t.owner===fk).reduce((n,t)=>n+t.aircraft,0);
+  if(t[spec.source]<quantity||f.plutonium<pu||type==='air'&&aircraft>=RULES.prep.upgrades.maxAircraft)return false;
+  t[spec.source]-=quantity;t[spec.target]++;f.plutonium-=pu;return true;
+}
+function doUpgrade(type){
+  if(G.gameOver||!G_step.isMyTurn||STEPS[G_step.phase]?.[G_step.idx]?.id!=='upgrade')return;
+  const id=G.sel,t=G.territories[id],spec=upgradeSpec(type),f=G.factions[G.pf];
+  if(!t||t.owner!==G.pf||!spec){addLog('Selecciona un territorio propio.','sys');return;}
+  const quantity=spec.cost[spec.source],pu=spec.cost.plutonium;
+  if(t[spec.source]<quantity||f.plutonium<pu)return;
+  const key=currentStepKey();document.getElementById('upgrade-confirm')?.remove();
+  const dialog=document.createElement('div');dialog.id='upgrade-confirm';
+  dialog.style.cssText='position:fixed;inset:0;z-index:1000;background:#000d;display:flex;align-items:center;justify-content:center';
+  dialog.innerHTML='<div style="background:#08080c;border:1px solid #888;padding:24px"><h3>CONFIRMAR MEJORA</h3><p>'+quantity+' '+spec.source+' + '+pu+' Pu → 1 '+spec.target+'</p><p>Quedan '+(t[spec.source]-quantity)+' '+spec.source+', '+(t[spec.target]+1)+' '+spec.target+' y '+(f.plutonium-pu)+' Pu</p><button id="upgrade-ok">CONFIRMAR</button> <button id="upgrade-cancel">CANCELAR</button></div>';
+  document.body.appendChild(dialog);
+  dialog.querySelector('#upgrade-cancel').onclick=()=>dialog.remove();
+  dialog.querySelector('#upgrade-ok').onclick=()=>{
+    dialog.remove();if(key!==currentStepKey()||!G_step.isMyTurn)return;
+    if(applyUpgrade(G.pf,id,type)){addLog('Mejora aplicada en '+terName(id),'res');refreshCards();selectTerritory(id);updateMap();_syncNow('Mejora aplicada','res');}
+  };
 }
 
 function startMoveMode() {
+  if(G.gameOver||!G_step.isMyTurn||!['move','regroup'].includes(STEPS[G_step.phase]?.[G_step.idx]?.id))return;
   const btn=document.getElementById('ba-move-btn');
   if(btn){btn.textContent='↗ ACTIVO — clic en origen';btn.style.borderColor='#C8A800';btn.style.color='#C8A800';}
   G.moveMode=true; G.moveSrc=null;
@@ -800,11 +732,7 @@ function checkElimination(fk, attackerFk = G_step.currentFk) {
   }
 }
 
-function totalArmyPoints(fk) {
-  return Object.values(G.territories).filter(t=>t.owner===fk).reduce((s,t)=>s+armyPoints(t),0);
-}
-
-function checkWinCondition() {
+function checkWinCondition(moment = 'elimination', activeFk = G_step.currentFk) {
   if(G.gameOver) return;
   const order = G.setup.order || Object.keys(G.factions);
   const alive = order.filter(fk=>G.factions[fk]?.alive!==false);
@@ -812,24 +740,25 @@ function checkWinCondition() {
   const totalNuclears = Object.values(G.territories).filter(t=>t.hasNuclear).length;
 
   order.forEach(fk=>{
-    if(G.gameOver || G.factions[fk]?.alive===false) return;
+    if(G.gameOver || G.factions[fk]?.alive===false || fk!==activeFk) return;
+    if(fk==='imp' ? moment!=='start' : moment!=='end') return;
     const V=RULES.victory[fk]; if(!V||!V.enabled) return;
     const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
     const myNucs=myTers.filter(t=>t.hasNuclear);
 
     if(fk==='imp'){
       let fullR=0; REGIONS.forEach(r=>{const rTs=TERRITORIES_DEF.filter(t=>t.region===r.id);if(rTs.every(t=>G.territories[t.id]?.owner===fk))fullR++;});
-      if(fullR>=(V.fullRegions||5)){ declareWin(fk,'PAX AUGUSTA — '+fullR+' regiones completas'); return; }
+      if(fullR>=(V.fullRegions??5)){ declareWin(fk,'PAX AUGUSTA — '+fullR+' regiones completas'); return; }
     }
     if(fk==='lib'){
       if(totalNuclears<=G.playerCount){ declareWin(fk,'TOTAL BLACKOUT — Solo '+totalNuclears+' Nucleares'); return; }
     }
     if(fk==='clt'){
-      if((G.factions[fk].eliminatedArmies||0)>=(V.armiesEliminated||2)){ declareWin(fk,'THE GREAT OFFERING — '+V.armiesEliminated+' jugadores eliminados'); return; }
+      if((G.factions[fk].eliminatedArmies||0)>=(V.armiesEliminated??2)){ declareWin(fk,'THE GREAT OFFERING — '+V.armiesEliminated+' jugadores eliminados'); return; }
     }
     if(fk==='erb'){
       const nucReg=new Set(myNucs.map(t=>TERRITORIES_DEF.find(x=>x.id===t.id)?.region).filter(Boolean));
-      if(nucReg.size>=(V.nuclearRegions||7)){ declareWin(fk,'EQUATION ZERO — Nuclear en '+nucReg.size+' regiones'); return; }
+      if(nucReg.size>=(V.nuclearRegions??7)){ declareWin(fk,'EQUATION ZERO — Nuclear en '+nucReg.size+' regiones'); return; }
     }
     if(fk==='prm'){
       if(totalNuclears>0&&myNucs.length>=Math.ceil(totalNuclears/2)){ declareWin(fk,'TERRAFORMATION — '+myNucs.length+'/'+totalNuclears+' Nucleares'); return; }
@@ -842,7 +771,7 @@ function checkWinCondition() {
         const maxOther=Math.max(0,...order.filter(k=>k!==fk).map(k=>rTs.reduce((s,t)=>s+(G.territories[t.id]?.owner===k?armyPoints(G.territories[t.id]):0),0)));
         if(myAP>0&&myAP>maxOther) regions7++;
       });
-      if(regions7>=(V.largestArmyRegions||7)){ declareWin(fk,'GENETIC SUPREMACY — Mayor ejército en '+regions7+' regiones'); return; }
+      if(regions7>=(V.largestArmyRegions??7)){ declareWin(fk,'GENETIC SUPREMACY — Mayor ejército en '+regions7+' regiones'); return; }
     }
   });
 }
@@ -850,6 +779,9 @@ function checkWinCondition() {
 function declareWin(fk, goal, broadcast = true) {
   if(G.gameOver || !G.factions[fk]) return;
   G.gameOver = true;
+  document.getElementById('online-decision-modal')?.remove();
+  if(typeof ONLINE!=='undefined'&&ONLINE.isOnline()&&ONLINE.cancelPendingDecision)ONLINE.cancelPendingDecision();
+  const nextButton=document.getElementById('btn-next');if(nextButton)nextButton.disabled=true;
   const combatModal=document.getElementById('dmodal');
   if(combatModal) combatModal.classList.remove('open');
   G.result = { winner: fk, goal, round: G.round };
@@ -862,6 +794,7 @@ function declareWin(fk, goal, broadcast = true) {
   }
   Object.values(G.pendingCpuAttack || {}).forEach(attack => clearTimeout(attack._timer));
   G.pendingCpuAttack = {};
+  updatePhaseBanner(G_step.currentFk||fk);
   declareVictory(goal, fk);
   if(broadcast && typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
     ONLINE.pushActionWithState('GAME_FINISHED', { result: G.result });
@@ -905,6 +838,8 @@ function endPhaseForFaction() {
     addLog('🔚 '+((FDATA[currentFk]&&FDATA[currentFk].name)||currentFk)+': FASE FINAL','sys');
     G.phase='end'; startPhase('end', currentFk);
   } else if(G_step.phase==='end'){
+    checkWinCondition('end',currentFk);
+    if(G.gameOver)return;
     const living = order.filter(fk => G.factions[fk]?.alive!==false);
     if(living.length<=1){ checkWinCondition(); return; }
     let nextIdx=(currentIdx+1)%order.length;
@@ -925,7 +860,7 @@ function endPhaseForFaction() {
 
 // ── Stubs ─────────────────────────────────────────────────────
 function updatePhaseGuide(){if(typeof updateStepUI==='function'&&G_step){const steps=STEPS[G_step.phase]||[];if(steps[G_step.idx])updateStepUI(steps[G_step.idx]);}}
-function startPhaseProgress(){if(typeof startPhase==='function')startPhase(G.phase,G.pf);}
+function startPhaseProgress(){startPhase(G.phase,G.currentFaction||G.setup.order[0]);}
 function markStepDone(id){updatePhaseBanner(G_step.currentFk);}
 function setStepActive(id){}
 function guideStepClick(id,action){}
@@ -1016,7 +951,38 @@ function updateMap(){
 function armyPoints(t){return t.soldiers+t.mechs*3+t.aircraft*3+t.scorpions*6;}
 function totalArmyPoints(faction){return Object.values(G.territories).filter(t=>t.owner===faction).reduce((sum,t)=>sum+armyPoints(t),0);}
 function buildUnitString(t){const p=[];if(t.scorpions>0)p.push(t.scorpions+'S');if(t.mechs>0)p.push(t.mechs+'M');if(t.aircraft>0)p.push(t.aircraft+'A');if(t.soldiers>0)p.push(t.soldiers+'s');return p.join(' ')||'';}
-function getMovableTargets(srcId,maxSteps){const visited=new Set([srcId]);let frontier=[srcId];for(let step=0;step<maxSteps;step++){const next=[];frontier.forEach(id=>{const t=G.territories[id];if(!t||!t.adj)return;t.adj.forEach(nid=>{if(!visited.has(nid)&&G.territories[nid]&&G.territories[nid].owner===G.pf){visited.add(nid);next.push(nid);}});});frontier=next;if(!frontier.length)break;}visited.delete(srcId);return visited;}
+function groundMoveTargets(srcId,maxSteps){
+  const src=G.territories[srcId];if(!src)return new Set();
+  const visited=new Set([srcId]);let frontier=[srcId];
+  for(let step=0;step<maxSteps;step++){
+    const next=[];for(const id of frontier)for(const n of G.territories[id].adj||[]){if(!visited.has(n)&&G.territories[n]?.owner===src.owner){visited.add(n);next.push(n);}}
+    frontier=next;
+  }
+  visited.delete(srcId);return visited;
+}
+function getMovableTargets(srcId,maxSteps){
+  const targets=groundMoveTargets(srcId,maxSteps),src=G.territories[srcId];
+  if(src?.aircraft>0)for(const t of Object.values(G.territories))if(t.owner===src.owner&&t.id!==srcId)targets.add(t.id);
+  return targets;
+}
+function transferUnits(srcId,dstId,chosen){
+  const src=G.territories[srcId],dst=G.territories[dstId];
+  if(G.gameOver||!src||!dst||src===dst||src.owner!==G.pf||dst.owner!==G.pf)return false;
+  const step=STEPS[G_step.phase]?.[G_step.idx]?.id;
+  if(!G_step.isMyTurn||!['move','regroup'].includes(step))return false;
+  const keys=Object.values(Battle.keys),total=keys.reduce((n,k)=>n+(chosen[k]||0),0);
+  const moved=G.movedUnits?.[srcId]||{};
+  if(total<1||total>=Battle.count(src)||keys.some(k=>!Number.isInteger(chosen[k]||0)||(chosen[k]||0)<0||(chosen[k]||0)>(src[k]||0)-(moved[k]||0)))return false;
+  const near=groundMoveTargets(srcId,RULES.prep.movementRange).has(dstId);
+  if(!near){
+    const air=chosen.aircraft||0,mechs=chosen.mechs||0,soldiers=chosen.soldiers||0;
+    if(air<1||chosen.scorpions>0||mechs>air||soldiers>3*(air-mechs))return false;
+  }
+  G.movedUnits||={};G.movedUnits[dstId]||={};
+  for(const key of keys){const n=chosen[key]||0;src[key]-=n;dst[key]+=n;G.movedUnits[dstId][key]=(G.movedUnits[dstId][key]||0)+n;}
+  return true;
+}
+
 function canMoveTarget(id){if(!G.moveSrc)return false;if(!G.moveTargets)G.moveTargets=getMovableTargets(G.moveSrc,RULES.prep.movementRange||2);return G.moveTargets.has(id);}
 function isAdjOwned(id){const t=G.territories[id];return t.adj.some(aid=>{const a=G.territories[aid];return a&&a.owner===G.pf;});}
 function blendHex(a,b,t){const pr=c=>parseInt(c.slice(1,3),16),pg=c=>parseInt(c.slice(3,5),16),pb=c=>parseInt(c.slice(5,7),16);const lr=(x,y)=>Math.min(255,Math.round(x*(1-t)+y*t));return'#'+[lr(pr(a),pr(b)),lr(pg(a),pg(b)),lr(pb(a),pb(b))].map(v=>v.toString(16).padStart(2,'0')).join('');}
@@ -1024,36 +990,17 @@ function totalAircraft(){return Object.values(G.territories).filter(t=>t.owner==
 
 function onTerritoryClick(id,event){
   if(G.gameOver) return;
+  if(!G.setup?._inSetup && !G_step.isMyTurn)return;
   if(G.setup&&G.setup.claimCallback){const handled=G.setup.claimCallback(id,event);if(handled)return;return;}
   if(G.reinforcementMode&&G.reinforcementMode.callback){const handled=G.reinforcementMode.callback(id,event);if(handled)return;return;}
   if(G.pendingCpuAttack&&G.pendingCpuAttack[id]){const pending=G.pendingCpuAttack[id];if(pending.spectator){if(pending._timer)clearTimeout(pending._timer);delete G.pendingCpuAttack[id];clearAttackFlash(id);openCombatModal('cpu-att-cpu-def');}else{openCombatModal('cpu-att-player-def');}return;}
   if(G.setup&&G.setup._inSetup){return;}
-  // Nuclear destroy mode — player selects which nuclear to destroy on the map
-  if(G.nukeDestroyMode && window._nukeDestroyState) {
-    const st = window._nukeDestroyState;
-    if(!st.validIds.has(id)) return;
-    if(st.chosen.has(id)) {
-      st.chosen.delete(id);
-      const ring = document.getElementById('tr-'+id);
-      if(ring){ring.setAttribute('stroke','#ff8800');ring.setAttribute('stroke-width','4');}
-    } else if(st.chosen.size < st.needed) {
-      st.chosen.add(id);
-      const ring = document.getElementById('tr-'+id);
-      if(ring){ring.setAttribute('stroke','#ff2222');ring.setAttribute('stroke-width','5');}
-    }
-    const cnt = document.getElementById('nuke-destroy-count');
-    if(cnt) cnt.textContent = 'Seleccionados: '+st.chosen.size+' / '+st.needed;
-    const btn = document.getElementById('nuke-destroy-confirm');
-    if(btn){btn.disabled=(st.chosen.size!==st.needed);btn.style.opacity=st.chosen.size===st.needed?'1':'0.4';}
-    return;
-  }
-
   if(G.nuclearMode){const tgt=G.territories[id];if(tgt&&tgt.owner===G.pf&&!tgt.hasNuclear){G.sel=id;doAct('nuke');G.nuclearMode=false;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(ring){ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});return;}}
   if(G.missileFiringMode){const tgt=G.territories[id];if(!tgt||!tgt.owner||tgt.owner===G.pf){addLog('Selecciona un territorio ENEMIGO para el misil.','sys');return;}G.missileFiringMode=false;G.sel=id;doMissileFire();return;}
   if(G.dragging)return;
   if(G.moveSrc){const src=G.territories[G.moveSrc],dst=G.territories[id];if(id===G.moveSrc){G.moveSrc=null;G.moveTargets=null;document.getElementById('map-wrap').classList.remove('moving');updateMap();return;}if(!G.moveTargets)G.moveTargets=getMovableTargets(G.moveSrc,RULES.prep.movementRange||2);if(dst&&G.moveTargets.has(id)){showMoveUnitsPopup(G.moveSrc,id,event);}else{addLog(`${terName(id)} no es destino válido (fuera de rango).`,'sys');}return;}
   if(G.moveMode&&G.territories[id]?.owner===G.pf&&armyPoints(G.territories[id])>0){G.moveSrc=id;G.moveTargets=getMovableTargets(id,RULES.prep.movementRange||2);document.getElementById('map-wrap').classList.add('moving');addLog(`Origen: ${terName(id)}. Clic en destino.`,'move');updateMap();return;}
-  if(G_step&&G_step.phase==='combat'&&G_step.isMyTurn){const tgt=G.territories[id];if(G.attackSrc&&tgt&&tgt.owner&&tgt.owner!==G.pf){const src=G.territories[G.attackSrc];if(src&&src.adj&&src.adj.includes(id)){const btn=document.getElementById('ba-attack');if(btn){btn.disabled=false;btn.onclick=()=>{G.sel=G.attackSrc;openDice(id);};btn.textContent='⚔ ATACAR '+id;}selectTerritory(id);return;}else{addLog('Territorio no adyacente.','sys');}}if(tgt&&tgt.owner===G.pf&&armyPoints(tgt)>1){G.attackSrc=id;G.moveTargets=null;const btn=document.getElementById('ba-attack');if(btn){btn.disabled=true;btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO';}selectTerritory(id);addLog(`Origen: ${terName(id)}. Clic en enemigo adyacente.`,'sys');return;}}
+  if(G_step&&G_step.phase==='combat'&&G_step.isMyTurn){const tgt=G.territories[id];if(G.attackSrc&&tgt&&tgt.owner&&tgt.owner!==G.pf){const src=G.territories[G.attackSrc];if(src&&src.adj&&src.adj.includes(id)){const btn=document.getElementById('ba-attack');if(btn){btn.disabled=false;btn.onclick=()=>{G.sel=G.attackSrc;openDice(id);};btn.textContent='⚔ ATACAR '+id;}selectTerritory(id);return;}else{addLog('Territorio no adyacente.','sys');}}if(tgt&&tgt.owner===G.pf&&Battle.canAttack(tgt)){G.attackSrc=id;G.moveTargets=null;const btn=document.getElementById('ba-attack');if(btn){btn.disabled=true;btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO';}selectTerritory(id);addLog(`Origen: ${terName(id)}. Clic en enemigo adyacente.`,'sys');return;}}
   selectTerritory(id);
 }
 
@@ -1076,7 +1023,7 @@ function selectTerritory(id){
   document.getElementById('u-sco-dummy').textContent=t.scorpions||'0';
   const isOwn=t.owner===G.pf,isEnemy=t.owner&&t.owner!==G.pf,isAdj=isAdjOwned(id);
   const inPrep=G.phase==='prep',inCombat=G.phase==='combat';
-  document.getElementById('ba-nuke').disabled=!(inPrep&&isOwn&&!t.hasNuclear&&myF.plutonium>=5);
+  document.getElementById('ba-nuke').disabled=!(inPrep&&isOwn&&!t.hasNuclear&&myF.plutonium>=RULES.prep.nuclearBuildCost);
   document.getElementById('ba-missile-build').disabled=!(inPrep&&myF.missiles<5&&myF.plutonium>=1);
   document.getElementById('ba-missile-fire').disabled=!(inPrep&&myF.missiles>0&&isEnemy);
   document.getElementById('ba-attack').disabled=!(inCombat&&isEnemy&&isAdj);
@@ -1086,13 +1033,14 @@ function selectTerritory(id){
   updateMissilePips();
 }
 
-function activateNuclearMode(){const myF=G.factions[G.pf];if(myF.plutonium<RULES.prep.nuclearBuildCost){addLog('Plutonio insuficiente.','sys');return;}G.nuclearMode=true;G.moveMode=false;G.moveSrc=null;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(!ring)return;if(t.owner===G.pf&&!t.hasNuclear){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','2.5');}else{ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});addLog('Clic en un territorio tuyo para construir Nuclear Complex.','sys');}
+function activateNuclearMode(){if(G.gameOver||!G_step.isMyTurn||STEPS[G_step.phase]?.[G_step.idx]?.id!=='nuclear')return;const myF=G.factions[G.pf];if(myF.plutonium<RULES.prep.nuclearBuildCost){addLog('Plutonio insuficiente.','sys');return;}G.nuclearMode=true;G.moveMode=false;G.moveSrc=null;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(!ring)return;if(t.owner===G.pf&&!t.hasNuclear){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','2.5');}else{ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});addLog('Clic en un territorio tuyo para construir Nuclear Complex.','sys');}
 
 function doAct(action){
-  if(G.gameOver) return;
+  if(G.gameOver||!G_step.isMyTurn) return;
   const id=G.sel; if(!id) return;
   const t=G.territories[id];const myF=G.factions[G.pf];
   if(action==='nuke'){
+    if(STEPS[G_step.phase]?.[G_step.idx]?.id!=='nuclear'||t.owner!==G.pf)return;
     if(myF.plutonium<RULES.prep.nuclearBuildCost){addLog(`⚠ Plutonio insuficiente.`,'sys');return;}
     if(t.hasNuclear){addLog('⚠ Ya tiene Nuclear Complex.','sys');return;}
     myF.plutonium-=RULES.prep.nuclearBuildCost;t.hasNuclear=true;
@@ -1106,16 +1054,4 @@ function doAct(action){
   if(action==='move-action'){G.moveSrc=id;G.moveTargets=getMovableTargets(id,RULES.prep.movementRange||2);document.getElementById('map-wrap').classList.add('moving');addLog(`Selecciona destino desde ${t.name}.`,'move');updateMap();}
 }
 
-function doUpgrade(type){
-  if(G.gameOver) return;
-  const id=G.sel;const myF=G.factions[G.pf];
-  if(!id||!G.territories[id]||G.territories[id].owner!==G.pf){addLog('Selecciona primero un territorio TUYO.','sys');return;}
-  const t=G.territories[id];
-  if(type==='mech'){if(t.soldiers<3||myF.plutonium<1)return;t.soldiers-=3;t.mechs+=1;myF.plutonium-=1;addLog(`3 Sol → 1 Mech en ${t.id}. −1 PLU.`,'res');}
-  if(type==='air'){if(t.soldiers<3||myF.plutonium<1||totalAircraft()>=5)return;t.soldiers-=3;t.aircraft+=1;myF.plutonium-=1;addLog(`3 Sol → 1 Aircraft en ${t.id}. −1 PLU.`,'res');}
-  if(type==='sco'){if(t.mechs<2||myF.plutonium<1)return;t.mechs-=2;t.scorpions+=1;myF.plutonium-=1;addLog(`2 Mech → 1 Scorpion en ${t.id}. −1 PLU.`,'res');}
-  _syncNow(`[${FDATA[G.pf]?.name}] mejora en ${terName(id)}`, 'res');
-  refreshCards();selectTerritory(id);updateMap();
-}
-
-function updateMissilePips(){const myF=G.factions[G.pf];const cont=document.getElementById('miss-pips');if(!cont)return;cont.innerHTML='';for(let i=0;i<5;i++){const p=document.createElement('div');p.className='miss-pip'+(i<myF.missiles?' full':'');cont.appendChild(p);}}
+function updateMissilePips(){const myF=G.factions[G.pf];const cont=document.getElementById('miss-pips');if(!cont)return;cont.innerHTML='';for(let i=0;i<RULES.prep.maxMissiles;i++){const p=document.createElement('div');p.className='miss-pip'+(i<myF.missiles?' full':'');cont.appendChild(p);}}

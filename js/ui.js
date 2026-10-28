@@ -110,9 +110,29 @@ function showRules(){
     +'<button onclick="document.getElementById(\'rules-modal\').remove()" style="flex:2;background:#0a0a0d;border:1px solid #C8A800;color:#C8A800;padding:8px;font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">CERRAR ▶</button>'
     +'</div></div>';
   document.body.appendChild(modal);
+  if(rulesLocked()){
+    modal.querySelectorAll('input,button[onclick="resetRules()"]').forEach(el=>el.disabled=true);
+    const note=document.createElement('p');note.textContent='Reglas de esta partida: solo lectura. Inicia una partida nueva para cambiar los valores.';modal.firstElementChild.prepend(note);
+  }
 }
-function setRule(path,value){const keys=path.split('.');let obj=RULES;for(let i=0;i<keys.length-1;i++)obj=obj[keys[i]];obj[keys[keys.length-1]]=value;}
-function resetRules(){Object.assign(RULES,JSON.parse(JSON.stringify(DEFAULT_RULES)));document.getElementById('rules-modal').remove();showRules();}
+function rulesLocked(){return !!(G.setup?.order?.length || G.gameOver);}
+function setRule(path,value){
+  if(rulesLocked())return false;
+  const keys=path.split('.');if(keys.some(k=>['__proto__','prototype','constructor'].includes(k)))return false;
+  let obj=RULES;for(const key of keys.slice(0,-1)){if(!Object.hasOwn(obj,key))return false;obj=obj[key];}
+  const key=keys.at(-1);if(!Object.hasOwn(obj,key)||typeof obj[key]!==typeof value)return false;
+  if(typeof value==='number'&&(!Number.isInteger(value)||value<0))return false;
+  if(/unitDice|maxAttackDice|maxDefenseDice|maintenanceDie|missileInterceptDie|Cost.soldiers|Cost.mechs/.test(path)&&value<1)return false;
+  if(/setup.startingAssets/.test(path)){
+    const count=Number(keys[2]),territories=TERRITORIES_DEF.length/count;
+    if(key==='territories'&&value!==territories||key==='soldiers'&&value<territories||key==='nukes'&&value>territories)return false;
+  }
+  obj[key]=value;return true;
+}
+function resetRules(){
+  if(rulesLocked())return;
+  RULES=JSON.parse(JSON.stringify(DEFAULT_RULES));document.getElementById('rules-modal')?.remove();showRules();
+}
 
 function showTip(e,id){
   const t=G.territories[id];
@@ -451,12 +471,12 @@ function cpuTurns() {
 
 
 const VICTORY_DETAIL_FULL = {
-  imp: 'PAX AUGUSTA\n• Controla 5 regiones COMPLETAS al fin de tu turno\n\nHabilidad — IMPERIAL DEFENSE:\n+1 a TODOS los dados de defensa',
-  lib: 'TOTAL BLACKOUT\n• Nucleares en tablero ≤ número de jugadores (fin de turno)\n\nHabilidad — SCORCHED EARTH:\nPor cada Nuclear destruido: gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca en ese territorio.',
+  imp: 'PAX AUGUSTA\n• Controla 5 regiones COMPLETAS al inicio de tu turno\n\nHabilidad — IMPERIAL DEFENSE:\n+1 a TODOS los dados de defensa',
+  lib: 'TOTAL BLACKOUT\n• Nucleares en tablero ≤ número de jugadores (fin de turno)\n\nHabilidad — SCORCHED EARTH:\nPor cada Nuclear propio destruido: gana 1 Misil + 1 Mech + 2 Pu. El Mech se coloca en ese territorio.',
   clt: 'THE GREAT OFFERING\n• Elimina a DOS jugadores enemigos (fin de turno)\n\nHabilidad — HOLY WAR:\n+1 a TODOS los dados de ataque',
   erb: 'EQUATION ZERO\n• Controla al menos 1 Nuclear en 7 regiones distintas (fin de turno)\n\nHabilidad — HIVE MIND:\nColoca refuerzos en cualquier territorio propio aunque no tenga Nuclear',
   prm: 'TERRAFORMATION\n• Controla la MITAD de todos los Nucleares del tablero (fin de turno)\n\nHabilidad — ADVANCED REACTOR:\n+1 Plutonio extra por cada Nuclear Base que controlas',
-  shn: 'GENETIC SUPREMACY\n• Mayor ejército (AP) en 7 regiones distintas (inicio de turno)\n\nHabilidad — MASS CLONING:\n+1 soldado extra por cada Nuclear Base que controlas',
+  shn: 'GENETIC SUPREMACY\n• Mayor ejército (AP) en 7 regiones distintas (fin de turno)\n\nHabilidad — MASS CLONING:\n+1 soldado extra por cada Nuclear Base que controlas',
 };
 
 function showFactionObjective(fk) {

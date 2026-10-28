@@ -102,8 +102,12 @@ function startSetupPhase() {
     const cpuFkeys = allFkeys.filter(k => k !== G.pf).slice(0, G.playerCount - 1);
     G.setup.order  = [G.pf, ...cpuFkeys];
   }
+  G.setup.seats = [...G.setup.order];
   G.setup.orderIdx    = 0;
   G.setup.rollResults = {};
+  G.setup.rollGeneration=(G.setup.rollGeneration||0)+1;
+  G.setup._rollScheduled={};
+  G.setup._resolvingRoll=false;
   G.setup.claimRound  = 0;
   G.setup._tieGroups  = null;
   G.setup._posStart   = {};
@@ -112,7 +116,7 @@ function startSetupPhase() {
   G.setup.nukesLeft    = {};
   G.setup.order.forEach(fk => {
     G.setup.soldiersLeft[fk] = G.factions[fk].soldiers;
-    G.setup.nukesLeft[fk]    = fk === 'lib' ? 0 : G.factions[fk].nukes;
+    G.setup.nukesLeft[fk]    = G.factions[fk].nukes;
   });
   runSetupStep(0);
 }
@@ -212,7 +216,19 @@ function rollFor(fk) {
   }
 }
 
+function scheduleSetupRoll(fk,delay){
+  const generation=G.setup.rollGeneration;
+  G.setup._rollScheduled||={};
+  if(G.setup._rollScheduled[fk]===generation)return;
+  G.setup._rollScheduled[fk]=generation;
+  setTimeout(()=>{
+    if(!G.setup._inSetup||G.setup._stepIdx!==0||G.setup.rollGeneration!==generation||G.setup.rollResults[fk]!==undefined)return;
+    delete G.setup._rollScheduled[fk];rollFor(fk);
+  },delay);
+}
+
 function _applyRoll(fk, roll) {
+  if(!G.setup._inSetup||G.setup._stepIdx!==0||!G.setup.order.includes(fk)||!Number.isInteger(roll)||roll<1||roll>6)return;
   if(G.setup.rollResults[fk] !== undefined) return;
   G.setup.rollResults[fk] = roll;
   setupLog(`${FDATA[fk].name}: ${roll}`);
@@ -239,22 +255,24 @@ function _applyRoll(fk, roll) {
   if (_amHost()) {
     G.setup.order.forEach(fk2 => {
       if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
-        setTimeout(() => {
-          const r = Math.floor(Math.random()*6)+1;
-          _applyRoll(fk2, r);
-          if (_isOnline()) ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: r });
-        }, 300 + Math.random()*400);
+        scheduleSetupRoll(fk2, 300);
       }
     });
   }
 
   const allRolled = G.setup.order.every(fk2 => G.setup.rollResults[fk2] !== undefined);
-  if (allRolled) setTimeout(resolveRollOrder, 800);
+  if(allRolled&&!G.setup._resolvingRoll){
+    G.setup._resolvingRoll=true;const generation=G.setup.rollGeneration;
+    setTimeout(()=>{if(G.setup._inSetup&&G.setup._stepIdx===0&&G.setup.rollGeneration===generation)resolveRollOrder();},800);
+  }
 }
 
 function _onRemoteRoll(fk, roll) { _applyRoll(fk, roll); }
 
 function resolveRollOrder() {
+  G.setup._resolvingRoll=false;
+  G.setup.rollGeneration=(G.setup.rollGeneration||0)+1;
+  G.setup._rollScheduled={};
   const results = G.setup.rollResults;
   if(!G.setup._tieGroups) {
     G.setup._tieGroups = [G.setup.order.slice()];
@@ -295,11 +313,7 @@ function resolveRollOrder() {
       newTieGroups.forEach(grp => {
         grp.forEach(fk2 => {
           if (!isHumanFaction(fk2) && G.setup.rollResults[fk2] === undefined) {
-            setTimeout(() => {
-              const r = Math.floor(Math.random()*6)+1;
-              _applyRoll(fk2, r);
-              if (_isOnline()) ONLINE.pushAction('SETUP_ROLL', { fk: fk2, roll: r });
-            }, 600 + Math.random()*400);
+            scheduleSetupRoll(fk2, 600);
           }
         });
       });
@@ -361,7 +375,10 @@ function resolveRollOrder() {
   }
 
   // All resolved
-  const sorted = G.setup.order.slice().sort((a,b) => G.setup._posStart[a]-G.setup._posStart[b]);
+  const ranked=G.setup.order.slice().sort((a,b)=>G.setup._posStart[a]-G.setup._posStart[b]);
+  const seats=G.setup.seats||G.setup.order;
+  const first=seats.indexOf(ranked[0]);
+  const sorted=seats.slice(first).concat(seats.slice(0,first));
   G.setup.order    = sorted;
   G.setup.orderIdx = 0;
   G.setup._tieGroups = null;
@@ -395,6 +412,7 @@ function setupStep_Claim() {
 }
 
 function setupStep_Claim_Next() {
+  if(!G.setup._inSetup||G.setup._stepIdx!==1)return;
   updateMap(); // force redraw before checking unclaimed
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(unclaimed.length === 0) { nextSetupStep(); return; }
@@ -457,6 +475,7 @@ function setupStep_Claim_Next() {
 }
 
 function doClaimTerritory(fk, id) {
+  if(!G.setup._inSetup||G.setup._stepIdx!==1||fk!==G.setup.order[G.setup.orderIdx%G.setup.order.length])return;
   G.setup.claimCallback = null;
   const t = G.territories[id];
   if(!t || t.owner) return;
@@ -493,6 +512,7 @@ function autoClaimAll() {
 }
 
 function _doAutoClaimOne() {
+  if(!G.setup._inSetup||G.setup._stepIdx!==1)return;
   // Safety: verify it's actually this player's turn
   const currentFk = G.setup.order[G.setup.orderIdx % G.setup.order.length];
   if(currentFk !== G.pf) {
@@ -583,6 +603,7 @@ function setupStep_Soldiers_ForFaction(fk) {
 function _autoDistributeFaction(fk) {
   const n      = G.setup.soldiersLeft[fk]||0;
   const myTers = Object.values(G.territories).filter(t=>t.owner===fk);
+  if(!myTers.length)return false;
   // Distribute soldiers
   for(let s=0;s<n;s++){const p=myTers[s%myTers.length];if(p)p.soldiers++;}
   G.setup.soldiersLeft[fk] = 0;
@@ -669,6 +690,8 @@ function showSoldierCounter(fk, id, validTers, evt) {
   btnX.onclick=(e)=>{e.stopPropagation();popup.remove();};
   btnOk.onclick=(e)=>{
     e.stopPropagation(); popup.remove();
+    if(!G.setup._inSetup)return;
+    mechQty=Math.min(mechQty,G.factions[fk].mechs||0);
     if(mechQty>0){const t=G.territories[id];if(t){t.mechs+=mechQty;G.factions[fk].mechs=Math.max(0,(G.factions[fk].mechs||0)-mechQty);}}
     if(qty>0) doPlaceSoldier(fk,id,qty);
     else { updateMap(); refreshCards(); setupStep_Deploy_ForFaction(fk); }
@@ -684,6 +707,7 @@ function showSoldierCounter(fk, id, validTers, evt) {
 }
 
 function doPlaceSoldier(fk, id, qty) {
+  if(!G.setup._inSetup)return;
   if(!Number.isInteger(qty) || qty<=0 || !G.territories[id] || G.territories[id].owner!==fk) return;
   G.setup.claimCallback = null;
   const existing = document.getElementById('soldier-counter-popup');
@@ -811,6 +835,7 @@ function setupStep_Deploy() {
 }
 
 function setupStep_Deploy_Next() {
+  if(!G.setup._inSetup)return;
   // Find next faction that still has soldiers OR mechs OR nukes to place
   const order = G.setup.order;
   for(let i = 0; i < order.length; i++) {
@@ -829,6 +854,7 @@ function setupStep_Deploy_Next() {
 }
 
 function setupStep_Deploy_ForFaction(fk) {
+  if(!G.setup._inSetup)return;
   const fd      = FDATA[fk];
   const isMe    = isMyFaction(fk);
   const isHuman = isHumanFaction(fk);
@@ -848,6 +874,7 @@ function setupStep_Deploy_ForFaction(fk) {
     if(isHuman || !_amHost()) return;
     _autoDistributeFaction(fk);
     placeSetupNuclearsAutomatically(fk);
+    if(G.setup.nukesLeft[fk]>0){addLog('No hay territorios disponibles para las centrales pendientes. Revisa la preparación.','sys');return;}
     G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
     _syncSetup('DEPLOY', {fk});
     setTimeout(setupStep_Deploy_Next,600);
@@ -916,6 +943,7 @@ function placeSetupNuclearsAutomatically(fk) {
 }
 
 function activateNuclearMode_Setup(fk) {
+  if(!G.setup._inSetup)return;
   G.nuclearMode = true;
   Object.values(G.territories).forEach(t=>{
     const ring = document.getElementById('tr-'+t.id);
@@ -930,7 +958,7 @@ function activateNuclearMode_Setup(fk) {
   // Override territory click for setup nuclear placement
   G.setup.claimCallback = (id) => {
     const t = G.territories[id];
-    if(!t || t.owner !== fk || t.hasNuclear) return false;
+    if(!G.setup._inSetup||!(G.setup.nukesLeft[fk]>0)||!t || t.owner !== fk || t.hasNuclear) return false;
     t.hasNuclear = true;
     G.setup.nukesLeft[fk] = Math.max(0, (G.setup.nukesLeft[fk]||0) - 1);
     // Clear nuclear highlights
@@ -958,6 +986,7 @@ function activateNuclearMode_Setup(fk) {
 
 
 function endSetupPhase(){
+  if(!G.setup._inSetup)return;
   const pending=G.setup.order.some(fk =>
     (G.setup.soldiersLeft[fk]||0)>0 || (G.factions[fk].mechs||0)>0 || (G.setup.nukesLeft[fk]||0)>0);
   if(pending){ setupStep_Deploy_Next(); return; }
@@ -965,9 +994,9 @@ function endSetupPhase(){
   G.setup.claimCallback=null;
   G.setup._inSetup=false;
   G.phase='prep'; G.round=1;
+  G.awaitingStart=true;
   G.currentFaction=G.setup.order[0];
   document.getElementById('rnum').textContent=G.round;
-  startPhaseProgress();
   updateMap();
 
   const _isHost = typeof ONLINE === 'undefined' || !ONLINE.isOnline() || ONLINE.isHost();
@@ -1001,7 +1030,8 @@ function endSetupPhase(){
 
   // Host clicks COMENZAR → signals all guests then starts locally
   window._hostStartGame = function() {
-    document.getElementById('game-start-overlay').remove();
+    if(!G.awaitingStart)return;
+    document.getElementById('game-start-overlay')?.remove();
     if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && ONLINE.isHost()) {
       ONLINE.pushActionWithState('GAME_PHASE_START', {});
     }
@@ -1010,7 +1040,5 @@ function endSetupPhase(){
     refreshCards();
   };
 
-  startPhase('prep', G.setup.order[0]||G.pf);
-  refreshCards();
   refreshCards();
 }

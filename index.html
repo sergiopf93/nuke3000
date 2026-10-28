@@ -278,12 +278,12 @@
       <script>
       (function() {
         const factions = [
-          {f:'imp',name:'IMPERATORS',leader:'Augustus XXVII · Europa',ability:'Imperial Defense: +1 lowest def die',goal:'PAX AUGUSTA: 5 regions OR 30 territories'},
-          {f:'lib',name:'LIBERTOS',leader:'Vance Cruz · Global',ability:'Scorched Earth: +5 Pu +5 sol per Nuclear',goal:'TOTAL BLACKOUT: 6 regions sin Nuclear'},
-          {f:'clt',name:'CULT OF TAL-MAUT',leader:'Malak-Maut · África',ability:'Holy War: +1 lowest attack die',goal:'THE GREAT OFFERING: 10 territories + ejército'},
-          {f:'erb',name:'EREBUS SWARM',leader:'IA Colmena · Global',ability:'Hive Mind: refuerza cualquier territorio',goal:'EQUATION ZERO: Eliminar 2 ejércitos'},
-          {f:'prm',name:'PROMETHEUS',leader:'Skye Apex · Oceanía',ability:'Advanced Reactor: +1 Pu / 2 Nucleares',goal:'TERRAFORMATION: Nuclear en 7 regiones'},
-          {f:'shn',name:'SHININ',leader:'Shin Khang · Espacio',ability:'Mass Cloning: +1 soldado / 2 Nucleares',goal:'SUPREMACÍA GENÉTICA: Ejército mayor en 6 regiones'},
+          {f:'imp',name:'IMPERATORS',leader:'Augustus XXVII · Europa',ability:'Imperial Defense: +1 a todos los dados defensivos',goal:'PAX AUGUSTA: 5 regiones al inicio del turno'},
+          {f:'lib',name:'LIBERTOS',leader:'Vance Cruz · Global',ability:'Scorched Earth: misil + mech + 2 Pu por Nuclear propia destruida',goal:'TOTAL BLACKOUT: Nucleares ≤ jugadores al final del turno'},
+          {f:'clt',name:'CULT OF TAL-MAUT',leader:'Malak-Maut · África',ability:'Holy War: +1 a todos los dados ofensivos',goal:'THE GREAT OFFERING: elimina 2 jugadores'},
+          {f:'erb',name:'EREBUS SWARM',leader:'IA Colmena · Global',ability:'Hive Mind: refuerza cualquier territorio',goal:'EQUATION ZERO: Nuclear en 7 regiones'},
+          {f:'prm',name:'PROMETHEUS',leader:'Skye Apex · Oceanía',ability:'Advanced Reactor: +1 Pu por Nuclear',goal:'TERRAFORMATION: controla la mitad de las Nucleares'},
+          {f:'shn',name:'SHININ',leader:'Shin Khang · Espacio',ability:'Mass Cloning: +1 soldado por Nuclear',goal:'SUPREMACÍA GENÉTICA: ejército mayor en 7 regiones'},
         ];
         const grid = document.getElementById('faction-grid');
         factions.forEach(({f,name,leader,ability,goal}) => {
@@ -485,6 +485,7 @@
 <script src="js/data.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/map.js"></script>
+<script src="js/battle.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>

@@ -1,5 +1,5 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v1';
+const CACHE = 'nuke3000-v2-engine';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   '/nuke3000/js/data.js',
   '/nuke3000/js/setup.js',
   '/nuke3000/js/map.js',
+  '/nuke3000/js/battle.js',
   '/nuke3000/js/engine.js',
   '/nuke3000/js/combat.js',
   '/nuke3000/js/ui.js',
@@ -25,7 +26,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k.startsWith('nuke3000-') && k !== CACHE).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });

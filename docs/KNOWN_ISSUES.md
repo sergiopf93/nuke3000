@@ -1,25 +1,34 @@
-# Estado de incidencias
+# Incidencias — estabilización del motor
 
-El diagnóstico histórico completo permanece en PROJECT_ANALYSIS.md. Esta lista registra el desarrollo posterior, sin certificar el juego completo.
+Actualizado 28/10/2026. Diagnóstico original en PROJECT_ANALYSIS.md. **Estabilización local del Bloque A validada**, pendiente de aceptación del propietario. No confundir transporte simulado con Firebase real.
 
-| Incidencia | Estado y evidencia |
-|---|---|
-| H01/H02: cierre inexistente/recursivo | Corregido en la ruta activa; resultado idempotente con vencedor explícito. Regresión VM y cierre controlado en Chrome; falta victoria de partida completa |
-| H05: eliminación atribuida a pf y repetida | Corregido con atacante explícito e idempotencia. Regresión VM |
-| H06: turnos de eliminados | Rotación omite eliminados y cuenta cruce de ronda. Regresión VM |
-| H03: NEXT_STEP avanza dos veces | Handler aplica índice y ejecuta paso sin incrementarlo. Regresión de protocolo aislado |
-| H04: CPU en invitado | runCurrentStep espera en turnos remotos/CPU sin autoridad, incluidos ingresos. Regresión VM. Setup online pendiente |
-| BUG-09: estado final | Se registra/transmite resultado, se bloquean entradas principales y transiciones, se cierran dados y cancelan timers de ataques registrados. No hay auditoría completa de callbacks/temporizadores; sincronización real pendiente |
-| BUG-02/H10/H11 | Corregida transición manual al despliegue combinado, contador con solo mechs y barrera de finalización con reservas pendientes. Se conserva reserva nuclear sin ubicación. CPU de setup solo host y evento DEPLOY común. Regresiones VM de reservas 3–6J; falta E2E manual/mixto y multicliente real |
-| BUG-05/06/07/08 | Combate interactivo y automático divergen; posibles bucles/bloqueos, selección por AP frente a unidades y bajas poco claras. Pendientes |
-| BUG-03/04/H07/H08/H09/H13 | Confirmación/costes de mejoras, contador y última unidad de misil, supervivientes nucleares, habilidades y evaluación de victoria pendientes |
-| H12/H14 | Reconexión/replay/autoridad y nombres remotos inseguros pendientes; no probados contra Firebase |
-| H15–H17 | Copias históricas, PWA y rendimiento pendientes; standalone intacta |
-| BUG-01 | Móvil todavía no validado como jugable. Smoke horizontal solo verifica carga/cierre |
-| Rusia | Corregido según reglamento V3 p.6: 60 territorios, 7 Rusia, enlace transcontinental. Grafo y conservación de 59 originales probados; capturas antes/después. Selección real en Chrome; partida completa/online real pendientes |
+## Correcciones verificadas
 
-No se considera cerrado el bloque A. Los defectos restantes impiden certificar estabilidad.
+| Incidencia | Causa y corrección | Evidencia |
+|---|---|---|
+| BUG-05: bajas y degradaciones | Se perdía el tipo del dado y se eliminaba la unidad más barata. Battle resuelve dados tipados, desempata caras/tipo y aplica bajas simultáneas: scorpion→mech, mech→soldado; aircraft/soldado desaparecen | Matriz 4×4 por ambos bandos, orden de empate, bonificaciones, guarnición y combates completos |
+| BUG-05: diferencias CPU/humano | Resolutores distintos, +1 TAL-MAUT parcial y defensa limitada por ataque. Ambos usan Battle.round/Battle.fight; +1 en todos los dados correspondientes; hasta 4 defensivos independientemente del atacante | Motor determinista y combate real por clics con guarnición escogida |
+| BUG-06 | Resultado ahora enumera comparaciones tipadas, bajas/degradaciones, iniciales y restantes | Integración Chrome y trazas de partida |
+| BUG-07/08 | CPU–CPU dependía de observar modal y pulsar siguiente; callbacks de rondas podían seguir tras agotamiento. Resolución automática acotada por niveles de daño, final idempotente y callback único. Defensa humana local abre su decisión | Simulaciones completas 3–6J; E2E completo con reglas finales; regresiones de callback/guarnición |
+| BUG-09/H01/H02/H05/H06 | Cierre recursivo/inexistente, eliminación atribuida a pf, turnos muertos y victorias fuera de momento. Ganador explícito/idempotente, atacante correcto y rotación viva; IMP al inicio propio, resto al final propio; extinción inmediata | Seis facciones con casos positivos/negativos, hooks reales, eliminados y estado final bloqueado |
+| Setup/H10/H11 | Ruta antigua omite centrales, popup rechaza solo mechs, arranque duplicado y tiradas/callbacks obsoletos. Despliegue combinado, guard de reservas, una única salida tras COMENZAR, primer jugador correcto y orden circular; callbacks por generación | Reservas 3–6J, setup manual Chrome y setup completo E2E |
+| H07 nuclear | Se conservaban todos los soldados o se creaba un soldado; humano elegía otra base distinta a su dado. Ahora cada base usa su propia tirada, conserva aircraft o un terrestre existente de elección; CPU termina sin modal | Todos tipos de superviviente, bases seguras/explosivas y callback único |
+| BUG-03/H08 | Mejora inmediata con costes fijos; CPU mejoraba reservas de setup. Confirmación/cancelación con estado final, costes de RULES y tropas reales del tablero; CPU reutiliza applyUpgrade | Cancelar/confirmar Chrome y reglas de coste modificadas en motor |
+| BUG-04/H09 | Contador obsoleto y protección por AP. Misil protege una unidad de cualquier tipo, elige objetivo antes de tirar y refresca contador al consumir/interceptar; dado de intercepción configurable | Pruebas de impacto/intercepción y contador Chrome con modal abierto |
+| Refuerzos | Caminos automáticos ignoraban Erebus y fallback regional. Selección/automático/CPU comparten elegibilidad; no se omiten pendientes por SIGUIENTE | Motor y E2E con colocación automática real |
+| Movimiento | AP permitía vaciar origen; aircraft tenía BFS terrestre y no transporte. Cantidades enteras, guarnición por unidades, ruta propia y transporte a destino propio con capacidad V3 | Pruebas de alcance/capacidad y ocupación; una vez por unidad/fase, disponible de nuevo al reagrupar |
+| Reglas/caché | Editor alteraba partida activa y dados/costes inválidos podían bloquear CPU. Editor solo lectura tras empezar; validación básica. SW incluye battle.js y elimina solo cachés NUKE3000 antiguas | Test de editor/valores; sintaxis SW. Offline/PWA no validado |
 
-## Contraste con V3 recibido
+## Discrepancias resueltas por el propietario
 
-Ver RULES_SPEC.md con páginas. Nuevos fallos confirmados: bajas sin degradaciones ni identidad del dado, desempate por caras/tipo ausente, defensa limitada por dados atacantes, Aircraft sin vuelo/transporte y momentos de victoria incorrectos. Estos fallos mantienen abierto el bloque A. Contradicciones del resumen resueltas por el propietario: 4 Pu/base y D6≥5 contra Aircraft.
+Central 4 Pu y Aircraft D6≥5 prevalecen sobre el resumen p.12. Libertos recibe recompensa solo por destrucción de una nuclear propia, con mech inmediato. Shinin debe superar a todos en AP regional. Cada unidad mueve una vez por fase y puede mover de nuevo al reagrupar. Se mantiene construir misiles antes de disparar. Todas tienen pruebas; ninguna decisión reglamentaria detectada queda pendiente.
+
+## Online — límites de certificación
+
+Se añade protocolo de solicitud/respuesta para defensa e intercepción humana remota, sin selección automática ni snapshot enviado por el defensor. El actor activo resuelve; el host dirige CPU. IDs, remitente, turno, cancelación y duplicados protegen las decisiones. Siete tests aislados y dos páginas Chrome prueban ataque humano, ataque CPU de varias rondas e intercepción con recursos y estado coincidentes.
+
+No hay E2E Firebase ni Emulator en esta iteración. Reconexión, replay/deduplicación general de acciones, autoridad de servidor y nombres remotos inseguros (H12/H14) siguen pendientes del bloque E. El estado de paso y reglas ahora se transmite, pero restaurar una sala y recuperar una decisión en vuelo no está certificado. Las pruebas del protocolo no sustituyen esas comprobaciones ni certifican el juego online completo.
+
+## Fuera de esta iteración
+
+Mapa actual intacto (60/7 Rusia); fingerprint y grafo pasan. UX móvil, balance, estrategia CPU avanzada, presets/versionado/importación, dispositivos físicos y standalone pendientes. No se han hecho push, merge ni despliegue.

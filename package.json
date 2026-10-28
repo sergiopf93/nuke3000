@@ -4,7 +4,9 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "test:engine": "node --test tests/*.test.cjs",
-    "test:browser": "node tests/browser-smoke.cjs"
+    "test:browser": "node tests/browser-smoke.cjs && node tests/online-combat.browser.cjs",
+    "test:e2e": "node tests/full-game.e2e.cjs",
+    "test:all": "npm run test:engine && npm run test:browser && npm run test:e2e"
   },
   "engines": {
     "node": ">=22"
