@@ -9,8 +9,8 @@
 :is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) :is(button,input,select):focus-visible{outline:2px solid var(--nuke-gold);outline-offset:2px}
 :is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button:disabled{opacity:.4;cursor:not-allowed}
 :is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button:hover:not(:disabled){border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important}
-:is(#btn-roll,#upgrade-ok,#maint-confirm,#remote-defense-confirm,#remote-intercept){background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important;font-weight:600!important}
-:is([data-missile-target],#mobile-exit),#dmodal[data-battle-state="ongoing"] #btn-cancel{background:linear-gradient(135deg,#5a0a0a,#2a0505)!important;border-color:#8B1A1A!important;color:#ddd!important}
+button:is(#btn-roll,#upgrade-ok,#maint-confirm,#remote-defense-confirm,#remote-intercept){background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important;font-weight:600!important}
+button:is([data-missile-target],#mobile-exit),#dmodal[data-battle-state="ongoing"] #btn-cancel{background:linear-gradient(135deg,#5a0a0a,#2a0505)!important;border-color:#8B1A1A!important;color:#ddd!important}
 :is(#dmodal,#rules-modal,#maint-modal,#online-decision-modal) select{appearance:none;-webkit-appearance:none;background:#0a0a0d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23C8A800' stroke-width='2'/%3E%3C/svg%3E") right 12px center/12px 8px no-repeat!important;padding-right:34px!important;color-scheme:dark}
 :is(#dmodal,#rules-modal,#maint-modal,#online-decision-modal) option{background:#0a0a0d;color:#ccc}
 :is(#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal)>div{background:linear-gradient(135deg,#101015,#08080c)!important;border:1px solid var(--nuke-line)!important;border-top-color:var(--nuke-gold)!important;border-radius:2px;box-shadow:0 16px 60px #000b;padding:20px!important;font-size:16px;line-height:1.5}
@@ -108,3 +108,5 @@
  #step-actions .abtn>div>div:last-child{font:400 13px/1.3 var(--nuke-text)!important;color:#aaa!important}
 }
 @media (max-width:700px) and (orientation:landscape){#dbox .die-kind,#dbox .die-outcome{font-size:11px}}
+
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button{-webkit-tap-highlight-color:rgba(200,168,0,.12)}

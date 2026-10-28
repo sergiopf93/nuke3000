@@ -1,8 +1,8 @@
 // Touch UI integration with prepared scenarios; full-game.e2e.cjs covers a complete UI-only game.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),evidence=process.env.NUKE_UX_EVIDENCE||path.join(root,'docs/evidence/mobile-ux');fs.mkdirSync(evidence,{recursive:true});
-const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
+const root=path.resolve(__dirname,'..'),evidence=process.env.NUKE_UX_EVIDENCE||path.join(root,'docs/evidence/visual-consistency');fs.mkdirSync(evidence,{recursive:true});
+const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.ttf':'font/ttf'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{browser=await chromium.launch({channel:'chrome',headless:true});const origin=`http://127.0.0.1:${server.address().port}`;
 for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667,height:375},{width:932,height:430},{width:390,height:844}]){
@@ -11,11 +11,22 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  const page=await context.newPage(),errors=[];page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(e.message));const press=selector=>touch?page.locator(selector).tap():page.locator(selector).click();
  await page.goto(origin);await press('#faction-grid [data-f="imp"]');await page.locator('#pname').fill('QA UX');await press('#btnstart');
  await page.evaluate(()=>{hideSetupPanel();G.setup.claimCallback=null;G.setup._inSetup=false;G.awaitingStart=false;G.setup.order=['imp','lib','clt'];G.phase='combat';G.currentFaction='imp';G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};for(const t of Object.values(G.territories))Object.assign(t,{owner:'lib',soldiers:1,mechs:0,aircraft:0,scorpions:0,hasNuclear:false});Object.assign(G.territories['01_01'],{owner:'imp',soldiers:5,mechs:1});G.territories['01_03'].owner='imp';Math.random=()=>0.99;updateStepUI(STEPS.combat[0]);updateMap();resetV();});
+ await page.evaluate(()=>document.fonts.ready);
  const tag=process.env.NUKE_UX_BASELINE?'before':'after',size=`${viewport.width}x${viewport.height}`;
  await page.screenshot({path:path.join(evidence,`${tag}-${size}-map.png`)});
  await page.evaluate(()=>beginCombat('01_01','01_02','imp'));
+ await page.evaluate(()=>document.fonts.ready);
  await page.screenshot({path:path.join(evidence,`${tag}-${size}-combat.png`)});
  if(process.env.NUKE_UX_BASELINE){assert.deepEqual(errors,[]);await context.close();continue;}
+ if(!process.env.NUKE_UX_BASELINE){
+  const guard=await page.locator('#combat-guard').evaluate(el=>({background:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color,scheme:getComputedStyle(el).colorScheme}));
+  assert.equal(guard.background,'rgb(10, 10, 13)');assert.equal(guard.color,'rgb(204, 204, 204)');assert.equal(guard.scheme,'dark');
+  assert.equal(await page.evaluate(()=>document.fonts.check('700 14px "Nuke Display"')),true);
+  if(viewport.width>viewport.height){
+   const layout=await page.locator('#dbox').evaluate(box=>{const content=document.getElementById('combat-content'),buttons=[...box.querySelectorAll('.dbtns button')].filter(el=>getComputedStyle(el).display!=='none');return {scroll:content.scrollHeight-content.clientHeight,visible:buttons.every(el=>{const r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth})};});
+   assert.equal(layout.visible,true,'Acciones completas dentro del viewport');if(viewport.width===844)assert.ok(layout.scroll<=2,'Sin scroll principal a 844×390: '+layout.scroll);
+  }
+ }
  // Prepared fixtures exercise real controls with tap(), never mouse clicks on mobile.
  await press('#btn-cancel');
  if(touch){
@@ -45,13 +56,24 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers),3);
  assert.equal(await page.locator('#move-popup').count(),0);
  await page.evaluate(()=>{clearInteractionModes();G_step.idx=2;G.factions.imp.plutonium=10;G.territories['01_01'].soldiers=6;updateStepUI(STEPS.prep[2]);updateMap();});
- await press('#tc-01_01');await press('#step-actions button:first-child');if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-upgrade.png`)});await press('#upgrade-cancel');
+ await press('#tc-01_01');await press('#step-actions button:first-child');
+ const actions=await page.locator('#upgrade-confirm').evaluate(el=>{const primary=getComputedStyle(el.querySelector('#upgrade-ok')),secondary=getComputedStyle(el.querySelector('#upgrade-cancel'));return {primaryBorder:primary.borderColor,primaryBackground:primary.backgroundImage,secondaryBackground:secondary.backgroundImage};});
+ assert.equal(actions.primaryBorder,'rgb(200, 168, 0)');assert.notEqual(actions.primaryBackground,actions.secondaryBackground,'Confirmar se distingue visualmente de Cancelar');
+ if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-upgrade.png`)});await press('#upgrade-cancel');
  assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers),6);
  await press('#step-actions button:first-child');await press('#upgrade-ok');assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers),3);
  await page.evaluate(()=>{clearInteractionModes();G_step.idx=4;Object.assign(G.territories['01_02'],{owner:'lib',soldiers:2,mechs:0,aircraft:1});G.factions.lib.missiles=0;G.factions.imp.missiles=2;updateStepUI(STEPS.prep[4]);updateMap();});
  await press('#step-actions button:has-text("Construir")');if(touch)assert.match(await page.locator('#mobile-resources').innerText(),/3\/5 misiles/);
  await press('#step-actions button:has-text("Lanzar")');await press('#tc-01_02');await press('[data-missile-target="aircraft"]');
  assert.equal(await page.evaluate(()=>G.territories['01_02'].aircraft),0);if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-missile.png`)});await press('#missile-close');
+ // Construction/reforcement controls share the dark visual system, using engine actions.
+ await page.evaluate(()=>{clearInteractionModes();G_step.idx=5;G.factions.imp.plutonium=10;G.territories['01_01'].hasNuclear=false;updateStepUI(STEPS.prep[5]);updateMap();});
+ if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-nuclear.png`)});
+ await press('#step-actions button:has-text("CONSTRUIR NUCLEAR")');await press('#tc-01_01');
+ assert.equal(await page.evaluate(()=>G.territories['01_01'].hasNuclear),true);assert.equal(await page.evaluate(()=>G.factions.imp.plutonium),6);
+ await page.evaluate(()=>{clearInteractionModes();G_step.idx=1;G.factions.imp.pendingSoldiers=2;updateStepUI(STEPS.prep[1]);showReinforcementUI(2);});
+ await press('#tc-01_01');if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-reinforcements.png`)});
+ await press('#rc-plus');await press('#rc-ok');assert.equal(await page.evaluate(()=>G.factions.imp.pendingSoldiers),0);
  // Human defense: the choice remains explicit, even when the CPU drives its turn.
  await page.evaluate(()=>{clearInteractionModes();G.phase='combat';G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:false};Object.assign(G.territories['01_02'],{owner:'clt',soldiers:3,mechs:0,aircraft:0});Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:0});openDiceCpu('01_02','01_01','clt',()=>{});});
  assert.equal(await page.evaluate(()=>G_combat.history.length),0);
@@ -61,9 +83,18 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  if(touch){await press('#tc-01_02');assert.match(await page.locator('#territory-name').innerText(),/TAL-MAUT/);assert.equal(await page.locator('#dmodal.open').count(),0);}
  await page.evaluate(()=>{G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:0,aircraft:0,scorpions:1});Object.assign(G.territories['01_02'],{owner:'lib',soldiers:0,mechs:0,aircraft:0,scorpions:2});beginCombat('01_01','01_02','imp');});
  if(!touch)await press('#unit-sel-att > button');await press('#btn-roll');
- assert.equal(await page.evaluate(()=>G_combat.done),false);await press('#btn-roll');
- if(touch){await press('#combat-unit-choice > summary');await page.waitForFunction(()=>document.getElementById('btn-roll').disabled);await press('#unit-sel-att > button');assert.equal(await page.locator('#btn-roll').isEnabled(),true);}
+ assert.equal(await page.evaluate(()=>G_combat.done),false);
+ assert.equal(await page.locator('#dmodal .die.lost').count(),await page.evaluate(()=>G.lastBattle.losses.attacker.length+G.lastBattle.losses.defender.length));
+ assert.equal(await page.locator('#dmodal .die[data-pair="1"]').count(),2);
+ await page.waitForTimeout(550);await page.screenshot({path:path.join(evidence,`${tag}-${size}-roll.png`)});await press('#btn-roll');
+ if(touch){await press('#combat-unit-choice > summary');await page.screenshot({path:path.join(evidence,`${tag}-${size}-attack-selection.png`)});await page.waitForFunction(()=>document.getElementById('btn-roll').disabled);await press('#unit-sel-att > button');assert.equal(await page.locator('#btn-roll').isEnabled(),true);}
  await press('#btn-cancel');assert.equal(await page.evaluate(()=>G_combat),null);
+ // Mixed dice exercise ordering, loss badges and both downgrade labels without recalculating rules in the UI.
+ await page.evaluate(()=>{G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:2,aircraft:1,scorpions:2});Object.assign(G.territories['01_02'],{owner:'lib',soldiers:1,mechs:1,aircraft:1,scorpions:1});beginCombat('01_01','01_02','imp');});
+ if(!touch)await press('#unit-sel-att > button');await press('#btn-roll');
+ assert.equal(await page.locator('#dmodal .die.lost').count(),await page.evaluate(()=>G.lastBattle.losses.attacker.length+G.lastBattle.losses.defender.length));
+ if(viewport.width===844){assert.ok(await page.locator('#combat-content').evaluate(el=>el.scrollHeight-el.clientHeight)<=2);await page.waitForTimeout(550);await page.screenshot({path:path.join(evidence,`${tag}-${size}-mixed-dice.png`)});}
+ await press('#btn-cancel');
  if(touch&&viewport.width>viewport.height){
   await page.evaluate(()=>{clearInteractionModes();G_step={currentFk:'imp',phase:'prep',idx:3,isMyTurn:true};updateMap();});
   const session=await context.newCDPSession(page),box=await page.locator('#map-wrap').boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;
