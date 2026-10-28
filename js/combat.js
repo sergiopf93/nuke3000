@@ -8,6 +8,7 @@ function showRemoteDecision(packet,reply){
   if(packet.kind==='intercept'){
     const target=G.territories[data.targetId];if(target?.owner!==G.pf)return;
     box.innerHTML='<h3>MISIL ENTRANTE</h3><p>'+terName(data.targetId)+'</p><button id="remote-intercept">INTERCEPTAR (1 MISIL)</button> <button id="remote-pass">NO INTERCEPTAR</button>';
+    if(RULES.version==='v4'){const info=document.createElement('p');info.textContent='Objetivo: '+(data.target==='mech'?'1 meca':'hasta 3 soldados')+' · Intercepciones previas: '+((data.interceptions||[]).join(', ')||'ninguna');box.prepend(info);}
     box.querySelector('#remote-intercept').disabled=!(G.factions[G.pf].missiles>0);
     for(const [id,value]of [['remote-intercept',true],['remote-pass',false]])box.querySelector('#'+id).onclick=async()=>{
       const ok=await reply({intercept:value});if(!ok)addLog('No se envió la decisión. Vuelve a intentarlo.','sys');
@@ -177,7 +178,7 @@ function scheduleCombat(ctx,action,delay){
 function combatView(ctx,result=null){
   return {srcId:ctx.srcId,targetId:ctx.targetId,attFk:ctx.attFk,defFk:ctx.defFk,
     round:result?ctx.history.length:ctx.round,initialAtt:ctx.initialAtt,initialDef:ctx.initialDef,
-    attSelected:ctx.attSelected,defSelected:ctx.defSelected,done:ctx.done,result};
+    attSelected:ctx.attSelected,defSelected:ctx.defSelected,before:ctx.before,done:ctx.done,result};
 }
 function publishCombatView(ctx,result=null){
   if(G.gameOver||typeof ONLINE==='undefined'||!ONLINE.isOnline()||ctx.remote)return;
@@ -193,10 +194,12 @@ function showCombatView(view){
   document.getElementById('dlba').textContent=FDATA[ctx.attFk].name;
   document.getElementById('dlbd').textContent=FDATA[ctx.defFk].name;
   document.getElementById('dmodal').classList.add('open');
+  if(typeof BattleScene!=='undefined'&&RULES.version==='v4')BattleScene.open(ctx,view.before);
   if(view.result){
     // JSON transports copies; restore references used by the existing paired-dice renderer.
     for(const pair of view.result.pairs)for(const side of ['att','def'])pair[side]=view.result[side+'Rolls'].find(d=>d.type===pair[side].type&&d.index===pair[side].index);
     displayBattleResult(ctx,view.result);
+    if(typeof BattleScene!=='undefined'&&RULES.version==='v4')BattleScene.result(ctx,view.result);
   }else renderDicePools();
   document.getElementById('btn-roll').style.display='none';
   const close=document.getElementById('btn-cancel');close.style.display=ctx.done?'inline-block':'none';close.textContent='CERRAR';close.onclick=closeDice;
@@ -350,6 +353,7 @@ function retreatCombat(){
   completeCombat(ctx,'retreated');publishCombatView(ctx);closeDice();
 }
 function closeDice(){
+  if(typeof BattleScene!=='undefined')BattleScene.close();
   const ctx=G_combat;
   if(ctx&&!ctx.done){if(ctx.isPlayerAtt)retreatCombat();return;}
   document.getElementById('dmodal').classList.remove('open');

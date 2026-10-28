@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),touch=!!process.env.NUKE_TOUCH_ONLINE;
 const server=http.createServer((req,res)=>{
- const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));
+ const pathname=new URL(req.url,'http://localhost').pathname;const file=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
  fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);});
 });
@@ -22,7 +22,7 @@ const server=http.createServer((req,res)=>{
    });
    const page=pages[uid]=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',err=>errors.push(err.message));
    await page.exposeFunction('publishTestAction',action=>{queue.push(action);});
-   await page.goto(origin);await page.locator(`#faction-grid [data-f="${faction}"]`)[touch?'tap':'click']();await page.locator('#pname').fill(uid);await page.locator('#btnstart')[touch?'tap':'click']();
+   await page.goto(origin+'?rules=v3');await page.locator(`#faction-grid [data-f="${faction}"]`)[touch?'tap':'click']();await page.locator('#pname').fill(uid);await page.locator('#btnstart')[touch?'tap':'click']();
    await page.evaluate(({uid,faction})=>{
     hideSetupPanel();clearInteractionModes();G.setup={order:['clt','lib','imp'],_inSetup:false};G.awaitingStart=false;G.gameOver=false;G.result=null;G.round=1;G.phase='combat';G.currentFaction='clt';
     G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:faction==='clt'};

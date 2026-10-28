@@ -33,7 +33,7 @@ const server = http.createServer((req, res) => {
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', err => errors.push(err.message));
-      await page.goto(origin);
+      await page.goto(origin+'?rules=v3');
       await page.locator('#faction-grid [data-f="imp"]').click();
       await page.locator('#pname').fill('QA');
       await page.locator('#btnstart').click();

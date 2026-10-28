@@ -14,11 +14,11 @@ try{browser=await chromium.launch({channel:'chrome',headless:true});const contex
  await page.goto(origin+prefix);console.log('loaded old page');await page.waitForFunction(async()=>navigator.serviceWorker.controller&&(await caches.keys()).includes('nuke3000-v4-visual'));
  assert.equal(await page.locator('meta[name="nuke-release"]').count(),0);
  console.log('old cache ready');old=false;await page.evaluate(()=>navigator.serviceWorker.getRegistration().then(r=>r.update()));
- console.log('update requested');await page.waitForFunction(()=>document.querySelector('meta[name="nuke-release"]')?.content==='combat-missiles-v5');
- await page.waitForFunction(async()=>{const keys=await caches.keys();return keys.includes('nuke3000-v5-combat-missiles')&&!keys.includes('nuke3000-v4-visual');});
- const assets=['index.html','js/battle.js','js/combat.js','js/engine.js','js/online.js','js/mobile-ux.js','css/visual-system.css'];
+ console.log('update requested');await page.waitForFunction(()=>document.querySelector('meta[name="nuke-release"]')?.content==='rules-v4-v6');
+ await page.waitForFunction(async()=>{const keys=await caches.keys();return keys.includes('nuke3000-v6-rules-v4')&&!keys.includes('nuke3000-v4-visual');});
+ const assets=['index.html','js/battle.js','js/combat.js','js/engine.js','js/online.js','js/mobile-ux.js','css/visual-system.css','js/rules-v4.js','js/v4-game.js','js/battle-scene.js','css/battle-scene.css'];
  for(const name of assets){const bytes=await page.evaluate(async name=>[...new Uint8Array(await(await caches.match('/nuke3000/'+name)).arrayBuffer())],name);assert.equal(crypto.createHash('sha256').update(Buffer.from(bytes)).digest('hex'),crypto.createHash('sha256').update(fs.readFileSync(path.join(root,name))).digest('hex'),name);}
- await context.setOffline(true);await page.reload();assert.equal(await page.locator('meta[name="nuke-release"]').getAttribute('content'),'combat-missiles-v5');
+ await context.setOffline(true);await page.reload();assert.equal(await page.locator('meta[name="nuke-release"]').getAttribute('content'),'rules-v4-v6');
  await page.locator('#faction-grid [data-f="imp"]').click();await page.locator('#pname').fill('QA offline');await page.locator('#btnstart').click();assert.equal(await page.locator('[id^="tg-"]').count(),60);
- console.log('PASS SW real: actualización automática desde '+previous+', recarga sin intervención, caché anterior eliminada, SHA256 de 7 recursos coincide y arranque offline con 60 territorios');
+ console.log('PASS SW real: actualización automática desde '+previous+', recarga sin intervención, caché anterior eliminada, SHA256 de 11 recursos coincide y arranque offline con 60 territorios');
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

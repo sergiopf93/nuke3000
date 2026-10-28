@@ -427,7 +427,8 @@ function setupStep_Claim_Next() {
     'bar');
 
   // Highlight unclaimed
-  unclaimed.forEach(t => {
+  const highlighted=typeof V4Game!=='undefined'&&V4Game.enabled()?V4Game.claimCandidates(fk):unclaimed;
+  highlighted.forEach(t => {
     const ring = document.getElementById('tr-'+t.id);
     if(ring){ ring.setAttribute('stroke','#C8A800'); ring.setAttribute('stroke-width','2'); }
   });
@@ -464,7 +465,8 @@ function setupStep_Claim_Next() {
     // CPU — host acts, publishes sync
     G.setup.claimCallback = null;
     if (_amHost()) {
-      const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
+      const eligible=typeof V4Game!=='undefined'&&V4Game.enabled()?V4Game.claimCandidates(fk):unclaimed;
+      const pick = eligible[Math.floor(Math.random()*eligible.length)];
       setTimeout(() => {
         doClaimTerritory(fk, pick.id);
         // Sync published inside doClaimTerritory for host
@@ -476,9 +478,10 @@ function setupStep_Claim_Next() {
 
 function doClaimTerritory(fk, id) {
   if(!G.setup._inSetup||G.setup._stepIdx!==1||fk!==G.setup.order[G.setup.orderIdx%G.setup.order.length])return;
-  G.setup.claimCallback = null;
   const t = G.territories[id];
   if(!t || t.owner) return;
+  if(typeof V4Game!=='undefined'&&V4Game.enabled()&&!V4Game.claimCandidates(fk).some(x=>x.id===id)){addLog('Las primeras tres reclamaciones deben ser en la región de origen; las regiones de otros jugadores conservan sus reservas.','sys');return;}
+  G.setup.claimCallback = null;
   t.owner = fk; t.soldiers = 1;
   G.factions[fk].soldiers  = Math.max(0, G.factions[fk].soldiers-1);
   G.setup.soldiersLeft[fk] = Math.max(0, (G.setup.soldiersLeft[fk]||0)-1);
@@ -522,7 +525,8 @@ function _doAutoClaimOne() {
   }
   const unclaimed = Object.values(G.territories).filter(t=>!t.owner);
   if(!unclaimed.length) return;
-  const pick = unclaimed[Math.floor(Math.random()*unclaimed.length)];
+  const eligible=typeof V4Game!=='undefined'&&V4Game.enabled()?V4Game.claimCandidates(currentFk):unclaimed;
+  const pick = eligible[Math.floor(Math.random()*eligible.length)];
   doClaimTerritory(G.pf, pick.id);
   // Sync is handled inside doClaimTerritory (if _amHost or fk===G.pf)
 }

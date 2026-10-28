@@ -1,3 +1,25 @@
+# Especificación vigente V4
+
+Referencia: NUKE-REGLAMENTO-V4_20261028_173655_0000.pdf, páginas6–13, contrastado con el documento original. Petición del propietario prevalece en mantenimiento y discrepancias expresamente resueltas. El presetV3 sigue accesible por `?rules=v3`; no usar el historial inferior para nuevas partidas V4.
+
+- Setup3–6: soldados60/45/36/30, mecas4/3/2/2, bases4/3/2/2, misiles2, Pu0. Libertos: Pu5, +5 soldados, mismas mecas ordinarias, sin bases. Los primeros3 territorios corresponden a la región de origen; se reservan para impedir que reclamaciones ajenas la agoten. Orígenes según lore: Europa/AméricaSur/África/Rusia/Oceanía/Asia. Las mecas de la tabla se despliegan junto al resto del material. La selección habitual del lobby/sala representa acuerdo de facciones; no se añade un asistente de disputa de selección por D6.
+- Recursos:3Pu/base; Prometeo4. Construcción4Pu, territorio propio sin base. Se construye antes del refuerzo; una base nueva recibe sus soldados, sin ingreso retroactivo.
+- Refuerzo: floor(propios/2) por región, fondo restringido a esa región. Control completo añade1 en cada territorio con arista real hacia otra región. Base añade3 en su territorio; Shinin5. Fijos automáticos, fondos manuales/CPU bajo las mismas restricciones.
+- Rearme:3soldados+1Pu→meca;2mecas+1Pu→escorpión;1soldado+1Pu→aeronave;1Pu→misil. Máximos5 aviones/misiles. Los costes de avión y escorpión son PROVISIONALES por discrepancia texto/chuleta, configurables en prep.upgrades.
+- Movimiento:2 saltos terrestres/Érebo4, origen/tránsito propios, destino propio o enemigo. Se conserva una unidad en origen inmediatamente y se impide remover las recién llegadas en esa fase. El destino enemigo conserva dueño y defensa, con atacantes agrupados por facción. Aviones: propios ilimitados/enemigos contiguos a propios. Cada avión transporta1meca o3soldados; no escorpiones en transporte aéreo.
+- Combate: todos los destinos comprometidos deben resolverse, sin retirada. PrioridadD20>D12>D6,5 dados ataque/4defensa; D12 mínimo3/D20 mínimo5, después +1 atacanteCulto/+1 defensorImperators. Orden resultado descendente, igualdad menor caras primero y meca antes de avión. Valor mayor gana, empate pierde atacante. Baja sobre dado concreto: soldado/avión elimina; meca→soldado; escorpión→meca. Invasores sin guarnición adicional. Conquista solo al vaciar defensa; base conservable/destruible.
+- Misil: objetivo previo hasta3soldados o1meca, lanzamiento consume1; intercepciones cada una1misil y D6>=4; repetición humana libre mientras stock, CPU hasta límite configurable (por defecto5). Sin D6 de impacto. Base alcanzada: D12=1 accidente (texto principal prevalece sobre chuleta abreviada). Ledger/revisión evita dobles gastos y daños en reintento.
+- Recompensas: evento de conquista con dueño anterior/turno/ID;1Pu por base al cierre, paga enemigo hasta saldo disponible y resto reserva. Se conserva recompensa si la base se destruye después: decisión provisional. Un evento se paga una vez.
+- Mantenimiento: muestra bases, botón único, dados independientes de ellas, cuenta unos y elige secuencialmente bases propias. Cadenas recalculan bases disponibles y reducen accidentes pendientes al máximo todavía aplicable. CPU elige menor número de unidades propias y después ID. No elige superviviente: se aplica unidad de menor dado obligatoria.
+- Accidente: elimina base y terrestres sin degradaciones en centro/adyacentes; conserva aviones, si no hay ninguno conserva una unidad del dado menor entre tropas presentes. Nunca crea superviviente en vacío. Cadena BFS cada base/territorio una sola vez, con snapshots y pasos; conexión Rusia–Norteamérica incluida. Si cohabitan ejércitos se consideran todas las unidades presentes para el único superviviente (criterio provisional). Libertos recibe5Pu+1meca por centro causado, incluyendo cadena atribuida al iniciador, después de todos los daños. Naturales sin recompensa. Meca en territorio no propio queda como presencia Libertos, sin conquista artificial.
+- Objetivos al cierre: Imperators/Shinin5regiones; Libertos bases totales<=jugadores iniciales; Culto última unidad de1enemigo atribuida; Érebo/Prometeo ceil(mitad bases), con total>0. Se mantiene victoria del último superviviente al cierre. Duplicaciones del PDF se conservan; no se inventan objetivos alternativos.
+
+Ambigüedades: p11 dice “mejor número pierde”, tratado como errata frente al sistema/empates; p13 omite D12 del impacto nuclear; costes rearmado discrepantes; despliegue inicial omite mecas pese a tabla; recompensa tras destruir base; atribución Libertos en cadena/cohabitación. Ver comparación detallada.
+
+---
+
+## Histórico anterior a la migración V4
+
 # Especificación de reglas — referencia V3
 
 ## Fuentes y autoridad

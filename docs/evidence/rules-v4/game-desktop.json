@@ -1,0 +1,95 @@
+{
+  "seed": 123,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "touch": false,
+  "player": "imp",
+  "players": 4,
+  "start": {
+    "erb": {
+      "territories": 15,
+      "soldiers": 45,
+      "nukes": 3
+    },
+    "imp": {
+      "territories": 15,
+      "soldiers": 45,
+      "nukes": 3
+    },
+    "lib": {
+      "territories": 15,
+      "soldiers": 50,
+      "nukes": 0
+    },
+    "clt": {
+      "territories": 15,
+      "soldiers": 45,
+      "nukes": 3
+    }
+  },
+  "final": {
+    "result": {
+      "winner": "lib",
+      "goal": "TOTAL BLACKOUT",
+      "round": 4
+    },
+    "phase": "finished",
+    "gameOver": true,
+    "step": 2,
+    "round": 4,
+    "turn": "lib"
+  },
+  "actions": [
+    "#setup-actions button",
+    "#roll-card-imp",
+    "#setup-actions button",
+    "#step-actions button",
+    "#step-actions button",
+    "#step-actions button",
+    "#game-start-overlay button",
+    "COLOCAR REFUERZOS ▶",
+    "SIGUIENTE (sin construir)",
+    "AUTO-DISTRIBUIR",
+    "SIGUIENTE (sin mejoras)",
+    "SIGUIENTE (sin mover)",
+    "SIGUIENTE ▶",
+    "SIGUIENTE",
+    "FINALIZAR COMBATES",
+    "🎲 LANZAR DADOS DE MANTENIMIENTO",
+    "#maint-modal button",
+    "#v4-intercept button",
+    "#v4-intercept button",
+    "COLOCAR REFUERZOS ▶",
+    "SIGUIENTE (sin construir)",
+    "AUTO-DISTRIBUIR",
+    "SIGUIENTE (sin mejoras)",
+    "SIGUIENTE (sin mover)",
+    "SIGUIENTE ▶",
+    "SIGUIENTE",
+    "FINALIZAR COMBATES",
+    "🎲 LANZAR DADOS DE MANTENIMIENTO",
+    "#maint-modal button",
+    "COLOCAR REFUERZOS ▶",
+    "SIGUIENTE (sin construir)",
+    "AUTO-DISTRIBUIR",
+    "SIGUIENTE (sin mejoras)",
+    "SIGUIENTE (sin mover)",
+    "SIGUIENTE ▶",
+    "SIGUIENTE",
+    "FINALIZAR COMBATES",
+    "🎲 LANZAR DADOS DE MANTENIMIENTO",
+    "#maint-modal button",
+    "COLOCAR REFUERZOS ▶",
+    "SIGUIENTE (sin construir)",
+    "AUTO-DISTRIBUIR",
+    "SIGUIENTE (sin mejoras)",
+    "SIGUIENTE (sin mover)",
+    "SIGUIENTE ▶",
+    "SIGUIENTE",
+    "FINALIZAR COMBATES",
+    "SIGUIENTE (sin Nucleares)"
+  ],
+  "errors": []
+}

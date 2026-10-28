@@ -1,3 +1,21 @@
+# Estado V4 y límites vigentes
+
+Las reglas y decisiones V3 inferiores son históricas y no describen V4.
+
+- Pendientes de validación reglamentaria: costesPu avión/escorpión, errata “mejor número”, duplicación Érebo/Prometeo e Imperators/Shinin, recompensa tras destruir base, mecas iniciales, cohabitación y atribución Libertos en cadena. Criterios funcionales en RULES_SPEC, sin ocultar provisionalidad.
+- Selección ordinaria por acuerdo en lobby/sala. No hay nuevo asistente de disputa de selección de facciones mediante D6. Se conserva el sorteo D6 de inicio de reclamación y orden horario.
+- La escena es2.5D con miniaturas vectoriales esquemáticas, no modelos3D ni recortes detallados de cada ejército. Dirección artística pendiente del propietario; sonido no implementado.
+- Safari/iPhone físico no probado. Chrome táctil emulado y reduced-motion probados; no equivalen a mediciones de FPS/memoria en iPhone real.
+- Online validado con dos clientes reales y transporte Firestore sustituido, incluyendo intercepciones y transiciones. Firebase real, reglas de seguridad de servidor y reconexión completa no certificados por estas pruebas.
+- Viejas partidas no migran silenciosamente a V4: se conserva presetV3 y fases propias. Debe actualizarse la PWA antes de mezclar clientes en sala.
+- Prometeo o Érebo pueden comenzar con la mitad de bases (p.ej3J con Libertos sin bases) y ganar su primer cierre. Es consecuencia del objetivo duplicado del PDF, no una condición alternativa ni un fallo disimulado.
+
+Sin modificación de tablero, geometría, paleta ni assets existentes.
+
+---
+
+## Histórico anterior a la migración V4
+
 # Estado actual — combate y misiles, 28/10/2026
 
 BUG 1 corregido: no hay selección ni confirmación defensiva humana. BUG 2 corregido: impacto siempre posterior a intercepción; objetivo posterior a D6, soldado siempre elegible. BUG 3 corregido: sin resolutor silencioso CPU–CPU, presentación por rondas y callback único. El cierre de resultados y los temporizadores obsoletos no repiten bajas. Se diferencia ejército defensor derrotado de ocupación posterior.

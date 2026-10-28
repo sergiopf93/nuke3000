@@ -1,0 +1,44 @@
+// Browser integrations use explicit fixtures; the separate V4 E2E never mutates game state.
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..'),evidence=process.env.NUKE_V4_EVIDENCE||'/tmp/nuke-v4-integration';fs.mkdirSync(evidence,{recursive:true});
+const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost'),file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':url.pathname));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.ttf':'font/ttf'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
+try{browser=await chromium.launch({channel:'chrome',headless:true});const origin='http://127.0.0.1:'+server.address().port;
+for(const viewport of [{width:1440,height:900},{width:844,height:390}]){
+ const touch=viewport.width===844,context=await browser.newContext({viewport,hasTouch:touch,isMobile:touch,serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
+ await context.route('**/*',r=>{const url=r.request().url();if(!url.startsWith(origin)&&!url.startsWith('data:'))return r.abort();if(url.endsWith('/js/firebase-config.js'))return r.fulfill({contentType:'text/javascript',body:''});return r.continue();});
+ await page.goto(origin+'?rules=v4');await page.locator('#faction-grid [data-f="imp"]').click();await page.locator('#pname').fill('QA V4');await page.locator('#btnstart').click();
+ assert.equal(await page.evaluate(()=>RULES.version),'v4');
+ await page.evaluate(()=>{hideSetupPanel();G.setup={order:['imp','lib','clt'],_inSetup:false};G.awaitingStart=false;G.gameOver=false;G.result=null;G.round=1;G.initialPlayerCount=3;G.movedUnits={};G.baseCaptures=[];G.eliminations=[];for(const t of Object.values(G.territories))Object.assign(t,{owner:'lib',soldiers:1,mechs:0,aircraft:0,scorpions:0,hasNuclear:false,attackers:{}});G.territories['03_01'].owner='clt';for(const f of Object.values(G.factions)){f.alive=true;f.missiles=0;}G.phase='prep';G_step={currentFk:'imp',phase:'prep',idx:4,isMyTurn:true};Object.assign(G.territories['01_01'],{owner:'imp',soldiers:1,scorpions:1});Math.random=()=>.99;});
+ assert.equal(await page.evaluate(()=>transferUnits('01_01','01_02',{scorpions:1})),true);
+ assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,def:G.territories['01_02'].soldiers,committed:G.territories['01_02'].attackers.imp.scorpions,guard:G.territories['01_01'].soldiers})),{owner:'lib',def:1,committed:1,guard:1});
+ await page.evaluate(()=>{G.phase='combat';G_step.phase='combat';G_step.idx=1;renderStepActions(STEPS.combat[1]);});
+ const prior=await page.evaluate(()=>currentStepKey());await page.evaluate(()=>advanceStep());assert.equal(await page.evaluate(()=>currentStepKey()),prior,'No puede omitir combate obligatorio');
+ await page.locator('#step-actions button').filter({hasText:/COMBATIR/}).click();
+ await page.waitForFunction(()=>G_combat?.history.length>0);assert.equal(await page.locator('#btn-cancel').isVisible(),false,'Sin retirada');
+ await page.waitForFunction(()=>G_combat===null);assert.equal(await page.evaluate(()=>G.territories['01_02'].owner),'imp');assert.equal(await page.evaluate(()=>RulesV4.pendingAttacks(V4Game.state(),'imp').length),0);
+ await page.screenshot({path:path.join(evidence,viewport.width+'-conquest.png')});
+ // The chosen category precedes launch. Two failures spend two defensive missiles; no impact die.
+ await page.evaluate(()=>{G.phase='combat';G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};G.sel='01_03';Object.assign(G.territories[G.sel],{owner:'lib',soldiers:5,mechs:1,hasNuclear:false});G.factions.imp.missiles=2;G.factions.lib.missiles=2;window.randomCalls=0;Math.random=()=>{randomCalls++;return .1;};doMissileFire();});
+ assert.equal(await page.evaluate(()=>G.factions.imp.missiles),2);await page.locator('#missile-modal button').filter({hasText:'HASTA 3 SOLDADOS'}).click();await page.waitForFunction(()=>G.waitingMissile===false);
+ assert.deepEqual(await page.evaluate(()=>({interceptions:G.lastMissile.interceptions,blocked:G.lastMissile.blocked,destroyed:G.lastMissile.destroyed,sol:G.territories[G.sel].soldiers,mech:G.territories[G.sel].mechs,att:G.factions.imp.missiles,def:G.factions.lib.missiles})),{interceptions:[1,1],blocked:false,destroyed:3,sol:2,mech:1,att:1,def:0});
+ await page.locator('#missile-modal button').click();
+ await page.evaluate(()=>{G.factions.lib.missiles=3;Math.random=()=>.99;doMissileFire();});await page.locator('#missile-modal button').filter({hasText:'1 MECA'}).click();await page.waitForFunction(()=>G.waitingMissile===false);
+ assert.deepEqual(await page.evaluate(()=>({blocked:G.lastMissile.blocked,rolls:G.lastMissile.interceptions,mech:G.territories[G.sel].mechs,def:G.factions.lib.missiles})),{blocked:true,rolls:[6],mech:1,def:2});await page.locator('#missile-modal button').click();
+ // Nuclear rolls are displayed together; the player chooses any own base afterwards.
+ await page.evaluate(()=>{G.phase='end';G_step={currentFk:'imp',phase:'end',idx:1,isMyTurn:true};for(const t of Object.values(G.territories))t.hasNuclear=false;for(const id of ['01_01','01_02','03_01'])Object.assign(G.territories[id],{owner:'imp',hasNuclear:true,soldiers:5});window.maintenanceCalls=0;Math.random=()=>maintenanceCalls++===0?0:.99;window.finishedMaintenance=0;runMaintenanceRollsFor('imp',()=>finishedMaintenance++);});
+ assert.match(await page.locator('.v4-maint-dice').innerText(),/D12: 1.*D12: 12.*D12: 12/);assert.equal(await page.evaluate(()=>Object.values(G.territories).filter(t=>t.hasNuclear).length),3,'Ninguna base explota antes de elegir');
+ const target=await page.evaluate(()=>terName('01_02'));await page.locator('#maint-modal button').filter({hasText:'EXPLOTAR '+target}).click();
+ assert.equal(await page.evaluate(()=>G.territories['01_02'].hasNuclear),false);assert.equal(await page.evaluate(()=>G.territories['01_01'].hasNuclear),false,'La base adyacente encadena');assert.equal(await page.evaluate(()=>G.territories['03_01'].hasNuclear),true,'Base remota conservada');await page.locator('#maint-modal button').filter({hasText:'FINALIZAR'}).click();assert.equal(await page.evaluate(()=>finishedMaintenance),1);
+ // Regional pools cannot be spent in another region and auto deployment exhausts each locally.
+ await page.evaluate(()=>{G.phase='prep';G_step={currentFk:'imp',phase:'prep',idx:2,isMyTurn:true};const ids=['01_01','01_02','03_01'];for(const id of ids)G.territories[id].owner='imp';G.factions.imp.regionalSoldiers={[G.territories['01_01'].region]:2,[G.territories['03_01'].region]:0};G.factions.imp.pendingSoldiers=2;window.beforeRegional=G.territories['03_01'].soldiers;placeReinforcements('03_01',1);});assert.equal(await page.evaluate(()=>G.territories['03_01'].soldiers),await page.evaluate(()=>beforeRegional));assert.equal(await page.evaluate(()=>distributeReinforcements('imp')),true);assert.equal(await page.evaluate(()=>G.factions.imp.pendingSoldiers),0);
+ // A base constructed after income receives its fixed reinforcement in the same turn, once.
+ await page.evaluate(()=>{G.round++;G.phase='prep';G_step={currentFk:'imp',phase:'prep',idx:0,isMyTurn:true};for(const t of Object.values(G.territories))t.hasNuclear=false;G.territories['01_01'].owner='imp';applyIncome('imp');window.beforeNewBase=G.territories['01_01'].soldiers;G_step.idx=1;G.sel='01_01';G.factions.imp.plutonium=4;doAct('nuke');});
+ assert.equal(await page.evaluate(()=>G.territories['01_01'].hasNuclear),true);
+ await page.evaluate(()=>{G_step.idx=2;executePlayerStep(STEPS.prep[2]);});
+ assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers-beforeNewBase),3);
+ await page.evaluate(()=>executePlayerStep(STEPS.prep[2]));assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers-beforeNewBase),3,'Reentrar no duplica refuerzo nuclear');
+ assert.deepEqual(errors,[]);console.log('PASS V4 fixture '+viewport.width+'x'+viewport.height+': compromiso, combate obligatorio, misil, mantenimiento/cadena y regiones');await context.close();
+}
+}finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e);process.exitCode=1;});

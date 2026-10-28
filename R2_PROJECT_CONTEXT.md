@@ -1,3 +1,23 @@
+# Estado vigente — Reglamento V4 y combate cinematográfico (28/10/2026)
+
+Fuente activa: `index.html`, JavaScript clásico, sin build. Desarrollo autorizado directamente en main y publicación tras verificaciones. PDFs originales V4 (13 páginas) y lore V1 (54 páginas) leídos mediante PDFKit; reporte `pruebas/v2.txt` leído. El tablero y sus 60 coordenadas/12 regiones/adyacencias no se modifican.
+
+Nuevas partidas: V4 por defecto; `?rules=v3` conserva preset y recorridos anteriores. `js/rules-v4.js` es motor puro y devuelve estados nuevos; `js/v4-game.js` adapta los flujos existentes. Estado invasor: `territory.attackers[faction]`, sin cambiar owner hasta vencer. Motor y presentación separados: `js/battle-scene.js` recibe before/results autoritativos; nunca tira dados. CSS propio, sin dependencias nuevas.
+
+Cambios: setup de origen con reservas; Libertos 5Pu+5 soldados/sin bases; producción3/Prometeo4; refuerzos regionales y fijos frontera/base3/Shinin5 tras construcción; rearme avión1soldado1Pu; movimiento terrestre2/Érebo4 y transporte; combate obligatorio tipado sin guarnición de invasores/retirada; misiles por etapas e idempotentes; cadenas nucleares BFS; mantenimiento dados sin asignación y elección posterior; recompensas por eventos; objetivos al cierre. Comparación/ambigüedades en RULES_V3_V4_DIFF y RULES_SPEC.
+
+Online V4: V4_STEP con snapshot posterior a transición, cola de envío y snapshotRevision; invasores, eventos de misiles, recompensas y reglas viajan juntos. COMBAT_VIEW incluye before y result; V4_EFFECT no genera lógica. Esquema2 para V4, preset antiguo conservado. No confundir transporte de pruebas de dos Chrome con Firebase real/reconexión certificada.
+
+Comprobaciones: `npm test` (318 tests), `npm run test:browser` (V3 explícito), `npm run test:v4:browser`, `npm run test:v4:e2e` y `npm run test:v4:e2e:mobile`. Node22 obligatorio. Playwright1.63 reutilizable mediante PLAYWRIGHT_MODULE si no está instalado localmente. Nuevos tests tienen fixtures de integración separados de partidas reales con solo semilla/aceleración.
+
+PWA: caché `nuke3000-v6-rules-v4`, marca HTML `rules-v4-v6`; incluye todos los módulos nuevos y CSS de escena. Validar SW tras última edición y comprobar hashes públicos tras push.
+
+Pendiente de validación humana: dirección artística y Safari/iPhone físico. No hay sonido ni modelos3D. Miniaturas SVG originales esquemáticas, retratos originales existentes. Mantener el historial inferior como V3, no como especificación actual.
+
+---
+
+## Histórico anterior a la migración V4
+
 ## Correcciones de combate y misiles — 28/10/2026
 
 El propietario autoriza trabajar directamente en `main`, hacer push remoto por SSH y publicar mediante GitHub Pages. Referencia de pruebas: https://sergiopf93.github.io/nuke3000/. Esta autorización sustituye las restricciones históricas de publicación indicadas más abajo.

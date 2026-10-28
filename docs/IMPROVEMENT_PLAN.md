@@ -1,3 +1,18 @@
+# Evolución V4 — hitos actuales
+
+1. Auditoría PDF/lore y diferencial: realizada, con decisiones provisionales expresas.
+2. Motor puro/config y adaptación incremental sin reescritura: implementados; presetV3 conservado.
+3. Mantenimiento: lanzar todos→elegir bases→cadenas, implementado.
+4. Piloto cinematográfico y extensión: escena2.5D, miniaturasSVG, dados/bajas/degradaciones, cámara y efectos territoriales implementados; capturas Chrome revisadas.
+5. Consolidación:318tests, integraciónV4/V3, partidas4J escritorio/touch, dos clientes y PWA; gates finales antes push.
+6. Publicación autorizada a main/Pages solo tras gates; comprobar hash de archivos públicos y commit remoto.
+
+Siguiente validación del propietario: dirección artística/Safari físico. Desarrollo posterior: asistente de disputa de faccionesD6; ilustraciones animadas propias por facción si las siluetas actuales no bastan; pruebas con Firebase real y reconexión. No se contrata infraestructura ni se añade WebGL.
+
+---
+
+## Histórico anterior a la migración V4
+
 # Plan incremental NUKE3000
 
 Trabajo actual en **main local**, autorizado expresamente por el propietario el 28/10/2026. Integración fast-forward hasta cd5d921; se conservan dev/mobile-gameplay-ux y dev/stabilization-gameplay como recuperación. Sin push ni despliegue; integración local fast-forward autorizada. Mapa 60/7 Rusia preservado.

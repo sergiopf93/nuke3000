@@ -1,3 +1,19 @@
+# NUKE3000 — Reglamento V4 y combate2.5D
+
+Juego de estrategia para3–6 facciones. Nuevas partidas usan V4: refuerzos por región, tropas comprometidas antes de combatir, combate obligatorio con bajas tipadas, misiles sin dado de impacto, cadenas nucleares y mantenimiento con elección posterior de bases. Se conserva el tablero original de60territorios.
+
+Combate con miniaturasSVG originales, dados animados, perspectiva sobre el mapa real, impactos/degradaciones y efectos de movimiento/misiles/nuclear. Modos normal/rápido/mínimo, omitir escena y reduced-motion; el motor calcula los resultados antes de representarlos. No requiere WebGL ni dependencias de animación.
+
+Jugar: https://sergiopf93.github.io/nuke3000/ . Preset anterior explícito: añadir `?rules=v3`. Decisiones provisionales y diferencias en [RULES_SPEC](docs/RULES_SPEC.md) y [diferencial](docs/RULES_V3_V4_DIFF.md).
+
+Desarrollo local: `python3 -m http.server 8080 --bind 127.0.0.1`. Pruebas Node22: `npm test`; integración `npm run test:browser`, `npm run test:v4:browser`; partidas completas `npm run test:v4:e2e` y `npm run test:v4:e2e:mobile`. Playwright1.63 utiliza Chrome instalado. No hay build, TypeScript ni linter configurados.
+
+Validación:318tests deterministas, Chrome escritorio/táctil, partidas completas y dos clientes con transporte controlado. Pendientes Safari/iPhone físico, dirección artística humana, Firebase real/reconexión y asistente de disputa de facciones porD6. [Límites](docs/KNOWN_ISSUES.md).
+
+---
+
+## Histórico anterior a la migración V4
+
 ## Correcciones de combate y misiles — 28/10/2026
 
 El propietario autoriza trabajar directamente en `main`, hacer push remoto por SSH y publicar mediante GitHub Pages. Referencia de pruebas: https://sergiopf93.github.io/nuke3000/. Esta autorización sustituye las restricciones históricas de publicación indicadas más abajo.

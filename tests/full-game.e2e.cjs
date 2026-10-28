@@ -26,7 +26,7 @@ const server=http.createServer((req,res)=>{
    const timeout=window.setTimeout.bind(window);window.setTimeout=(fn,delay,...args)=>timeout(fn,Math.min((delay||0)*0.02,30),...args);
   },Number(process.env.NUKE_E2E_SEED||123));
   const page=await context.newPage();page.setDefaultTimeout(3000);const errors=[],actions=[];page.on('pageerror',err=>errors.push(err.message));
-  await page.goto(origin);await page.locator('#faction-grid [data-f="prm"]')[touch?'tap':'click']();
+  await page.goto(origin+'?rules=v3');await page.locator('#faction-grid [data-f="prm"]')[touch?'tap':'click']();
   await page.locator('#pcount').selectOption('3');await page.locator('#pname').fill('QA V3');await page.locator('#btnstart')[touch?'tap':'click']();
   let start=null,finished=false;
   const click=async(selector)=>{const locator=page.locator(selector).first();if(await locator.isVisible()){await locator[touch?'tap':'click']({timeout:2000});actions.push(selector);return true;}return false;};

@@ -1,3 +1,19 @@
+# Validación de la migración V4
+
+Node22+, Playwright1.63/Chrome. Sin nuevas dependencias ni build/typecheck/lint inexistentes. `node --check` para JS activos; `git diff --check`. Suites V3 mantienen expectativas antiguas bajo ?rules=v3, no se borran tests para hacer pasar V4.
+
+- `npm test`:318 deterministas,222 históricos+96V4. Matrices de claims3–6, recursos, facciones, refuerzos, movimiento, transporte, dados tipados/mínimos/bonos/empates, misiles RNG exacto/etapas/ledger/repetición, accidente/cadena/wraparound, objetivos/recompensas.
+- `npm run test:browser`: fixtures V3 en escritorio/táctil, dos clientes con transporte controlado, matriz1440×900/844×390/667×375/932×430/390×844, comparación de mapa y SW real (actualización,11hashes, arranque offline60territorios).
+- `npm run test:v4:browser`: integración V4 en escritorio/táctil; compromiso y dueño original→bloqueo de pasar→combate sin retirada→conquista; misiles interceptados/no interceptados; mantenimiento varios dados/selección/cadena; fondo regional; base construida después de ingresos recibe refuerzo una sola vez. Dos clientes con RNG solo autoritativo, humanos/CPU, intercepciones repetidas, recuperación sin segundo gasto y transiciones entre fases/turnos.
+- `npm run test:v4:e2e` y `:mobile`: partida real4J hasta victoria válida, solo semilla/aceleración permitidas, sin escribir estado. Corrida3J Prometeo alcanza objetivo en primer cierre por poseer4/8bases; cobertura insuficiente por sí sola, por eso4J adicional. Trazas Playwright y capturas en /tmp, selección mantenida en docs/evidence/rules-v4.
+- Piloto visual API y V4 integrado Chrome1440/844: resultado real con meca→soldado, aeronave eliminada, dados autoritativos, retorno, omisión, efectos finitos y reduced-motion. La apariencia se revisó en capturas; fidelidad artística necesita validación humana.
+
+Límites: sin Safari físico, Firebase real ni medición de FPS/memoria de hardware. Las fixtures no se presentan como partidas completas; los dos clientes de pruebas no son validación del servicio externo.
+
+---
+
+## Histórico anterior a la migración V4
+
 ## Iteración combate/misiles (28/10/2026)
 
 `npm test`: 222 tests de motor/protocolo; conserva 121 anteriores adaptados al comportamiento solicitado. `combat-regressions.test.cjs`: 80 composiciones de defensa, caras/límite configurable, seis caras de intercepción/impacto, elección de cada tipo con 6, ausencia de defensa/objetivos, duplicados y paso bloqueado.

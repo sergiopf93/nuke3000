@@ -267,10 +267,14 @@ const ONLINE = (() => {
   }
 
   // ── Push action + full G state ────────────────────────────
+  let _stateSendQueue=Promise.resolve();
   async function pushActionWithState(type, payload = {}) {
     if (!_roomId) return;
+    const v4=RULES.version==='v4';
+    if(v4)G.snapshotRevision=(G.snapshotRevision||0)+1;
     const serialized = _serializeG();
     if (serialized) payload._G = serialized;
+    if(v4){const send=async()=>{try{await _db.collection('rooms').doc(_roomId).update({state:serialized});}catch(error){console.warn('[ONLINE] state persistence:',error.message);}return _pushActionRaw(type,payload);};const pending=_stateSendQueue.then(send,send);_stateSendQueue=pending.catch(()=>{});return pending;}
     // Also save state to room doc for reconnects
     try {
       await _db.collection('rooms').doc(_roomId).update({ state: serialized });
@@ -325,9 +329,11 @@ const ONLINE = (() => {
   function _handleRemoteAction(action) {
     if(G.gameOver) return;
     const { type, payload } = action;
+    if(payload?._G?.schemaVersion>2){addLog('La sala usa una versión más reciente. Actualiza el juego.','sys');return;}
     if(type==='DECISION_REQUEST')return _receiveDecision(action);
     if(type==='DECISION_RESPONSE')return _receiveDecisionResponse(action);
     if(type==='DECISION_DONE')return _receiveDecisionClosed(action);
+    if(payload?._G?.rules?.version==='v4'&&payload._G.snapshotRevision!=null&&payload._G.snapshotRevision<=(G.snapshotRevision||0))return;
     console.log('[ONLINE] Remote:', type);
 
     // Apply full G state first if present
@@ -426,6 +432,14 @@ const ONLINE = (() => {
         if (typeof runCurrentStep === 'function') runCurrentStep();
         break;
 
+      case 'V4_STEP':
+        if(typeof runCurrentStep==='function')runCurrentStep();
+        break;
+
+      case 'V4_EFFECT':
+        if(typeof BattleScene!=='undefined')BattleScene.effect(payload.kind,payload.data);
+        break;
+
       case 'COMBAT_VIEW':
         if(typeof showCombatView==='function')showCombatView(payload.view);
         break;
@@ -449,6 +463,7 @@ const ONLINE = (() => {
     const wasFinished = G.gameOver;
     Object.assign(G, remoteG);
     if(remoteG.rules)RULES=JSON.parse(JSON.stringify(remoteG.rules));
+    if(typeof V4Game!=='undefined')V4Game.configure();
     if(remoteG.step){Object.assign(G_step,remoteG.step);G_step.isMyTurn=G_step.currentFk===G.pf;}
     if(result && !wasFinished && typeof declareWin === 'function') {
       G.gameOver = false;
@@ -474,6 +489,17 @@ const ONLINE = (() => {
       return JSON.parse(JSON.stringify({
         step: {phase:G_step.phase,idx:G_step.idx,currentFk:G_step.currentFk},
         rules: RULES,
+        schemaVersion:RULES.version==='v4'?2:1,
+        snapshotRevision:G.snapshotRevision||0,
+        initialPlayerCount:G.initialPlayerCount,
+        missileEvents:G.missileEvents||{},
+        missileSequence:G.missileSequence||0,
+        pendingMissile:G.pendingMissile||null,
+        baseCaptures:G.baseCaptures||[],
+        rewardedCaptures:G.rewardedCaptures||[],
+        eliminations:G.eliminations||[],
+        v4Maintenance:G.v4Maintenance||null,
+        movedUnits:G.movedUnits||{},
         gameOver:       !!G.gameOver,
         result:         G.result || null,
         round:          G.round,
