@@ -1,0 +1,110 @@
+/* Existing NUKE palette and typefaces, scoped to UI; the SVG board keeps its own styles. */
+@font-face{font-family:'Nuke Display';src:url('../assets/fonts/orbitron-700.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:'Nuke Text';src:url('../assets/fonts/rajdhani-400.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Nuke Text';src:url('../assets/fonts/rajdhani-600.ttf') format('truetype');font-weight:600;font-display:swap}
+@font-face{font-family:'Nuke Text';src:url('../assets/fonts/rajdhani-700.ttf') format('truetype');font-weight:700;font-display:swap}
+:root{--nuke-display:'Nuke Display',Orbitron,sans-serif;--nuke-text:'Nuke Text',Rajdhani,sans-serif;--nuke-gold:#C8A800;--nuke-attack:#aa2222;--nuke-defense:#4488cc;--nuke-line:#33333a;--nuke-muted:#999;--nuke-surface:#09090d;--nuke-space:8px}
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal,#game-start-overlay,#game-result){font-family:var(--nuke-text);color:var(--tx);color-scheme:dark}
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) :is(button,input,select){font-family:var(--nuke-text)!important;font-size:15px!important;line-height:1.25;color:#ccc!important;background:linear-gradient(135deg,#17171d,#08080c)!important;border:1px solid #555!important;border-radius:2px;box-shadow:inset 0 1px 0 #ffffff0b;min-height:44px;padding:7px 12px!important;cursor:pointer}
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) :is(button,input,select):focus-visible{outline:2px solid var(--nuke-gold);outline-offset:2px}
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button:disabled{opacity:.4;cursor:not-allowed}
+:is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button:hover:not(:disabled){border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important}
+:is(#btn-roll,#upgrade-ok,#maint-confirm,#remote-defense-confirm,#remote-intercept){background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important;font-weight:600!important}
+:is([data-missile-target],#mobile-exit),#dmodal[data-battle-state="ongoing"] #btn-cancel{background:linear-gradient(135deg,#5a0a0a,#2a0505)!important;border-color:#8B1A1A!important;color:#ddd!important}
+:is(#dmodal,#rules-modal,#maint-modal,#online-decision-modal) select{appearance:none;-webkit-appearance:none;background:#0a0a0d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23C8A800' stroke-width='2'/%3E%3C/svg%3E") right 12px center/12px 8px no-repeat!important;padding-right:34px!important;color-scheme:dark}
+:is(#dmodal,#rules-modal,#maint-modal,#online-decision-modal) option{background:#0a0a0d;color:#ccc}
+:is(#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal)>div{background:linear-gradient(135deg,#101015,#08080c)!important;border:1px solid var(--nuke-line)!important;border-top-color:var(--nuke-gold)!important;border-radius:2px;box-shadow:0 16px 60px #000b;padding:20px!important;font-size:16px;line-height:1.5}
+:is(#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal)>div>h3{font:700 16px/1.4 var(--nuke-display);letter-spacing:1px;color:var(--nuke-gold);margin-bottom:12px}
+:is(#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal)>div>p{margin:8px 0 12px}
+:is(#move-popup,#soldier-counter-popup,#reinf-counter-popup){background:linear-gradient(135deg,#101015,#08080c)!important;border-color:#4488cc!important;border-radius:2px;padding:16px!important;font-family:var(--nuke-text)!important}
+:is(#move-popup,#soldier-counter-popup,#reinf-counter-popup) span{font-size:15px!important}
+#rules-modal input{max-width:90px}#rules-modal .re-table{font-family:var(--nuke-text)}
+/* Combat: fixed header/actions, scroll only the optional content. */
+#dmodal{padding:8px;background:rgba(0,0,0,.9)}
+#dbox{display:grid!important;grid-template-rows:auto minmax(0,1fr) auto;width:min(900px,98vw)!important;min-width:0;max-width:none;max-height:calc(100dvh - 16px)!important;padding:0!important;overflow:hidden;background:linear-gradient(145deg,#101015,#07070a);border:1px solid #555;border-top:2px solid var(--nuke-gold);box-shadow:0 20px 80px #000c;color:var(--tx)}
+#combat-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--nuke-line)}
+#dbox h2{grid-column:1;grid-row:1;text-align:left;font:700 16px/1.4 var(--nuke-display);letter-spacing:1px;margin:0;color:var(--nuke-gold)}
+#cdesc{grid-column:1;grid-row:2;text-align:left;margin:0;font:400 16px/1.3 var(--nuke-text);letter-spacing:0;color:#aaa}
+#combat-guard-slot{grid-column:2;grid-row:1/3;display:flex;gap:8px;align-items:center}#combat-guard{width:130px}
+#combat-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 16px;scrollbar-gutter:stable}
+#combat-dice{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px!important}
+.battle-side{min-width:0;padding:8px 10px;background:#08080c;border:1px solid #333;border-top:2px solid var(--nuke-attack)}
+.battle-side.defense{border-top-color:var(--nuke-defense)}
+.battle-side-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.battle-role{font:600 12px/1.2 var(--nuke-text);letter-spacing:2px;color:var(--nuke-attack)}.defense .battle-role{color:var(--nuke-defense)}
+#dbox .dlbl{font:700 12px/1.3 var(--nuke-display);letter-spacing:0;color:#ddd;margin:0;text-align:right}
+.battle-territory{font:600 17px/1.3 var(--nuke-text);margin:2px 0;color:#ddd}
+:is(#combat-army-att,#combat-army-def){display:block!important;font:400 14px/1.35 var(--nuke-text);color:#aaa;min-height:20px}
+.battle-squads{display:inline-flex;gap:8px;flex-wrap:wrap}.battle-unit{white-space:nowrap}.battle-unit b{color:#ddd;font-weight:600}.battle-unit abbr{text-decoration:none}
+#dbox .drow{justify-content:flex-start;gap:5px;flex-wrap:wrap;margin-top:5px}
+#dbox .die{display:flex;flex-direction:column;justify-content:center;align-items:center;width:48px;height:58px;gap:1px;border-width:1px;border-radius:2px;background:linear-gradient(145deg,#1a0b0d,#060608);color:#ddd;box-shadow:inset 0 1px 0 #ffffff0b;font-family:var(--nuke-display)}
+#dbox .die.def{background:linear-gradient(145deg,#0b1420,#060608);border-color:#285280}
+#dbox .die.att{border-color:#713030}
+.die-kind{font:600 12px/1 var(--nuke-text);letter-spacing:0;color:#aaa;white-space:nowrap}.die-value{font:700 20px/1.25 var(--nuke-display)}.die-outcome{font:600 12px/1 var(--nuke-text);letter-spacing:0;color:#aaa}
+#dbox .die.lost{border-color:#aa2222;box-shadow:inset 0 0 0 1px #aa2222}.die.lost .die-outcome{color:#e17b7b}.die.won .die-outcome{color:var(--nuke-gold)}
+#dbox .dtot{display:none}.die-legend{display:none}
+.battle-loss{font:600 14px/1.3 var(--nuke-text);margin-top:5px;color:#ccc;min-height:18px}
+#combat-summary{display:flex!important;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;margin:8px 0 0;background:linear-gradient(135deg,#191700,#08080c);border:1px solid #554a13;font-family:var(--nuke-text);line-height:1.3}
+.battle-result-title{display:block;font:700 14px/1.35 var(--nuke-display);color:var(--nuke-gold)}.battle-result-caption{display:block;font-size:14px;color:#aaa}
+.battle-result-counts{text-align:right;flex-shrink:0;font-size:14px;color:#ccc}
+#dbox .dbtns{position:static;display:flex;gap:8px;margin:0;padding:8px 16px;background:#08080c;border-top:1px solid var(--nuke-line);justify-content:flex-end;order:initial}
+#dbox .dbtns button{white-space:nowrap;letter-spacing:.4px;font-weight:600;min-width:110px}
+#combat-detail-toggle{display:block!important;margin-right:auto;font-size:14px!important;min-width:0!important}
+#dres{display:none;font:400 15px/1.5 var(--nuke-text);text-align:left;letter-spacing:0;padding:12px;margin:8px 0 0;border-color:var(--nuke-line)}#dres.details-open{display:block}
+#combat-unit-choice{border:1px solid var(--nuke-line);background:#0a0a0d;margin-bottom:8px}
+#combat-unit-choice>summary{padding:8px 12px;min-height:40px;font:600 15px/1.5 var(--nuke-text);color:#bbb;cursor:pointer}
+#unit-sel-att,#unit-sel-def{border:0!important;margin:0!important;padding:8px!important}
+:is(#unit-sel-att,#unit-sel-def)>div{font-family:var(--nuke-text)!important;font-size:15px!important;gap:8px!important;margin:4px 12px 4px 0!important}
+:is(#unit-sel-att,#unit-sel-def)>div>span:first-child{width:90px!important;font-size:15px!important;color:#bbb!important}
+:is(#unit-sel-att,#unit-sel-def)>div:first-child{font-size:14px!important;color:var(--nuke-gold)!important;letter-spacing:0!important}
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ #turn-ui .hbtn,.mobile-drawer-close,.mobile-drawer-exit,#territory-clear{font-family:var(--nuke-display)!important;font-weight:700;background:linear-gradient(135deg,#17171d,#08080c);border:1px solid #555;color:#ccc;letter-spacing:.3px}
+ #turn-ui .hbtn{font-size:10px!important}#turn-ui #btn-next{background:linear-gradient(135deg,#5a0a0a,#2a0505);border-color:#8B1A1A}
+ #phase-header,#step-actions,#territory-inspector,#orientation-hint,#lp,#rp-log{font-family:var(--nuke-text)}
+ #step-title{font-family:var(--nuke-display)!important;font-size:11px!important;line-height:1.4;letter-spacing:.5px!important}
+ #pg-phase{font-family:var(--nuke-display)!important;letter-spacing:.7px!important}
+ #step-actions{font-size:15px;line-height:1.4}#step-actions>div{font-size:15px!important}
+ #step-actions button{font:600 14px/1.25 var(--nuke-text)!important;background:linear-gradient(135deg,#17171d,#08080c)!important;border:1px solid #555!important;color:#ccc!important;letter-spacing:.3px!important;padding:9px 10px!important;border-radius:2px;box-shadow:inset 0 1px 0 #ffffff0b}
+ #step-actions button:not(:disabled):hover{border-color:var(--nuke-gold)!important;color:var(--nuke-gold)!important}
+ #step-actions .acost{font-size:12px!important;color:#aaa}
+ #territory-inspector{background:linear-gradient(135deg,#101015,#08080c);border-color:#333;border-left:2px solid var(--nuke-gold);padding:7px 10px;gap:10px}
+ #territory-name{font:600 16px/1.25 var(--nuke-text)}#territory-units{font:400 15px/1.25 var(--nuke-text)}#territory-hint{font:400 14px/1.3 var(--nuke-text);color:#aaa}
+ #mobile-resources{font:400 14px/1.3 var(--nuke-text);padding:6px 8px;border:1px solid #333;background:#08080c;margin-bottom:6px}.resource-chips{display:flex;gap:12px}.resource-chips b{font-weight:600;color:var(--nuke-gold)}
+ #dbox h2{font-size:14px}#combat-header{padding:7px 12px}#cdesc{font-size:14px}#combat-content{padding:6px 12px}#combat-guard{font-size:14px!important}
+ #dbox .dbtns{padding:7px 12px}#dbox .dbtns button{min-height:44px;font-size:14px!important}
+ #dbox .die{width:44px;height:52px}.die-value{font-size:18px}.battle-territory{font-size:16px}
+ .battle-side{padding:6px 8px}.battle-result-title{font-size:13px}#combat-summary{padding:7px 10px}.battle-loss{font-size:13px}
+}
+@media (max-width:700px) and (orientation:landscape){
+ #combat-header{padding:5px 10px}#dbox h2{font-size:12px}#cdesc{font-size:13px}#combat-guard{font-size:13px!important}
+ #combat-content{padding:5px 10px}.battle-side{padding:5px 7px}#combat-dice{gap:8px!important}#dbox .die{width:38px;height:48px}.die-kind{font-size:11px}.die-value{font-size:17px}
+ #dbox .dlbl{font-size:10px}.battle-role{font-size:11px}.battle-territory{font-size:15px}#combat-summary{padding:5px 8px}.battle-result-caption{font-size:13px}
+}
+@media (max-width:600px) and (orientation:portrait){
+ #combat-header{grid-template-columns:1fr}#combat-guard-slot{grid-column:1;grid-row:3}#combat-guard{width:100%}#combat-dice{grid-template-columns:1fr}#dbox .dbtns{flex-wrap:wrap}#combat-detail-toggle{flex-basis:100%}#combat-summary{align-items:flex-start;flex-direction:column;gap:4px}.battle-result-counts{text-align:left}#dbox{height:calc(100dvh - 16px)}
+}
+#dmodal[data-battle-state="ready"] .battle-loss{display:none}
+#dmodal:not([data-battle-state="ready"]) #combat-unit-choice{display:none}
+#combat-guard-slot label{font:600 12px/1 var(--nuke-text);letter-spacing:1px;color:#999}
+#combat-unit-choice[open]>summary{background:#171500;color:var(--nuke-gold);border-bottom:1px solid #333}
+#dmodal :is(button,summary,select){-webkit-tap-highlight-color:rgba(200,168,0,.12)}
+#dmodal summary{user-select:none}
+#move-popup>div:last-child>button:first-child{background:linear-gradient(135deg,#0a1e3a,#08080c)!important;border-color:#4488cc!important;color:#ccc!important}
+:is(#soldier-counter-popup,#reinf-counter-popup)>div:last-child>button:first-child{background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:#C8A800!important;color:#C8A800!important}
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ #step-actions button[onclick^="nextStep("],#step-actions button[onclick^="doMissileBuild("],#step-actions button[onclick^="activateNuclearMode("]{background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:#C8A800!important;color:#C8A800!important}
+ #step-actions button[onclick^="activateMissileFire("]{background:linear-gradient(135deg,#5a0a0a,#2a0505)!important;border-color:#8B1A1A!important;color:#ddd!important}
+}
+:is(#move-popup,#soldier-counter-popup,#reinf-counter-popup)>div:first-child{font-family:var(--nuke-display)!important;font-size:13px!important;letter-spacing:1px!important;margin-bottom:12px!important}
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ #rp-log #clog{font:400 15px/1.5 var(--nuke-text)!important}#rp-log .le.combat{color:#cc3333}#rp-log .le.res{color:#6aac5f}#rp-log .le.move{color:#4488cc}#rp-log .le.sys{color:#aaa}
+}
+:is(#unit-sel-att,#unit-sel-def)>button{background:linear-gradient(135deg,#292400,#0d0d00)!important;border-color:#C8A800!important;color:#C8A800!important}
+#reinf-counter-popup{border-color:#44ff88!important}#reinf-counter-popup>div{font-size:15px!important}#reinf-counter-popup #rc-qty{font-size:24px!important;font-weight:600}
+#rules-modal :is(th,td){font-family:var(--nuke-text);font-size:14px}
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ #step-actions button,#turn-ui button,#territory-clear{-webkit-tap-highlight-color:rgba(200,168,0,.12)}
+ #step-actions .abtn>div>div:first-child{font:600 16px/1.2 var(--nuke-text)!important;color:#ccc!important}
+ #step-actions .abtn>div>div:last-child{font:400 13px/1.3 var(--nuke-text)!important;color:#aaa!important}
+}
+@media (max-width:700px) and (orientation:landscape){#dbox .die-kind,#dbox .die-outcome{font-size:11px}}

@@ -1,3 +1,9 @@
+## Revisión visual y trabajo local en main — 28/10/2026
+
+Por instrucción explícita del propietario, los próximos cambios se desarrollan y confirman en `main` local. Se integró `dev/mobile-gameplay-ux` por fast-forward, preservando las ramas y commits anteriores. Esto **no autoriza push ni despliegue**.
+
+La revisión aplica la identidad de NUKE3000 al combate y controles móviles: [sistema visual y límites](docs/VISUAL_SYSTEM.md), [comparativas y pruebas](docs/evidence/visual-consistency/README.md). Mapa y reglas intactos. Los apartados siguientes conservan el historial de las iteraciones previas.
+
 ## UX móvil horizontal en desarrollo (28/10/2026)
 
 Rama `dev/mobile-gameplay-ux` desde la base estabilizada `ec9a955`. Primera iteración de mapa contextual, gestos táctiles y combate rápido/detallado, conservando tablero y reglas V3. [Diseño, pasos antes/después y límites](docs/UX_MOBILE.md), [capturas y pruebas](docs/evidence/mobile-ux/README.md). Probado en Chrome con toque emulado; pendiente validación del propietario y dispositivo físico. Sin push/merge/despliegue.

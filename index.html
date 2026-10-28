@@ -18,6 +18,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/mobile-ux.css">
+  <link rel="stylesheet" href="css/visual-system.css">
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -453,25 +454,32 @@
 <!-- DICE MODAL -->
 <div id="dmodal">
   <div id="dbox">
-    <h2>☢ RESOLUCIÓN DE COMBATE</h2>
-    <div id="cdesc"></div>
-    <div class="die-legend">
-      <div class="dl-item">🪖 D6</div>
-      <div class="dl-item">🤖 D12</div>
-      <div class="dl-item">✈ D12</div>
-      <div class="dl-item">🦂 D20</div>
+    <header id="combat-header">
+      <h2>☢ RESOLUCIÓN DE COMBATE</h2>
+      <div id="cdesc"></div><div id="combat-guard-slot"></div>
+    </header>
+    <div id="combat-content">
+      <div class="die-legend"></div>
+      <div id="combat-dice">
+        <section class="battle-side attack" aria-label="Ejército atacante">
+          <div class="battle-side-head"><span class="battle-role">ATACANTE</span><div class="dlbl" id="dlba"></div></div>
+          <div class="battle-territory" id="combat-ter-att"></div>
+          <div id="combat-army-att"></div><div class="drow" id="datt"></div><div class="dtot att" id="dtot-a"></div>
+          <div class="battle-loss" id="combat-loss-att"></div>
+        </section>
+        <section class="battle-side defense" aria-label="Ejército defensor">
+          <div class="battle-side-head"><span class="battle-role">DEFENSOR</span><div class="dlbl" id="dlbd"></div></div>
+          <div class="battle-territory" id="combat-ter-def"></div>
+          <div id="combat-army-def"></div><div class="drow" id="ddef"></div><div class="dtot def" id="dtot-d"></div>
+          <div class="battle-loss" id="combat-loss-def"></div>
+        </section>
+      </div>
+      <div id="combat-summary" role="status"></div>
+      <div id="dres">Selecciona unidades y lanza los dados</div>
     </div>
-    <div id="combat-armies"><div id="combat-army-att"></div><div id="combat-army-def"></div></div>
-    <div id="combat-dice" style="display:flex;gap:24px;justify-content:center;">
-      <div class="dside"><div class="dlbl" id="dlba">ATACANTE</div><div class="drow" id="datt"></div><div class="dtot att" id="dtot-a">—</div></div>
-      <div style="display:flex;align-items:center;font-size:18px;color:#1e1e22;padding-top:16px;">VS</div>
-      <div class="dside"><div class="dlbl" id="dlbd">DEFENSOR</div><div class="drow" id="ddef"></div><div class="dtot def" id="dtot-d">—</div></div>
-    </div>
-    <div id="combat-summary" role="status"></div>
-    <button id="combat-detail-toggle" class="combat-detail-toggle" aria-expanded="false" aria-controls="dres">VER TIRADAS Y CÁLCULO</button>
-    <div id="dres">Selecciona unidades y lanza los dados</div>
     <div class="dbtns">
-      <button id="btn-retreat" style="display:none;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px 16px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-right:8px;" onclick="retreatCombat()">↩ RETIRAR</button>
+      <button id="combat-detail-toggle" class="combat-detail-toggle" aria-expanded="false" aria-controls="dres">VER TIRADAS Y CÁLCULO</button>
+      <button id="btn-retreat" style="display:none" onclick="retreatCombat()">↩ RETIRAR</button>
       <button id="btn-roll" class="dbtn" onclick="rollCombat()">⚄ LANZAR DADOS</button>
       <button id="btn-cancel" class="dbtn cx" onclick="closeDice()">CANCELAR</button>
     </div>

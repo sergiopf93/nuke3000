@@ -1,10 +1,15 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v3-mobile-ux';
+const CACHE = 'nuke3000-v4-visual';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',
   '/nuke3000/css/game.css',
   '/nuke3000/css/mobile-ux.css',
+  '/nuke3000/css/visual-system.css',
+  '/nuke3000/assets/fonts/orbitron-700.ttf',
+  '/nuke3000/assets/fonts/rajdhani-400.ttf',
+  '/nuke3000/assets/fonts/rajdhani-600.ttf',
+  '/nuke3000/assets/fonts/rajdhani-700.ttf',
   '/nuke3000/js/assets.js',
   '/nuke3000/js/data.js',
   '/nuke3000/js/setup.js',

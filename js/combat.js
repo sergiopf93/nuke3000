@@ -136,6 +136,7 @@ function renderDicePools() {
   const def=ctx.defSelected||ctx.defPool||[];
   document.getElementById('datt').innerHTML=att.map((_,i)=>`<div class="die att" id="da${i}">${_.label}<br><span style="font-size:10px;color:#888;">D${_.sides}</span></div>`).join('');
   document.getElementById('ddef').innerHTML=def.map((_,i)=>`<div class="die def" id="dd${i}">${_.label}<br><span style="font-size:10px;color:#888;">D${_.sides}</span></div>`).join('');
+  if(typeof GameUX!=='undefined')GameUX.combat(ctx);
 }
 
 function showUnitSelectorInModal(side, pool, maxN, callback) {
@@ -162,8 +163,8 @@ function showUnitSelectorInModal(side, pool, maxN, callback) {
       CONFIRMAR
     </button>`;
   selDiv._maxN=maxN; selDiv._pool=pool; selDiv._chosen={}; selDiv._callback=callback;
-  const dbox=document.getElementById('dbox');
-  dbox.insertBefore(selDiv, document.querySelector('.die-legend')||dbox.firstChild);
+  const dbox=document.getElementById('combat-content')||document.getElementById('dbox');
+  dbox.insertBefore(selDiv, dbox.firstChild);
   window['_usel_'+side]=selDiv;
   if(typeof GameUX!=='undefined'&&GameUX.isMobile()){
     const details=document.createElement('details');details.id='combat-unit-choice';

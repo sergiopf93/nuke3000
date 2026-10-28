@@ -3,7 +3,7 @@ const GameUX=(()=>{
  const query=matchMedia('(max-width:1024px) and (max-height:600px), (max-width:600px)');
  let focusBeforeDrawer=null;
  const labels={soldiers:'Soldados',mechs:'Mechs',aircraft:'Aircraft',scorpions:'Scorpions'};
- function units(t){return Object.entries(labels).map(([key,label])=>(t[key]||0)+' '+label).join(' · ');}
+ function units(t){return Object.entries(labels).filter(([key])=>t[key]>0).map(([key,label])=>t[key]+' '+label).join(' · ')||'Sin unidades';}
  function closePanel(){delete document.body.dataset.mobilePanel;document.querySelectorAll('#mobile-players,#mobile-log').forEach(b=>b.setAttribute('aria-expanded','false'));focusBeforeDrawer?.focus();}
  function panel(name){if(document.body.dataset.mobilePanel===name){closePanel();return;}focusBeforeDrawer=document.activeElement;document.body.dataset.mobilePanel=name;document.querySelectorAll('#mobile-players,#mobile-log').forEach(b=>b.setAttribute('aria-expanded',String(b.id==='mobile-'+name)));document.querySelector(name==='players'?'#lp .mobile-drawer-close':'#rp-log .mobile-drawer-close')?.focus();}
  function cancelSelection(){G.sel=G.attackSrc=G.moveSrc=G.moveTargets=null;G.moveMode=false;document.getElementById('map-wrap').classList.remove('moving');document.getElementById('move-popup')?.remove();updateMap();}
@@ -13,7 +13,7 @@ const GameUX=(()=>{
   const container=query.matches?document.getElementById('phase-header'):document.getElementById('hdr');
   if(resources.parentElement!==container)container.prepend(resources);
   resources.replaceChildren();const own=document.createElement('div');own.textContent='Tú: '+FDATA[G.pf].name;
-  const amounts=document.createElement('div');amounts.textContent=f.plutonium+' Pu · '+f.missiles+'/'+RULES.prep.maxMissiles+' misiles · '+owned.filter(t=>t.hasNuclear).length+' ☢';resources.append(own,amounts);
+  const amounts=document.createElement('div');amounts.className='resource-chips';for(const [value,label]of [[f.plutonium,'Pu'],[f.missiles+'/'+RULES.prep.maxMissiles,'misiles'],[owned.filter(t=>t.hasNuclear).length,'☢']]){const chip=document.createElement('span'),number=document.createElement('b');number.textContent=value;chip.append(number,document.createTextNode(' '+label));amounts.appendChild(chip);}resources.append(own,amounts);
   const id=G.moveSrc||G.sel||G.attackSrc,t=G.territories[id],title=document.getElementById('territory-name'),detail=document.getElementById('territory-units'),hint=document.getElementById('territory-hint');
   title.textContent=t?terName(id)+' · '+(FDATA[t.owner]?.name||'Sin control'):'Toca un territorio';
   detail.textContent=t?units(t)+(t.hasNuclear?' · Nuclear':''):'';
@@ -29,16 +29,49 @@ const GameUX=(()=>{
   return false;
  }
  function combat(ctx,result){
-  const a=G.territories[ctx.srcId],d=G.territories[ctx.targetId];
-  document.getElementById('combat-army-att').textContent='Origen · '+FDATA[ctx.attFk].name+' · '+units(a);
-  document.getElementById('combat-army-def').textContent=(result?.status==='conquered'?'Ocupación · '+FDATA[ctx.attFk].name:FDATA[ctx.defFk].name)+' · '+units(d);
-  const summary=document.getElementById('combat-summary');
-  const changes=list=>list.map(c=>labels[Battle.keys[c.from]]+' → '+(c.to?labels[Battle.keys[c.to]]:'baja')).join(', ')||'sin bajas';
-  summary.textContent=result?(result.status==='conquered'?'CONQUISTA':result.status==='repelled'?'DEFENSA EXITOSA':'RONDA RESUELTA')+' · Ataque: '+changes(result.losses.attacker)+' · Defensa: '+changes(result.losses.defender)+' · Iniciales: '+ctx.initialAtt+' / '+ctx.initialDef:(ctx._attRolls?'Ataque: '+ctx._attRolls.map(d=>d.type+' D'+d.sides+' = '+d.value).join(' · ')+'. Elige tu defensa.':'Elige unidades. Siempre queda una guarnición en origen.');
-  if(result&&query.matches){for(const [side,rolls]of [['att',result.attRolls],['def',result.defRolls]])document.querySelectorAll('.die.'+side).forEach((el,i)=>{
-    const die=rolls[i];if(!die)return;el.textContent=die.value;el.title=die.type+' D'+die.sides+': '+die.raw+' + '+die.bonus+' = '+die.value;
-  });}
-  if(result&&query.matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches){document.querySelectorAll('.die').forEach(el=>{el.classList.remove('spin');void el.offsetWidth;el.classList.add('spin');});}
+  const labels={sol:'SOL',mech:'MCH',air:'AIR',scorp:'SCP'};
+  const modal=document.getElementById('dmodal');modal.dataset.battleState=result?.status||'ready';
+  const guard=document.querySelector('#cdesc #combat-guard');
+  const slot=document.getElementById('combat-guard-slot');if(guard){const label=document.createElement('label');label.htmlFor='combat-guard';label.textContent='GUARNICIÓN';for(const option of guard.options)option.textContent={sol:'Soldado',mech:'Mech',air:'Aircraft',scorp:'Scorpion'}[option.value];slot.replaceChildren(label,guard);}else if(!ctx.isPlayerAtt)slot.replaceChildren();const selector=slot.querySelector('select');if(selector)selector.disabled=!!result;
+  document.getElementById('cdesc').textContent=result?'Tirada resuelta · detalle disponible':'Selecciona tus unidades antes de tirar';
+  document.getElementById('combat-ter-att').textContent=terName(ctx.srcId);
+  document.getElementById('combat-ter-def').textContent=terName(ctx.targetId);
+  for(const [side,army,selected,rolls,losses]of [
+   ['att',result?.attacker||G.territories[ctx.srcId],ctx.attSelected,result?.attRolls||ctx._attRolls, result?.losses.attacker||[]],
+   ['def',result?.defender||G.territories[ctx.targetId],ctx.defSelected,result?.defRolls,result?.losses.defender||[]]
+  ]){
+   const info=document.getElementById('combat-army-'+side);info.replaceChildren();
+   const squads=document.createElement('span');squads.className='battle-squads';
+   for(const [type,key]of Object.entries(Battle.keys))if(army[key]>0){const unit=document.createElement('span');unit.className='battle-unit';const n=document.createElement('b');n.textContent=army[key]+' ';const name=document.createElement('abbr');name.title={sol:'Soldados',mech:'Mechs',air:'Aircraft',scorp:'Scorpions'}[type];name.textContent=labels[type];unit.append(n,name);squads.appendChild(unit);}
+   if(!squads.childNodes.length)squads.textContent='Sin unidades';
+   info.append(squads,document.createTextNode(' · Dados: '+(rolls?.length||selected?.length||0)));
+   const loss=document.getElementById('combat-loss-'+side);
+   loss.textContent=result?(losses.length?losses.map(c=>labels[c.from]+' → '+(c.to?labels[c.to]:'BAJA')).join(' · '):'Sin bajas'):(side==='att'?'Una unidad permanece en origen':'El defensor gana los empates');
+   const pool=selected||[],pairs=result?.pairs||[],paired=pairs.map(p=>side==='att'?p.att:p.def),dice=rolls?[...paired,...rolls.filter(d=>!paired.includes(d))]:pool;
+   const row=document.getElementById(side==='att'?'datt':'ddef');row.replaceChildren();
+   const remainingLosses=[...losses];
+   dice.forEach(die=>{
+    const pair=pairs.find(p=>(side==='att'?p.att:p.def)===die),lost=pair?.loser===(side==='att'?'attacker':'defender');
+    const tile=document.createElement('div');tile.className='die '+side+(lost?' lost':pair?' won':'');
+    const kind=document.createElement('span');kind.className='die-kind';kind.textContent=labels[die.type]+' · D'+die.sides;
+    const value=document.createElement('span');value.className='die-value';value.textContent=rolls?die.value:'—';
+    const status=document.createElement('span');status.className='die-outcome';
+    const index=remainingLosses.findIndex(c=>c.from===die.type),change=lost&&index>=0?remainingLosses.splice(index,1)[0]:null;
+    status.textContent=lost?(change?.to?'→ '+labels[change.to]:'BAJA'):pair?'GANA':rolls?'SIN PAR':'LISTO';
+    tile.title=rolls?labels[die.type]+' D'+die.sides+': '+die.raw+' + '+die.bonus+' = '+die.value:labels[die.type]+' D'+die.sides;
+    tile.setAttribute('aria-label',tile.title+' · '+status.textContent);tile.dataset.pair=pair?String(pairs.indexOf(pair)+1):'';
+    tile.append(kind,value,status);row.appendChild(tile);
+   });
+  }
+  const summary=document.getElementById('combat-summary');summary.replaceChildren();
+  const main=document.createElement('div'),title=document.createElement('strong'),caption=document.createElement('span'),counts=document.createElement('div');
+  title.className='battle-result-title';caption.className='battle-result-caption';counts.className='battle-result-counts';
+  const a=result?.losses.attacker.length||0,d=result?.losses.defender.length||0;
+  title.textContent=result?(result.status==='conquered'?'TERRITORIO CONQUISTADO':result.status==='repelled'?'DEFENSA GANADA':d>a?'ATAQUE GANA LA TIRADA':a>d?'DEFENSA GANA LA TIRADA':'RONDA RESUELTA'):'PREPARAR COMBATE';
+  caption.textContent=result?.status==='conquered'?FDATA[ctx.attFk].name+' ocupa '+terName(ctx.targetId):result?'Bajas y degradaciones señaladas en cada bando':ctx.isPlayerDef?'El atacante ya ha tirado. Elige tu defensa.':'Unidades sugeridas listas. Puedes cambiar la selección.';
+  counts.textContent=result?'Iniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restan '+Battle.count(result.attacker)+' / '+Battle.count(result.defender):'Hasta '+RULES.combat.maxAttackDice+' ataque · '+RULES.combat.maxDefenseDice+' defensa';
+  main.append(title,caption);summary.append(main,counts);
+  if(result&&!matchMedia('(prefers-reduced-motion:reduce)').matches)document.querySelectorAll('#dmodal .die').forEach(el=>el.classList.add('spin'));
  }
  document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('mobile-players').onclick=()=>panel('players');document.getElementById('mobile-log').onclick=()=>panel('log');document.getElementById('mobile-panel-backdrop').onclick=closePanel;
