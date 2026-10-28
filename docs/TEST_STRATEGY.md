@@ -1,3 +1,15 @@
+## Iteración combate/misiles (28/10/2026)
+
+`npm test`: 222 tests de motor/protocolo; conserva 121 anteriores adaptados al comportamiento solicitado. `combat-regressions.test.cjs`: 80 composiciones de defensa, caras/límite configurable, seis caras de intercepción/impacto, elección de cada tipo con 6, ausencia de defensa/objetivos, duplicados y paso bloqueado.
+
+`npm run test:browser`: integración real Chrome con estados preparados (no partidas completas), matriz visual/táctil, dos clientes online con transporte local y upgrade SW real. `combat-flow.browser.cjs` usa pausas reales sin aceleración: ventanas humano/CPU, CPU/humano y CPU/CPU, 2 rondas, bajas/degradaciones, conquista, cierre y callback único; intercepción, impacto/elección y falta de objetivos.
+
+`npm run test:e2e` / `test:e2e:mobile`: partidas completas por UI desde lobby y setup, semilla 123 y temporizadores acelerados; sin mutar estado de juego. El controlador observa ventanas CPU sin pulsarlas. Ambas terminan con Libertos en ronda 12, 121 acciones UI cada una.
+
+`service-worker.browser.cjs`: servidor local bajo /nuke3000/, versión 19130f4 real, instalación v4, cambio a fuentes actuales, upgrade/recarga automática, hashes de caché y arranque offline. Comparación visual: se localizaron 16 píxeles del halo animado en x28–29/y126–137 fuera de la máscara previa; se ajustó solo el halo y se obtuvo cero diferencias del tablero. Se detectó y corrigió una dependencia circular al esperar la navegación dentro de activación. Externos bloqueados intencionadamente; mensajes de red por CDN bloqueados no son errores JS del juego.
+
+[Pruebas, capturas y límites de esta iteración](evidence/combat-missiles/README.md). No certifica iPhone/Safari físico ni Firebase/reconexión.
+
 # Revisión visual sobre main — 28/10/2026
 
 Se conservan las 121 pruebas de motor/protocolo. La matriz de UI añade selector oscuro, fuentes locales, controles dentro del viewport y ausencia de scroll principal en preparación a 844×390; correspondencia entre pérdidas del motor y dados marcados, tirada mixta, refuerzos manuales y construcción nuclear. Se mantienen los recorridos de escritorio, táctiles, remotos y las partidas completas.

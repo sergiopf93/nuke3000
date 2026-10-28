@@ -1,5 +1,5 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v4-visual';
+const CACHE = 'nuke3000-v5-combat-missiles';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',
@@ -31,11 +31,17 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k.startsWith('nuke3000-') && k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  e.waitUntil((async()=>{
+    const old=(await caches.keys()).filter(k=>k.startsWith('nuke3000-')&&k!==CACHE);
+    await Promise.all(old.map(k=>caches.delete(k)));
+    await self.clients.claim();
+    // A page opened through the previous cache has already loaded old scripts.
+    // Reload once after the new cache is ready. Do not await navigation inside
+    // activation: the navigation itself waits for this worker to become active.
+    if(old.length)for(const client of await self.clients.matchAll({type:'window'})){
+      if(client.url.startsWith(self.registration.scope))client.navigate(client.url).catch(()=>{});
+    }
+  })());
 });
 
 self.addEventListener('fetch', e => {

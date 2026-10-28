@@ -20,7 +20,7 @@ const server=http.createServer((req,res)=>{
     if(url.endsWith('/js/online.js'))return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(root,'js/online.js'),'utf8').replace('    signalGameEnd,','    __configure:(uid,db)=>{_roomId="test";_userId=uid;_db=db;_isHost=uid==="a";}, _handleRemoteAction,\n    signalGameEnd,')});
     return route.continue();
    });
-   const page=pages[uid]=await context.newPage();page.on('pageerror',err=>errors.push(err.message));
+   const page=pages[uid]=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',err=>errors.push(err.message));
    await page.exposeFunction('publishTestAction',action=>{queue.push(action);});
    await page.goto(origin);await page.locator(`#faction-grid [data-f="${faction}"]`)[touch?'tap':'click']();await page.locator('#pname').fill(uid);await page.locator('#btnstart')[touch?'tap':'click']();
    await page.evaluate(({uid,faction})=>{
@@ -37,13 +37,12 @@ const server=http.createServer((req,res)=>{
   }
   const pump=async()=>{while(queue.length){const action=queue.shift();await pages[action.playerId==='a'?'b':'a'].evaluate(action=>ONLINE._handleRemoteAction(action),action);}};
   await pages.a.locator('#tc-01_01')[touch?'tap':'click']();await pages.a.locator('#tc-01_02')[touch?'tap':'click']();if(!touch){await pages.a.locator('#ba-attack').click();await pages.a.locator('#unit-sel-att > button').click();}await pages.a.locator('#btn-roll')[touch?'tap':'click']();
-  await pages.a.waitForFunction(()=>G.waitingDecision?.id!=='loading'&&G.waitingDecision);
-  assert.equal(await pages.a.evaluate(()=>G.territories['01_02'].owner),'lib');await pump();
-  await pages.b.locator('#remote-defense-confirm').waitFor();
-  assert.equal(await pages.a.evaluate(()=>G.territories['01_02'].owner),'lib','No se resuelve antes de la decisión humana');
-  await pages.b.locator('#remote-defense-confirm')[touch?'tap':'click']();await pump();
+  await pages.a.waitForTimeout(150);await pump();
+  assert.equal(await pages.a.evaluate(()=>G.waitingDecision||null),null);
+  assert.equal(await pages.b.locator('#remote-defense-confirm').count(),0);
+  assert.equal(await pages.b.locator('#dmodal.open').isVisible(),true,'El defensor remoto observa el combate automático');
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,units:Battle.count(G.territories['01_02']),guard:Battle.count(G.territories['01_01'])})),{owner:'clt',units:2,guard:1});
-  assert.equal(await pages.a.evaluate(()=>G.waitingDecision),null);
+  assert.equal(await pages.a.evaluate(()=>G.waitingDecision||null),null);
   assert.equal(await pages.b.locator('#online-decision-modal').count(),0);
   await pages.a.locator('#btn-cancel')[touch?'tap':'click']();
   await pages.a.evaluate(()=>{
@@ -52,11 +51,11 @@ const server=http.createServer((req,res)=>{
     Object.assign(G.territories['01_02'],{owner:'lib',soldiers:1,mechs:1});
     window.cpuCallbacks=0;openDiceCpu('01_01','01_02','imp',()=>cpuCallbacks++);
   });
-  for(let round=0;round<2;round++){
-    await pages.a.waitForFunction(()=>G.waitingDecision&&G.waitingDecision.id!=='loading');await pump();
-    await pages.b.locator('#remote-defense-confirm')[touch?'tap':'click']();await pump();
+  for(let tick=0;tick<180;tick++){
+    await pages.a.waitForTimeout(50);await pump();
+    if(await pages.a.evaluate(()=>cpuCallbacks===1))break;
   }
-  await pages.a.waitForFunction(()=>cpuCallbacks===1);
+  assert.equal(await pages.a.evaluate(()=>cpuCallbacks),1);
   assert.equal(await pages.a.evaluate(()=>G_combat.history.length),2);
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({owner:G.territories['01_02'].owner,units:Battle.count(G.territories['01_02']),guard:Battle.count(G.territories['01_01'])})),{owner:'imp',units:2,guard:1});
   await pages.a.evaluate(()=>{
@@ -64,12 +63,18 @@ const server=http.createServer((req,res)=>{
     Object.assign(G.territories['01_02'],{owner:'lib',soldiers:2,mechs:0,aircraft:1,scorpions:0});
     G.factions.clt.missiles=2;G.factions.lib.missiles=1;G.sel='01_02';doMissileFire();
   });
-  await pages.a.locator('[data-missile-target="aircraft"]')[touch?'tap':'click']();
+  await pages.a.locator('#missile-launch')[touch?'tap':'click']();
   await pages.a.waitForFunction(()=>G.waitingDecision&&G.waitingDecision.id!=='loading');await pump();
-  assert.equal(await pages.a.evaluate(()=>G.factions.clt.missiles),2);
+  assert.equal(await pages.a.evaluate(()=>G.factions.clt.missiles),1);
   await pages.b.locator('#remote-intercept')[touch?'tap':'click']();await pump();
+  await pages.a.waitForTimeout(150);await pump();
   for(const page of Object.values(pages))assert.deepEqual(await page.evaluate(()=>({att:G.factions.clt.missiles,def:G.factions.lib.missiles,air:G.territories['01_02'].aircraft})),{att:1,def:0,air:1});
   assert.match(await pages.a.locator('#miss-result').innerText(),/INTERCEPTADO/);
-  assert.deepEqual(errors,[]);console.log('PASS Chrome 2 clientes: combate humano/CPU por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase');
+  await pages.a.locator('#missile-close')[touch?'tap':'click']();
+  await pages.a.evaluate(()=>{clearInteractionModes();G.setup.order=['clt','lib'];for(const t of Object.values(G.territories))Object.assign(t,{owner:'clt',soldiers:1,mechs:0,aircraft:0,scorpions:0});G.factions.imp.alive=false;G.factions.clt.alive=G.factions.lib.alive=true;G.phase='combat';G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:true};Object.assign(G.territories['01_01'],{scorpions:2});G.territories['01_02'].owner='lib';beginCombat('01_01','01_02','clt');});
+  if(!touch)await pages.a.locator('#unit-sel-att > button').click();await pages.a.locator('#btn-roll')[touch?'tap':'click']();await pages.a.waitForTimeout(100);await pump();
+  for(const page of Object.values(pages)){assert.equal(await page.evaluate(()=>G.result.winner),'clt');assert.equal(await page.locator('#dmodal.open').isVisible(),true);assert.equal(await page.locator('#game-result').count(),0);}
+  await Promise.all(Object.values(pages).map(page=>page.locator('#game-result').waitFor()));
+  assert.deepEqual(errors,[]);console.log('PASS Chrome 2 clientes: defensa automática humano/CPU, ventana remota por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase');
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(err=>{console.error(err);process.exitCode=1;});

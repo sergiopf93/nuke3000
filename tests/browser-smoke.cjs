@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
           G_step.idx=4;G.sel=null;Object.assign(G.territories['01_02'],{owner:'clt',soldiers:0,mechs:0,aircraft:2,scorpions:0});G.factions.clt.missiles=0;G.factions.imp.missiles=2;Math.random=()=>0.7;updateStepUI(STEPS.prep[4]);updateMap();
         });
         await page.locator('#step-actions').getByRole('button',{name:'Lanzar',exact:true}).click();await page.locator('#tc-01_02').click();
-        await page.locator('[data-missile-target="aircraft"]').click();
+        await page.locator('#missile-launch').click();await page.locator('[data-missile-target="aircraft"]').click();
         assert.match(await page.locator('#step-actions').innerText(),/1\/5 misiles/);
         assert.equal(await page.evaluate(()=>G.territories['01_02'].aircraft),1);
         await page.locator('#missile-close').click();
@@ -99,15 +99,11 @@ const server = http.createServer((req, res) => {
           Object.assign(G.territories['01_02'],{owner:'clt',soldiers:3,mechs:0,aircraft:0,scorpions:0});
           Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:1,aircraft:0,scorpions:0});
           window.remoteReplies=[];
-          showRemoteDecision({id:'fixture-defense',turn:currentStepKey(),kind:'defense',data:{srcId:'01_02',targetId:'01_01',attFk:'clt',attRolls:[{type:'sol',sides:6,value:4}]}},async choice=>{remoteReplies.push(choice);document.getElementById('online-decision-modal').remove();return true;});
         });
-        assert.equal(await page.evaluate(()=>remoteReplies.length),0);
-        await page.locator('[data-defense-type="sol"]').fill('0');
-        await page.locator('#remote-defense-confirm').click();
-        assert.deepEqual(await page.evaluate(()=>remoteReplies),[{units:[{type:'mech'}]}]);
+        assert.equal(await page.locator('#unit-sel-def').count(),0);
         await page.evaluate(()=>showRemoteDecision({id:'fixture-intercept',turn:currentStepKey(),kind:'intercept',data:{targetId:'01_01',unitType:'mechs'}},async choice=>{remoteReplies.push(choice);document.getElementById('online-decision-modal').remove();return true;}));
         await page.locator('#remote-pass').click();
-        assert.deepEqual(await page.evaluate(()=>remoteReplies[1]),{intercept:false});
+        assert.deepEqual(await page.evaluate(()=>remoteReplies[0]),{intercept:false});
         console.log('PASS integración Chrome: setup manual, combate/guarnición, mejoras, misil y decisiones remotas por clics (transporte controlado)');
       }
 

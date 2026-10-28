@@ -332,7 +332,7 @@ const ONLINE = (() => {
 
     // Apply full G state first if present
     if (payload && payload._G) {
-      _applyRemoteG(payload._G);
+      _applyRemoteG(payload._G,payload.combat);
     }
 
     switch(type) {
@@ -426,6 +426,10 @@ const ONLINE = (() => {
         if (typeof runCurrentStep === 'function') runCurrentStep();
         break;
 
+      case 'COMBAT_VIEW':
+        if(typeof showCombatView==='function')showCombatView(payload.view);
+        break;
+
       case 'FULL_SYNC':
         if (typeof updateMap === 'function') updateMap();
         if (typeof refreshCards === 'function') refreshCards();
@@ -438,7 +442,7 @@ const ONLINE = (() => {
   }
 
   // ── Apply remote G ────────────────────────────────────────
-  function _applyRemoteG(remoteG) {
+  function _applyRemoteG(remoteG,finalCombat) {
     if (!remoteG || G.gameOver) return;
     const view = { vx: G.vx, vy: G.vy, vscale: G.vscale, dragging: false };
     const result = remoteG.result;
@@ -448,6 +452,7 @@ const ONLINE = (() => {
     if(remoteG.step){Object.assign(G_step,remoteG.step);G_step.isMyTurn=G_step.currentFk===G.pf;}
     if(result && !wasFinished && typeof declareWin === 'function') {
       G.gameOver = false;
+      if(finalCombat&&typeof showCombatView==='function')showCombatView(finalCombat);
       declareWin(result.winner, result.goal, false);
     }
     Object.assign(G, view);
@@ -533,7 +538,7 @@ const ONLINE = (() => {
   async function _receiveDecision(action){
     const p=action.payload;
     if(!p||p.recipient!==_userId||p.toFaction!==G.pf||_incomingDecisions.has(p.id)||_closedDecisions.has(p.id))return;
-    if(!['defense','intercept'].includes(p.kind)||!String(p.id).startsWith(action.playerId+':'))return;
+    if(p.kind!=='intercept'||!String(p.id).startsWith(action.playerId+':'))return;
     _incomingDecisions.set(p.id,{sender:action.playerId});
     try{
       const snap=await _db.collection('rooms').doc(_roomId).get(),meta=snap.data().meta;

@@ -11,16 +11,16 @@ function client(uid,bus,{fail=false}={}){
  vm.runInContext(`ONLINE.__configure(uid,db);G.pf=({a:'imp',b:'lib',c:'erb'})[uid];G.round=1;G.phase='combat';G.setup={order:['imp','lib','clt'],_inSetup:false};G.factions={imp:{alive:true,missiles:2},lib:{alive:true,missiles:2},clt:{alive:true}};G.territories={};G_step={currentFk:'imp',phase:'combat',idx:0};updateMap=refreshCards=updatePhaseBanner=addLog=()=>{};let views=0,replies=0,choice=null,failure=null,respond;showRemoteDecision=(packet,reply)=>{views++;respond=reply};`,ctx);
  return {run:s=>vm.runInContext(s,ctx),deliver:action=>{ctx.action=action;return vm.runInContext('ONLINE._handleRemoteAction(action)',ctx);}};
 }
-const request="ONLINE.requestDecision('defense','lib',{attFk:'imp',srcId:'x',targetId:'y',attRolls:[]},(answer,error)=>{replies++;choice=answer;failure=error?.message})";
+const request="ONLINE.requestDecision('intercept','lib',{attFk:'imp',srcId:'x',targetId:'y',attRolls:[]},(answer,error)=>{replies++;choice=answer;failure=error?.message})";
 test('dos clientes: espera decisión humana, respuesta única y sin snapshot del defensor',async()=>{
  const bus=[],a=client('a',bus),b=client('b',bus);await a.run(request);assert.equal(a.run('replies'),0);assert.ok(a.run('G.waitingDecision'));
  const req=bus.shift();await b.deliver(req);await b.deliver(req);assert.equal(b.run('views'),1);assert.equal(a.run('replies'),0);
- await b.run("respond({units:[{type:'sol'}]})");const response=bus.shift();assert.equal(response.type,'DECISION_RESPONSE');assert.equal(response.payload._G,undefined);
- await a.deliver(response);await a.deliver(response);assert.equal(a.run('replies'),1);assert.equal(a.run('choice.units[0].type'),'sol');assert.equal(a.run('G.waitingDecision'),null);
+ await b.run("respond({intercept:true})");const response=bus.shift();assert.equal(response.type,'DECISION_RESPONSE');assert.equal(response.payload._G,undefined);
+ await a.deliver(response);await a.deliver(response);assert.equal(a.run('replies'),1);assert.equal(a.run('choice.intercept'),true);assert.equal(a.run('G.waitingDecision'),null);
 });
 test('respuesta de otro participante no consume la decisión ni aplica su estado',async()=>{
  const bus=[],a=client('a',bus);await a.run(request);const req=bus.shift();
- await a.deliver({type:'DECISION_RESPONSE',playerId:'c',payload:{id:req.payload.id,choice:{units:[]},_G:{round:99}}});
+ await a.deliver({type:'DECISION_RESPONSE',playerId:'c',payload:{id:req.payload.id,choice:{intercept:false},_G:{round:99}}});
  assert.equal(a.run('replies'),0);assert.equal(a.run('G.round'),1);assert.ok(a.run('G.waitingDecision'));
 });
 test('un remitente que no dirige el turno no solicita decisiones',async()=>{
@@ -30,7 +30,7 @@ test('un remitente que no dirige el turno no solicita decisiones',async()=>{
 test('cancelar invalida respuestas tardías y cierra la pregunta remota',async()=>{
  const bus=[],a=client('a',bus),b=client('b',bus);await a.run(request);const req=bus.shift();await b.deliver(req);
  a.run('ONLINE.cancelPendingDecision()');await b.deliver(bus.shift());assert.equal(await b.run('respond({units:[{type:"sol"}]})'),false);
- await a.deliver({type:'DECISION_RESPONSE',playerId:'b',payload:{id:req.payload.id,choice:{units:[{type:'sol'}]}}});assert.equal(a.run('replies'),0);
+ await a.deliver({type:'DECISION_RESPONSE',playerId:'b',payload:{id:req.payload.id,choice:{intercept:true}}});assert.equal(a.run('replies'),0);
 });
 test('una solicitud histórica no hace retroceder ronda o paso al reconectar',async()=>{
  const bus=[],a=client('a',bus),b=client('b',bus);b.run('G.round=2');await a.run(request);await b.deliver(bus.shift());assert.equal(b.run('views'),0);assert.equal(b.run('G.round'),2);
@@ -40,6 +40,6 @@ test('CPU dirigida por host solicita intercepción al humano y acepta NO sin aut
  await a.run("ONLINE.requestDecision('intercept','lib',{attFk:'clt',targetId:'x'},answer=>{replies++;choice=answer})");await b.deliver(bus.shift());assert.equal(b.run('views'),1);assert.equal(a.run('replies'),0);
  await b.run('respond({intercept:false})');await a.deliver(bus.shift());assert.equal(a.run('choice.intercept'),false);assert.equal(a.run('replies'),1);
 });
-test('fallo al enviar libera la espera sin inventar una defensa',async()=>{
+test('fallo al enviar libera la espera sin inventar una intercepción',async()=>{
  const bus=[],a=client('a',bus,{fail:true});assert.equal(await a.run(request),false);assert.equal(a.run('G.waitingDecision'),null);assert.equal(a.run('replies'),1);assert.equal(a.run('choice'),null);assert.ok(a.run('failure'));
 });

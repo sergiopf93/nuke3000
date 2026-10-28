@@ -110,3 +110,8 @@ button:is([data-missile-target],#mobile-exit),#dmodal[data-battle-state="ongoing
 @media (max-width:700px) and (orientation:landscape){#dbox .die-kind,#dbox .die-outcome{font-size:11px}}
 
 :is(#dmodal,#move-popup,#soldier-counter-popup,#reinf-counter-popup,#upgrade-confirm,#missile-modal,#maint-modal,#online-decision-modal,#rules-modal) button{-webkit-tap-highlight-color:rgba(200,168,0,.12)}
+
+/* Missile stages remain readable without changing the board or dialog identity. */
+#missile-modal>div{width:min(560px,96vw);max-height:94dvh;overflow:auto}
+#miss-result{padding-left:24px;margin:8px 0 12px;font-size:16px;line-height:1.4}
+#miss-targets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}

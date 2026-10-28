@@ -1,0 +1,21 @@
+{
+  "baseline": "19130f4",
+  "protectedUnchanged": {
+    "js/data.js": "d2923738b9f2490e6a71b9700b016f48a0c6140aeb7a39b1c93d775ca55d0fba",
+    "js/map.js": "284ad4e4c3ccc34362699eab1cc950573d7d00185caecf60d883d3a0702fcd92",
+    "js/assets.js": "72d091e2283357c40deaab6bb194c336982ecfc085f9e3c6392959334c5f192d",
+    "css/game.css": "33ca9c5224f5878ffc1f618eccf587bbd8bd68d66706486166cca6cb9d0f37e9",
+    "js/setup.js": "446e5ffac9ef907e55dcd0ac07c61618443fc24ae3d4784fdf6a95bee4efe4d2"
+  },
+  "release": "combat-missiles-v5",
+  "assets": {
+    "index.html": "80258681ed0c2116500384fd1a9f53f8621fe8516c04743bec07f01676692d6d",
+    "css/visual-system.css": "f21a935619264fcf5026a4f94d7ca27cfff4ef2dbb87785cbfd0160775981f36",
+    "js/battle.js": "d10e662742ff790e6df119df126dad27839e59fe4bef1c0c3a55e0a32f1bdf0f",
+    "js/combat.js": "59e96e8ae1f95ba9d336390f78a5a1f339fd5b5489e7e10bf22af907a47fbebe",
+    "js/engine.js": "90ff9aae2dc5911fbe40dd5208cae1f9cf6cc8c6038a2289a2a5b98636f3cb04",
+    "js/mobile-ux.js": "28ec8d98b2bc28bbf8aaf86319340e1a1f9e60369cdd4328e2feee605f781910",
+    "js/online.js": "f00fcdd11a7fd113839943667b803b7eca982ae1aa80d4ee46baec9d8613fcdb",
+    "sw.js": "b88f5c94ce721e30fa2a520e3a88d416d90acce23a510f2fe17fe1dedc2d647f"
+  }
+}

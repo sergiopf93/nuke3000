@@ -161,6 +161,11 @@ function completeEngine(){
     RULES.victory=JSON.parse(JSON.stringify(DEFAULT_RULES.victory));
     Object.values(G.territories).forEach(t=>{t.owner='clt';t.soldiers=1});
     G_step.currentFk='imp';G_step.phase='prep';G_step.idx=0;G_step.isMyTurn=true;`);
+  // Engine-only tests replace presentation, retaining the real round/timer/completion lifecycle.
+  e.run(`openCombatModal=()=>{const c=G_combat;c.stage='ready';c.presentation=(c.presentation||0)+1;
+    c.attSelected=buildPool(G.territories[c.srcId]).slice(0,Math.min(Battle.count(G.territories[c.srcId])-1,RULES.combat.maxAttackDice));
+    c.defSelected=buildPool(G.territories[c.targetId]).slice(0,RULES.combat.maxDefenseDice);scheduleCombat(c,resolveCombatRound,900)};
+    displayBattleResult=()=>{};closeDice=()=>{G_combat=null};const getElement=document.getElementById;document.getElementById=id=>id==='btn-roll'?{style:{}}:getElement(id);`);
   return e;
 }
 const victoryFixtures={
@@ -207,10 +212,10 @@ test('repetir runCurrentStep no duplica CPU o ingresos',()=>{
  const e=completeEngine();e.run(`let times=0;G_step.currentFk='clt';G_step.isMyTurn=false;G_step.idx=1;executeCpuStep=()=>times++;updateStepUI=()=>{};runCurrentStep();runCurrentStep();`);
  assert.equal(e.run('times'),1);
 });
-test('combate CPU–CPU termina y notifica una sola vez sin DOM de dados',()=>{
+test('combate CPU–CPU termina por rondas y notifica una sola vez (presentación sustituida)',()=>{
  const e=completeEngine();e.run(`RULES.victory={};G.territories={'a':{id:'a',owner:'clt',adj:['b'],soldiers:20,mechs:0,aircraft:0,scorpions:0},'b':{id:'b',owner:'lib',adj:['a'],soldiers:1,mechs:0,aircraft:0,scorpions:0}};
- let completed=0;clearAttackFlash=()=>{};resolveCpuCpuSilent('a','b','clt',()=>completed++);`);
- assert.equal(e.run('completed'),1);assert.ok(e.run('G.lastBattle.rounds.length>0'));assert.ok(e.run("Battle.count(G.territories.a)>=1"));
+ let completed=0;clearAttackFlash=()=>{};openDiceCpu('a','b','clt',()=>completed++);`);
+ e.flush();assert.equal(e.run('completed'),1);assert.ok(e.run('G_combat.history.length>0'));assert.ok(e.run("Battle.count(G.territories.a)>=1"));
 });
 for(const survivor of ['soldiers','mechs','scorpions'])test(`explosión conserva exactamente un ${survivor} elegido`,()=>{
  const e=completeEngine();e.run(`G.setup.order=['imp','clt'];let t={id:'a',owner:'imp',soldiers:5,mechs:2,aircraft:0,scorpions:3,hasNuclear:true};resolveNuclearExplosion(t,'${survivor}')`);
@@ -271,8 +276,8 @@ for(const count of [3,4,5,6]) test(`simulación del motor: partida completa ${co
 });
 
 test('ataque con 2 unidades y elección de guarnición no deja territorios vacíos',()=>{
- const e=completeEngine();e.run(`RULES.victory={};G.territories={a:{id:'a',owner:'clt',adj:['b'],soldiers:0,mechs:2,aircraft:0,scorpions:0},b:{id:'b',owner:'lib',adj:['a'],soldiers:1,mechs:0,aircraft:0,scorpions:0}};clearAttackFlash=()=>{};Math.random=()=>0.99;resolveCpuCpuSilent('a','b','clt');`);
- assert.equal(e.run("G.territories.b.owner"),'clt');assert.equal(e.run('Battle.count(G.territories.a)'),1);assert.equal(e.run('Battle.count(G.territories.b)'),1);
+ const e=completeEngine();e.run(`RULES.victory={};G.territories={a:{id:'a',owner:'clt',adj:['b'],soldiers:0,mechs:2,aircraft:0,scorpions:0},b:{id:'b',owner:'lib',adj:['a'],soldiers:1,mechs:0,aircraft:0,scorpions:0}};clearAttackFlash=()=>{};Math.random=()=>0.99;openDiceCpu('a','b','clt');`);
+ e.flush();assert.equal(e.run("G.territories.b.owner"),'clt');assert.equal(e.run('Battle.count(G.territories.a)'),1);assert.equal(e.run('Battle.count(G.territories.b)'),1);
 });
 
 for(const [fk,fixture]of Object.entries(victoryFixtures))test(`hook de transición evalúa victoria ${fk} antes de ejecutar otro turno`,()=>{

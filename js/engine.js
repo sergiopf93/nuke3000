@@ -52,6 +52,7 @@ function _isOnlineHumanTurn(fk) {
 }
 
 function _syncNow(logMsg, logType) {
+  if(G.gameOver)return; // GAME_FINISHED owns the final state and its last combat view.
   // Push full G state to Firebase so observers are up to date
   if (typeof ONLINE === 'undefined' || !ONLINE.isOnline()) return;
   ONLINE.pushActionWithState('FULL_SYNC', {
@@ -203,7 +204,7 @@ function clearInteractionModes(){
 function nextStep(expectedKey){
   if(G.gameOver||G.setup?._inSetup||G.awaitingStart||!G_step.isMyTurn)return;
   if(typeof expectedKey==='string'&&expectedKey!==currentStepKey())return;
-  if(G.waitingDecision||typeof G_combat!=='undefined'&&G_combat&&!G_combat.done)return;
+  if(G.waitingMissile||G.waitingDecision||typeof G_combat!=='undefined'&&G_combat&&!G_combat.done)return;
   const step=(STEPS[G_step.phase]||[])[G_step.idx];
   if(step?.id==='reinf'&&(G.factions[G_step.currentFk].pendingSoldiers||0)>0)return;
   if(step?.id==='maint'&&RULES.end.maintenanceEnabled&&
@@ -565,23 +566,6 @@ function clearAttackFlash(tgtId) {
   const b=document.getElementById('attack-banner'); if(b) b.remove();
 }
 
-function resolveCpuCpuSilent(srcId,targetId,cpuFk,callback) {
-  if(G.gameOver)return;
-  if(!validAttack(srcId,targetId,cpuFk)){if(callback)callback();return;}
-  const src=G.territories[srcId],tgt=G.territories[targetId],defFk=tgt.owner;
-  const result=Battle.fight(src,tgt,{rules:RULES.combat,attFk:cpuFk,defFk});
-  Object.assign(src,result.attacker);Object.assign(tgt,result.defender);
-  if(result.status==='conquered') {
-    tgt.owner=cpuFk;G.factions[cpuFk].conqueredThisTurn=(G.factions[cpuFk].conqueredThisTurn||0)+1;
-    checkElimination(defFk,cpuFk);checkWinCondition();
-  }
-  G.lastBattle=result;
-  clearAttackFlash(targetId);
-  addLog('⚔ '+FDATA[cpuFk].name+' → '+terName(targetId)+': '+result.status+' ('+result.rounds.length+' rondas)','combat');
-  updateMap();refreshCards();
-  if(callback&&!G.gameOver)callback();
-}
-
 function executeCpuAttack(fk, descEl) {
   if(G.gameOver) return;
   const myTers=Object.values(G.territories).filter(t=>t.owner===fk&&Battle.canAttack(t));
@@ -783,21 +767,24 @@ function declareWin(fk, goal, broadcast = true) {
   if(typeof ONLINE!=='undefined'&&ONLINE.isOnline()&&ONLINE.cancelPendingDecision)ONLINE.cancelPendingDecision();
   const nextButton=document.getElementById('btn-next');if(nextButton)nextButton.disabled=true;
   const combatModal=document.getElementById('dmodal');
-  if(combatModal) combatModal.classList.remove('open');
+  const finalCombat=typeof G_combat!=='undefined'&&G_combat&&(G_combat.resolving||G_combat.presentingFinal)?G_combat:null;
+  if(combatModal&&!finalCombat)combatModal.classList.remove('open');
   G.result = { winner: fk, goal, round: G.round };
   G.phase = 'finished';
   G.attackSrc = G.moveSrc = G.sel = null;
   G.missileFiringMode = G.nuclearMode = false;
   if(typeof G_combat !== 'undefined') {
     if(G_combat) G_combat.done = true;
-    G_combat = null;
+    if(!finalCombat)G_combat=null;
   }
   Object.values(G.pendingCpuAttack || {}).forEach(attack => clearTimeout(attack._timer));
   G.pendingCpuAttack = {};
   updatePhaseBanner(G_step.currentFk||fk);
-  declareVictory(goal, fk);
+  const result=G.result;
+  const showVictory=()=>{if(G.result!==result)return;if(combatModal)combatModal.classList.remove('open');declareVictory(goal,fk);};
+  if(finalCombat)setTimeout(showVictory,2200);else showVictory();
   if(broadcast && typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
-    ONLINE.pushActionWithState('GAME_FINISHED', { result: G.result });
+    ONLINE.pushActionWithState('GAME_FINISHED', { result:G.result, combat:finalCombat?combatView(finalCombat,finalCombat.history.at(-1)):null });
     ONLINE.signalGameEnd();
   }
 }

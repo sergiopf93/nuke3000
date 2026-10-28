@@ -30,7 +30,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#pcount').selectOption('3');await page.locator('#pname').fill('QA V3');await page.locator('#btnstart')[touch?'tap':'click']();
   let start=null,finished=false;
   const click=async(selector)=>{const locator=page.locator(selector).first();if(await locator.isVisible()){await locator[touch?'tap':'click']({timeout:2000});actions.push(selector);return true;}return false;};
-  for(let action=0;action<600;action++){
+  for(let action=0;action<1200;action++){
    if(errors.length)throw Error(errors.join('\n'));
    const state=await page.evaluate(()=>({setup:G.setup._inSetup,step:G.setup._stepIdx,roll:G.setup.rollResults[G.pf],auto:G.setup._autoClaimEnabled,
      result:G.result,round:G.round,fk:G_step.currentFk,phase:G_step.phase,idx:G_step.idx}));
@@ -47,7 +47,8 @@ const server=http.createServer((req,res)=>{
    }else if(await page.locator('#maint-modal').isVisible()){
     await click('#maint-confirm');
    }else if(await page.locator('#dmodal.open').isVisible()){
-    if(!await click('#unit-sel-def > button'))if(!await click('#btn-roll'))await click('#btn-cancel');
+    // CPU attacks advance on their own, including the final result pause.
+    if(await page.evaluate(()=>G_combat?.isPlayerAtt)){if(!await click('#unit-sel-att > button'))await click('#btn-roll');}
    }else if(state.fk==='prm'){
     // All choices are made through the same visible buttons a player uses.
     const buttons=page.locator('#step-actions button:enabled');

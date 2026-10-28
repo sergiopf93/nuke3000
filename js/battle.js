@@ -7,7 +7,7 @@ const Battle = (() => {
   const count=t=>Object.values(keys).reduce((sum,key)=>sum+(t[key]||0),0);
   const canAttack=t=>count(t)>1;
   function pool(t,rules) {
-    return Object.keys(keys).sort((a,b)=>priority[a]-priority[b]).flatMap(type=>
+    return Object.keys(keys).sort((a,b)=>rules.unitDice[diceKeys[b]]-rules.unitDice[diceKeys[a]]||priority[a]-priority[b]).flatMap(type=>
       Array.from({length:t[keys[type]]||0},(_,index)=>({type,sides:rules.unitDice[diceKeys[type]],label:labels[type],index})));
   }
   function select(t,chosen,limit,rules) {
@@ -51,7 +51,7 @@ const Battle = (() => {
     const eligible={...attacker};
     if(options.guardType){const key=keys[options.guardType];if(!key||!eligible[key])throw Error('Guarnición inválida');eligible[key]--;}
     const att=select(eligible,options.attUnits,Math.min(count(attacker)-1,rules.maxAttackDice),rules);
-    const def=select(defender,options.defUnits,Math.min(count(defender),rules.maxDefenseDice),rules);
+    const def=select(defender,null,Math.min(count(defender),rules.maxDefenseDice),rules);
     const attRolls=options.attRolls || roll(att,attFk,'attacker',random);
     const defRolls=roll(def,defFk,'defender',random);
     if(attRolls.length!==att.length || attRolls.some((u,i)=>u.type!==att[i].type))throw Error('Dados atacantes obsoletos');

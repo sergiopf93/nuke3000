@@ -1,0 +1,42 @@
+{
+  "baseline": "cd5d921",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "ignored": [
+    {
+      "label": "Contenedor de sala: ancho variable según el código",
+      "rect": [
+        960,
+        50,
+        1190,
+        80
+      ]
+    },
+    {
+      "label": "Tooltip de hover (nombre corregido)",
+      "rect": [
+        820,
+        610,
+        950,
+        710
+      ]
+    },
+    {
+      "label": "LED de turno y halo animado (box-shadow hasta 12px)",
+      "rect": [
+        20,
+        115,
+        65,
+        150
+      ]
+    }
+  ],
+  "results": [
+    {
+      "stage": "map",
+      "changedPixelsOutsideIgnored": 0
+    }
+  ]
+}

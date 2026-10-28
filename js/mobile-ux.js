@@ -18,7 +18,7 @@ const GameUX=(()=>{
   title.textContent=t?terName(id)+' · '+(FDATA[t.owner]?.name||'Sin control'):'Toca un territorio';
   detail.textContent=t?units(t)+(t.hasNuclear?' · Nuclear':''):'';
   const step=STEPS[G_step.phase]?.[G_step.idx]?.id;
-  hint.textContent=G.setup?._inSetup?'Completa el despliegue en el mapa':!G_step.isMyTurn?'Observando · Las decisiones de defensa se solicitan cuando te corresponda':G.moveSrc?'Toca un destino azul · ✕ cancela el origen':G.attackSrc?'Toca un enemigo adyacente rojo para preparar el ataque':['move','regroup'].includes(step)?'Toca origen propio y destino · Una vez por unidad en esta fase':step==='attack'?'Toca origen propio y después enemigo adyacente':step==='upgrade'?'Selecciona territorio propio y elige mejora':step==='missile'?'Construye antes de disparar · Usa Lanzar para elegir objetivo':'Acciones disponibles en el panel';
+  hint.textContent=G.setup?._inSetup?'Completa el despliegue en el mapa':!G_step.isMyTurn?'Observando · Defensa automática; intercepción de misiles cuando corresponda':G.moveSrc?'Toca un destino azul · ✕ cancela el origen':G.attackSrc?'Toca un enemigo adyacente rojo para preparar el ataque':['move','regroup'].includes(step)?'Toca origen propio y destino · Una vez por unidad en esta fase':step==='attack'?'Toca origen propio y después enemigo adyacente':step==='upgrade'?'Selecciona territorio propio y elige mejora':step==='missile'?'Construye antes de disparar · Usa Lanzar para elegir objetivo':'Acciones disponibles en el panel';
   document.getElementById('territory-clear').hidden=!t;
  }
  function territoryTap(id){
@@ -33,11 +33,11 @@ const GameUX=(()=>{
   const modal=document.getElementById('dmodal');modal.dataset.battleState=result?.status||'ready';
   const guard=document.querySelector('#cdesc #combat-guard');
   const slot=document.getElementById('combat-guard-slot');if(guard){const label=document.createElement('label');label.htmlFor='combat-guard';label.textContent='GUARNICIÓN';for(const option of guard.options)option.textContent={sol:'Soldado',mech:'Mech',air:'Aircraft',scorp:'Scorpion'}[option.value];slot.replaceChildren(label,guard);}else if(!ctx.isPlayerAtt)slot.replaceChildren();const selector=slot.querySelector('select');if(selector)selector.disabled=!!result;
-  document.getElementById('cdesc').textContent=result?'Tirada resuelta · detalle disponible':'Selecciona tus unidades antes de tirar';
+  document.getElementById('cdesc').textContent=result?'Tirada resuelta · detalle disponible':ctx.isPlayerAtt?'Selecciona tus unidades antes de tirar':'Resolución automática · siguiente tirada en breve';
   document.getElementById('combat-ter-att').textContent=terName(ctx.srcId);
   document.getElementById('combat-ter-def').textContent=terName(ctx.targetId);
   for(const [side,army,selected,rolls,losses]of [
-   ['att',result?.attacker||G.territories[ctx.srcId],ctx.attSelected,result?.attRolls||ctx._attRolls, result?.losses.attacker||[]],
+   ['att',result?.attacker||G.territories[ctx.srcId],ctx.attSelected,result?.attRolls, result?.losses.attacker||[]],
    ['def',result?.defender||G.territories[ctx.targetId],ctx.defSelected,result?.defRolls,result?.losses.defender||[]]
   ]){
    const info=document.getElementById('combat-army-'+side);info.replaceChildren();
@@ -46,7 +46,7 @@ const GameUX=(()=>{
    if(!squads.childNodes.length)squads.textContent='Sin unidades';
    info.append(squads,document.createTextNode(' · Dados: '+(rolls?.length||selected?.length||0)));
    const loss=document.getElementById('combat-loss-'+side);
-   loss.textContent=result?(losses.length?losses.map(c=>labels[c.from]+' → '+(c.to?labels[c.to]:'BAJA')).join(' · '):'Sin bajas'):(side==='att'?'Una unidad permanece en origen':'El defensor gana los empates');
+   loss.textContent=result?(losses.length?losses.map(c=>labels[c.from]+' → '+(c.to?labels[c.to]:'BAJA')).join(' · '):'Sin bajas'):(side==='att'?'Una unidad permanece en origen':'Defensa automática · gana los empates');
    const pool=selected||[],pairs=result?.pairs||[],paired=pairs.map(p=>side==='att'?p.att:p.def),dice=rolls?[...paired,...rolls.filter(d=>!paired.includes(d))]:pool;
    const row=document.getElementById(side==='att'?'datt':'ddef');row.replaceChildren();
    const remainingLosses=[...losses];
@@ -68,7 +68,7 @@ const GameUX=(()=>{
   title.className='battle-result-title';caption.className='battle-result-caption';counts.className='battle-result-counts';
   const a=result?.losses.attacker.length||0,d=result?.losses.defender.length||0;
   title.textContent=result?(result.status==='conquered'?'TERRITORIO CONQUISTADO':result.status==='repelled'?'DEFENSA GANADA':d>a?'ATAQUE GANA LA TIRADA':a>d?'DEFENSA GANA LA TIRADA':'RONDA RESUELTA'):'PREPARAR COMBATE';
-  caption.textContent=result?.status==='conquered'?FDATA[ctx.attFk].name+' ocupa '+terName(ctx.targetId):result?'Bajas y degradaciones señaladas en cada bando':ctx.isPlayerDef?'El atacante ya ha tirado. Elige tu defensa.':'Unidades sugeridas listas. Puedes cambiar la selección.';
+  caption.textContent=result?.status==='conquered'?FDATA[ctx.attFk].name+' ocupa con '+Battle.count(G.territories[ctx.targetId])+' · Guarnición '+Battle.count(G.territories[ctx.srcId]):result?'Bajas y degradaciones señaladas en cada bando':ctx.isPlayerAtt?'Unidades sugeridas listas. Puedes cambiar la selección.':'Combate automático · defensa con los dados más fuertes.';
   counts.textContent=result?'Iniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restan '+Battle.count(result.attacker)+' / '+Battle.count(result.defender):'Hasta '+RULES.combat.maxAttackDice+' ataque · '+RULES.combat.maxDefenseDice+' defensa';
   main.append(title,caption);summary.append(main,counts);
   if(result&&!matchMedia('(prefers-reduced-motion:reduce)').matches)document.querySelectorAll('#dmodal .die').forEach(el=>el.classList.add('spin'));

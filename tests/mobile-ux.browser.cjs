@@ -64,7 +64,7 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  await press('#step-actions button:first-child');await press('#upgrade-ok');assert.equal(await page.evaluate(()=>G.territories['01_01'].soldiers),3);
  await page.evaluate(()=>{clearInteractionModes();G_step.idx=4;Object.assign(G.territories['01_02'],{owner:'lib',soldiers:2,mechs:0,aircraft:1});G.factions.lib.missiles=0;G.factions.imp.missiles=2;updateStepUI(STEPS.prep[4]);updateMap();});
  await press('#step-actions button:has-text("Construir")');if(touch)assert.match(await page.locator('#mobile-resources').innerText(),/3\/5 misiles/);
- await press('#step-actions button:has-text("Lanzar")');await press('#tc-01_02');await press('[data-missile-target="aircraft"]');
+ await press('#step-actions button:has-text("Lanzar")');await press('#tc-01_02');await press('#missile-launch');await press('[data-missile-target="aircraft"]');
  assert.equal(await page.evaluate(()=>G.territories['01_02'].aircraft),0);if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-missile.png`)});await press('#missile-close');
  // Construction/reforcement controls share the dark visual system, using engine actions.
  await page.evaluate(()=>{clearInteractionModes();G_step.idx=5;G.factions.imp.plutonium=10;G.territories['01_01'].hasNuclear=false;updateStepUI(STEPS.prep[5]);updateMap();});
@@ -74,14 +74,13 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  await page.evaluate(()=>{clearInteractionModes();G_step.idx=1;G.factions.imp.pendingSoldiers=2;updateStepUI(STEPS.prep[1]);showReinforcementUI(2);});
  await press('#tc-01_01');if([844,1440].includes(viewport.width))await page.screenshot({path:path.join(evidence,`${tag}-${size}-reinforcements.png`)});
  await press('#rc-plus');await press('#rc-ok');assert.equal(await page.evaluate(()=>G.factions.imp.pendingSoldiers),0);
- // Human defense: the choice remains explicit, even when the CPU drives its turn.
+ // Human defense is automatic; the actual modal must progress without input.
  await page.evaluate(()=>{clearInteractionModes();G.phase='combat';G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:false};Object.assign(G.territories['01_02'],{owner:'clt',soldiers:3,mechs:0,aircraft:0});Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:0});openDiceCpu('01_02','01_01','clt',()=>{});});
  assert.equal(await page.evaluate(()=>G_combat.history.length),0);
- assert.equal(await page.locator('#datt .die-outcome').first().innerText(),'TIRADO','La tirada atacante pendiente de defensa no se presenta como sin par');
- if(!touch)await press('#unit-sel-def > button');
- await press('#btn-roll');assert.equal(await page.evaluate(()=>G_combat.history.length),1);
+ assert.equal(await page.locator('#unit-sel-def').count(),0);
+ await page.waitForFunction(()=>G_combat?.done);
+ assert.ok(await page.evaluate(()=>G_combat.history.length)>0);
  await press('#btn-cancel');
- if(touch){await press('#tc-01_02');assert.match(await page.locator('#territory-name').innerText(),/TAL-MAUT/);assert.equal(await page.locator('#dmodal.open').count(),0);}
  await page.evaluate(()=>{G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:0,aircraft:0,scorpions:1});Object.assign(G.territories['01_02'],{owner:'lib',soldiers:0,mechs:0,aircraft:0,scorpions:2});beginCombat('01_01','01_02','imp');});
  if(!touch)await press('#unit-sel-att > button');await press('#btn-roll');
  assert.equal(await page.evaluate(()=>G_combat.done),false);

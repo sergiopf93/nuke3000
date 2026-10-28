@@ -1,3 +1,18 @@
+## Correcciones de combate y misiles — 28/10/2026
+
+El propietario autoriza trabajar directamente en `main`, hacer push remoto por SSH y publicar mediante GitHub Pages. Referencia de pruebas: https://sergiopf93.github.io/nuke3000/. Esta autorización sustituye las restricciones históricas de publicación indicadas más abajo.
+
+- Defensa siempre automática: máximo de dados permitidos, por caras descendentes; en igualdad, mech antes de aircraft. El atacante conserva selección y guarnición. `Battle.round` ignora selecciones defensivas externas.
+- Misil por etapas: lanzamiento/consumo inmediato → decisión e intercepción válida (D6≥4) → solo si pasa, impacto D6 → selección de baja entre los tipos presentes elegibles. Soldado con 1–6, mech/aircraft con 5–6, scorpion con 6. Sin objetivo válido no hay baja; última unidad protegida y construcción posterior al disparo bloqueada.
+- Todos los combates abren ventana. CPU automática: 900 ms de preparación, 1600 ms de resultado entre rondas y 2200 ms de resultado final antes del callback. Cerrar el resultado no duplica el callback ni exige SIGUIENTE. Los observadores online reciben `COMBAT_VIEW`, sin tirar ni decidir defensa.
+- SW `nuke3000-v5-combat-missiles`: caché nueva completa, retirada de anteriores y recarga automática única de ventanas antiguas. Marca HTML `combat-missiles-v5` verificable.
+
+Validación: 222 tests Node (121 anteriores adaptados +101 regresiones); Chrome real 1440×900 y táctil 844×390 para humano/CPU, CPU/humano y CPU/CPU con pausas sin acelerar; dos clientes para humano/humano y CPU/humano, sin selección defensiva, con transporte local. Matriz adicional 667×375, 932×430, 390×844. Partidas completas desde lobby/setup hasta Libertos ronda 12, escritorio y horizontal, 121 acciones UI en cada una, sin mutar estado desde el test (solo semilla y aceleración de temporizadores). Prueba SW real desde `19130f4`: actualización sin intervención, SHA256 de siete recursos y arranque offline con 60 territorios.
+
+La última conquista ganadora conserva la tirada 2200 ms antes de mostrar victoria, también en los clientes remotos; ganador y bloqueo de acciones inmediatos. GAME_FINISHED incluye la presentación final y evita snapshots redundantes posteriores.
+
+Mapa, 60 territorios, costes y demás reglas V3 conservados. Pendientes: Safari/iPhone físico y Firebase real/reconexión/autoridad de servidor. Evidencia y resultados de publicación en [docs/evidence/combat-missiles/README.md](docs/evidence/combat-missiles/README.md). Las secciones siguientes son historial.
+
 ## Estado vigente — coherencia visual y main local, 28/10/2026
 
 El propietario autoriza expresamente desarrollar, probar y hacer commits en **main local**, integrando dev/mobile-gameplay-ux por fast-forward. Se conservan las ramas dev/stabilization-gameplay (ec9a955) y dev/mobile-gameplay-ux (cd5d921); no hay autorización de push ni despliegue. Esa instrucción sustituye temporalmente el flujo de ramas anterior. La base completa se probó desde main antes del rediseño; se corrigió una comparación frágil por un píxel del borde variable del código de sala.
