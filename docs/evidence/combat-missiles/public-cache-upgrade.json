@@ -1,0 +1,10 @@
+{
+  "phase": "verify",
+  "url": "https://sergiopf93.github.io/nuke3000/",
+  "caches": [
+    "nuke3000-v5-combat-missiles"
+  ],
+  "marker": "combat-missiles-v5",
+  "errors": [],
+  "firebase": "SDK transport stubbed: no auth or database writes"
+}

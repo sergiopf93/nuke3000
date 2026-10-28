@@ -33,3 +33,11 @@ CPU: preparación 900 ms, resultado intermedio 1600 ms y resultado final 2200 ms
 Publicación directa en main/Pages autorizada. Tras el commit se verifican workflow para su SHA, hashes públicos y los mismos combates/misiles contra https://sergiopf93.github.io/nuke3000/ (NUKE_PUBLIC_URL en combat-flow.browser.cjs). El resultado remoto se informa en la entrega, separado de las pruebas locales anteriores al push.
 
 Sin nuevas discrepancias reglamentarias. Safari/iPhone físico y Firebase real/reconexión siguen pendientes. Standalone histórico sin actualizar. Sin build/lint/TypeScript configurados; comprobación de sintaxis activa y git diff --check. Los .DS_Store y pruebas/ ajenos se conservan fuera de Git.
+
+## Verificación pública del código de juego
+
+Pages desplegó correctamente 3c2f931: [workflow](https://github.com/sergiopf93/nuke3000/actions/runs/40731850348). [Pruebas contra la URL real](public-browser.log): combate humano/CPU, CPU/humano, CPU/CPU, intercepción/impacto/elección y conquista ganadora; escritorio y horizontal táctil, cero errores JS. [Combate público](public-844-lib-clt-final.png), [misil público](public-844-missile-choose.png). Se bloquea Firebase para evitar escrituras, sin sustituir código de juego.
+
+[Actualización pública](public-cache-upgrade.json): un perfil con v4 previa actualiza sin intervención a v5, elimina v4 y comprueba SHA256 de siete recursos. El SDK Firebase se sustituye únicamente en esta comprobación de caché para evitar autenticación/escrituras; los recursos de la aplicación se sirven sin modificar.
+
+Después se refuerza la precarga con cache:reload para evitar también respuestas antiguas de caché HTTP; [regresión SW posterior](sw-http-reload.log) pasa. No cambia ningún cálculo ni código de juego respecto de 3c2f931. El SHA del último commit, su workflow y los hashes públicos se vuelven a verificar tras este ajuste y se informan en la entrega.

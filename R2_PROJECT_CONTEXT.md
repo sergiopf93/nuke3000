@@ -11,6 +11,8 @@ Validación: 222 tests Node (121 anteriores adaptados +101 regresiones); Chrome 
 
 La última conquista ganadora conserva la tirada 2200 ms antes de mostrar victoria, también en los clientes remotos; ganador y bloqueo de acciones inmediatos. GAME_FINISHED incluye la presentación final y evita snapshots redundantes posteriores.
 
+Código publicado y probado en Pages (3c2f931): combate/misiles en escritorio y horizontal, upgrade público v4→v5 y hashes coincidentes. Se refuerza después la precarga SW con cache:reload (regresión SW pasa) para evitar también caché HTTP anterior; el último SHA y despliegue se verifican en la entrega.
+
 Mapa, 60 territorios, costes y demás reglas V3 conservados. Pendientes: Safari/iPhone físico y Firebase real/reconexión/autoridad de servidor. Evidencia y resultados de publicación en [docs/evidence/combat-missiles/README.md](docs/evidence/combat-missiles/README.md). Las secciones siguientes son historial.
 
 ## Estado vigente — coherencia visual y main local, 28/10/2026

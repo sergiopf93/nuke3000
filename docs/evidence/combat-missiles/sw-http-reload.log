@@ -1,0 +1,23 @@
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+loaded old page
+SW browser: [SW] registered http://127.0.0.1:58141/nuke3000/
+old cache ready
+update requested
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: [SW] registered http://127.0.0.1:58141/nuke3000/
+SW browser: Failed to load resource: the server responded with a status of 404 (Not Found)
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: Failed to load resource: net::ERR_FAILED
+SW browser: [SW] registered http://127.0.0.1:58141/nuke3000/
+PASS SW real: actualización automática desde 19130f4, recarga sin intervención, caché anterior eliminada, SHA256 de 7 recursos coincide y arranque offline con 60 territorios

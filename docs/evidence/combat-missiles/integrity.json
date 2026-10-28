@@ -16,6 +16,6 @@
     "js/engine.js": "90ff9aae2dc5911fbe40dd5208cae1f9cf6cc8c6038a2289a2a5b98636f3cb04",
     "js/mobile-ux.js": "28ec8d98b2bc28bbf8aaf86319340e1a1f9e60369cdd4328e2feee605f781910",
     "js/online.js": "f00fcdd11a7fd113839943667b803b7eca982ae1aa80d4ee46baec9d8613fcdb",
-    "sw.js": "b88f5c94ce721e30fa2a520e3a88d416d90acce23a510f2fe17fe1dedc2d647f"
+    "sw.js": "c3640aeb736c557ff512937581ee12cdde3b16b95fe0d54268f6a97bf4260e62"
   }
 }

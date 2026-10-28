@@ -1,0 +1,3 @@
+Origen probado: https://sergiopf93.github.io/nuke3000/
+PASS combate/misiles 1440x900: humano/CPU, CPU/humano, CPU/CPU visibles, 2 rondas pausadas, callback único, intercepción, elección posterior y sin elegibles
+PASS combate/misiles 844x390: humano/CPU, CPU/humano, CPU/CPU visibles, 2 rondas pausadas, callback único, intercepción, elección posterior y sin elegibles
