@@ -64,6 +64,9 @@ function _syncNow(logMsg, logType) {
 let G_step = { idx:0, phase:'prep', isMyTurn:true, cpuQueue:[] };
 
 function startPhase(phase, fk) {
+  if(G.gameOver) return;
+  G.currentFaction = fk;
+  G.phase = phase;
   G_step.phase     = phase;
   G_step.idx       = 0;
   G_step.isMyTurn  = (fk === G.pf);
@@ -129,6 +132,7 @@ function showObjective(fk) {
 }
 
 function runCurrentStep() {
+  if(G.gameOver) return;
   const steps=STEPS[G_step.phase]||[];
   if(G_step.idx>=steps.length){ endPhaseForFaction(); return; }
   const step=steps[G_step.idx];
@@ -140,7 +144,9 @@ function runCurrentStep() {
   const isOnlineOpponent = isOnline && !G_step.isMyTurn && _isOnlineHumanTurn(G_step.currentFk);
   const isCpuTurn = !G_step.isMyTurn && !isOnlineOpponent;
 
-  if(step.isAuto){
+  if(isOnline && !G_step.isMyTurn && (isOnlineOpponent || !ONLINE.isHost())){
+    _showSpectatorStep(step);
+  } else if(step.isAuto){
     executeAutoStep(step);
   } else if(isOnlineOpponent) {
     // Show spectator UI — wait for remote action
@@ -172,6 +178,7 @@ function _showSpectatorStep(step) {
 }
 
 function nextStep() {
+  if(G.gameOver) return;
   G_step.idx++;
   // Online: if it's my turn, push NEXT_STEP with new idx so observers advance too
   if (typeof ONLINE !== 'undefined' && ONLINE.isOnline() && G_step.isMyTurn) {
@@ -404,6 +411,7 @@ function applyIncome(fk) {
 }
 
 function executeCpuStep(step) {
+  if(G.gameOver) return;
   const fk=G_step.currentFk;
   const desc=document.getElementById('cpu-action-desc');
   const delay=800;
@@ -597,6 +605,7 @@ function clearAttackFlash(tgtId) {
 }
 
 function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
+  if(G.gameOver) return;
   const src=G.territories[srcId], tgt=G.territories[targetId];
   if(!src||!tgt){if(callback)callback();return;}
   const Rc=RULES.combat;
@@ -629,7 +638,7 @@ function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
           else if(tgt.mechs>0){src.mechs=1;tgt.mechs--;}
         }
         addLog('['+(FDATA[cpuFk]?.name||cpuFk)+'] conquista '+terName(targetId),'combat');
-        checkElimination(prevDefOwner);
+        checkElimination(prevDefOwner, cpuFk);
         checkWinCondition();
       }
       updateMap();refreshCards();if(callback)callback();return;
@@ -652,6 +661,7 @@ function resolveCpuCpuSilent(srcId, targetId, cpuFk, callback) {
 }
 
 function executeCpuAttack(fk, descEl) {
+  if(G.gameOver) return;
   const myTers=Object.values(G.territories).filter(t=>t.owner===fk&&armyPoints(t)>1);
   let attacked=false;
   for(const src of myTers){
@@ -681,6 +691,7 @@ function runMaintenanceRolls() {
 }
 
 function runMaintenanceRollsFor(fk, callback) {
+  if(G.gameOver) return;
   const R=RULES.end;
   const nucTers=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);
   if(nucTers.length===0){if(callback)callback();return;}
@@ -776,13 +787,15 @@ function activateMissileFire() {
   G.missileFiringMode=true;
 }
 
-function checkElimination(fk) {
-  if(!fk||!G.factions[fk]) return;
+function checkElimination(fk, attackerFk = G_step.currentFk) {
+  if(G.gameOver || !fk || !G.factions[fk] || G.factions[fk].alive===false) return;
   const remaining=Object.values(G.territories).filter(t=>t.owner===fk);
   if(remaining.length===0){
     G.factions[fk].alive=false;
     addLog('☠ '+(FDATA[fk]?.name||fk)+' ELIMINADO!','combat');
-    if(G.factions[G.pf]) G.factions[G.pf].eliminatedArmies=(G.factions[G.pf].eliminatedArmies||0)+1;
+    if(attackerFk!==fk && G.factions[attackerFk]) {
+      G.factions[attackerFk].eliminatedArmies=(G.factions[attackerFk].eliminatedArmies||0)+1;
+    }
     flashScreen();
   }
 }
@@ -792,13 +805,14 @@ function totalArmyPoints(fk) {
 }
 
 function checkWinCondition() {
+  if(G.gameOver) return;
   const order = G.setup.order || Object.keys(G.factions);
   const alive = order.filter(fk=>G.factions[fk]?.alive!==false);
-  if(alive.length<=1){ declareWin(alive[0]||order[0],'Last faction standing'); return; }
+  if(alive.length===1){ declareWin(alive[0],'Last faction standing'); return; }
   const totalNuclears = Object.values(G.territories).filter(t=>t.hasNuclear).length;
 
   order.forEach(fk=>{
-    if(G.factions[fk]?.alive===false) return;
+    if(G.gameOver || G.factions[fk]?.alive===false) return;
     const V=RULES.victory[fk]; if(!V||!V.enabled) return;
     const myTers=Object.values(G.territories).filter(t=>t.owner===fk);
     const myNucs=myTers.filter(t=>t.hasNuclear);
@@ -833,14 +847,40 @@ function checkWinCondition() {
   });
 }
 
-function declareVictory(goal) {
-  const fc=FDATA[G.pf]||{name:G.pf,color:'#C8A800'};
+function declareWin(fk, goal, broadcast = true) {
+  if(G.gameOver || !G.factions[fk]) return;
+  G.gameOver = true;
+  const combatModal=document.getElementById('dmodal');
+  if(combatModal) combatModal.classList.remove('open');
+  G.result = { winner: fk, goal, round: G.round };
+  G.phase = 'finished';
+  G.attackSrc = G.moveSrc = G.sel = null;
+  G.missileFiringMode = G.nuclearMode = false;
+  if(typeof G_combat !== 'undefined') {
+    if(G_combat) G_combat.done = true;
+    G_combat = null;
+  }
+  Object.values(G.pendingCpuAttack || {}).forEach(attack => clearTimeout(attack._timer));
+  G.pendingCpuAttack = {};
+  declareVictory(goal, fk);
+  if(broadcast && typeof ONLINE !== 'undefined' && ONLINE.isOnline()) {
+    ONLINE.pushActionWithState('GAME_FINISHED', { result: G.result });
+    ONLINE.signalGameEnd();
+  }
+}
+
+function declareVictory(goal, fk = G.result?.winner || G.pf) {
+  const fc=FDATA[fk]||{name:fk,color:'#C8A800'};
+  const safeGoal=String(goal).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ov=document.createElement('div');
+  ov.id='game-result';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-label','Resultado de la partida');
   ov.style.cssText='position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="text-align:center;">'
     +'<div style="font-family:Orbitron,sans-serif;font-size:48px;letter-spacing:8px;color:'+fc.color+';text-shadow:0 0 40px '+fc.color+'aa;margin-bottom:16px;">VICTORIA</div>'
     +'<div style="font-size:16px;color:'+fc.color+';font-family:Orbitron,sans-serif;margin-bottom:8px;">'+fc.name+'</div>'
-    +'<div style="font-size:13px;color:#888;margin-bottom:30px;">'+goal+'</div>'
+    +'<div style="font-size:13px;color:#888;margin-bottom:30px;">'+safeGoal+'</div>'
     +'<button onclick="location.reload()" style="background:#0a0a0d;border:1px solid '+fc.color+';color:'+fc.color+';padding:12px 32px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">NUEVA PARTIDA</button>'
     +'</div>';
   document.body.appendChild(ov);
@@ -848,6 +888,7 @@ function declareVictory(goal) {
 }
 
 function endPhaseForFaction() {
+  if(G.gameOver) return;
   const order=G.setup.order||Object.keys(G.factions);
   const currentFk=G_step.currentFk;
   const currentIdx=order.indexOf(currentFk);
@@ -864,12 +905,16 @@ function endPhaseForFaction() {
     addLog('🔚 '+((FDATA[currentFk]&&FDATA[currentFk].name)||currentFk)+': FASE FINAL','sys');
     G.phase='end'; startPhase('end', currentFk);
   } else if(G_step.phase==='end'){
-    const nextIdx=(currentIdx+1)%order.length;
+    const living = order.filter(fk => G.factions[fk]?.alive!==false);
+    if(living.length<=1){ checkWinCondition(); return; }
+    let nextIdx=(currentIdx+1)%order.length;
+    while(G.factions[order[nextIdx]]?.alive===false) nextIdx=(nextIdx+1)%order.length;
     const nextFk=order[nextIdx];
-    const isNewRound=nextIdx===0;
+    const isNewRound=nextIdx<=currentIdx;
     if(isNewRound){
       G.round++;
-      document.getElementById('rnum').textContent=G.round;
+      const roundLabel=document.getElementById('rnum');
+      if(roundLabel) roundLabel.textContent=G.round;
       addLog('═══ RONDA '+G.round+' ═══','sys');
       flashScreen();
     }
@@ -978,6 +1023,7 @@ function blendHex(a,b,t){const pr=c=>parseInt(c.slice(1,3),16),pg=c=>parseInt(c.
 function totalAircraft(){return Object.values(G.territories).filter(t=>t.owner===G.pf).reduce((s,t)=>s+t.aircraft,0);}
 
 function onTerritoryClick(id,event){
+  if(G.gameOver) return;
   if(G.setup&&G.setup.claimCallback){const handled=G.setup.claimCallback(id,event);if(handled)return;return;}
   if(G.reinforcementMode&&G.reinforcementMode.callback){const handled=G.reinforcementMode.callback(id,event);if(handled)return;return;}
   if(G.pendingCpuAttack&&G.pendingCpuAttack[id]){const pending=G.pendingCpuAttack[id];if(pending.spectator){if(pending._timer)clearTimeout(pending._timer);delete G.pendingCpuAttack[id];clearAttackFlash(id);openCombatModal('cpu-att-cpu-def');}else{openCombatModal('cpu-att-player-def');}return;}
@@ -1043,6 +1089,7 @@ function selectTerritory(id){
 function activateNuclearMode(){const myF=G.factions[G.pf];if(myF.plutonium<RULES.prep.nuclearBuildCost){addLog('Plutonio insuficiente.','sys');return;}G.nuclearMode=true;G.moveMode=false;G.moveSrc=null;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(!ring)return;if(t.owner===G.pf&&!t.hasNuclear){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','2.5');}else{ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});addLog('Clic en un territorio tuyo para construir Nuclear Complex.','sys');}
 
 function doAct(action){
+  if(G.gameOver) return;
   const id=G.sel; if(!id) return;
   const t=G.territories[id];const myF=G.factions[G.pf];
   if(action==='nuke'){
@@ -1060,6 +1107,7 @@ function doAct(action){
 }
 
 function doUpgrade(type){
+  if(G.gameOver) return;
   const id=G.sel;const myF=G.factions[G.pf];
   if(!id||!G.territories[id]||G.territories[id].owner!==G.pf){addLog('Selecciona primero un territorio TUYO.','sys');return;}
   const t=G.territories[id];

@@ -1,4 +1,6 @@
 function initGame() {
+  G.gameOver = false;
+  G.result = null;
   const pc = G.playerCount;
   const setup = RULES.setup.startingAssets[pc] || SETUP[pc];
 

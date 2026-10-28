@@ -321,6 +321,7 @@ const ONLINE = (() => {
 
   // ── Handle remote action ──────────────────────────────────
   function _handleRemoteAction(action) {
+    if(G.gameOver) return;
     const { type, payload } = action;
     console.log('[ONLINE] Remote:', type);
 
@@ -356,7 +357,9 @@ const ONLINE = (() => {
         if (typeof updateMap === 'function') updateMap();
         if (typeof refreshCards === 'function') refreshCards();
 
-        if (sub === 'CLAIM') {
+        if (sub === 'DEPLOY') {
+          if(typeof setupStep_Deploy_Next === 'function') setupStep_Deploy_Next();
+        } else if (sub === 'CLAIM') {
           setTimeout(() => {
             if (typeof setupStep_Claim_Next === 'function') setupStep_Claim_Next();
             // Force map redraw after panel updates
@@ -404,12 +407,18 @@ const ONLINE = (() => {
         if (typeof endPhaseForFaction === 'function') endPhaseForFaction();
         break;
 
+      case 'GAME_FINISHED':
+        if(payload.result && typeof declareWin === 'function') {
+          declareWin(payload.result.winner, payload.result.goal, false);
+        }
+        break;
+
       case 'NEXT_STEP':
         // Sync G_step index if provided
         if (typeof G_step !== 'undefined' && payload.idx !== undefined) {
           G_step.idx = payload.idx;
         }
-        if (typeof nextStep === 'function') nextStep();
+        if (typeof runCurrentStep === 'function') runCurrentStep();
         break;
 
       case 'FULL_SYNC':
@@ -425,9 +434,15 @@ const ONLINE = (() => {
 
   // ── Apply remote G ────────────────────────────────────────
   function _applyRemoteG(remoteG) {
-    if (!remoteG) return;
+    if (!remoteG || G.gameOver) return;
     const view = { vx: G.vx, vy: G.vy, vscale: G.vscale, dragging: false };
+    const result = remoteG.result;
+    const wasFinished = G.gameOver;
     Object.assign(G, remoteG);
+    if(result && !wasFinished && typeof declareWin === 'function') {
+      G.gameOver = false;
+      declareWin(result.winner, result.goal, false);
+    }
     Object.assign(G, view);
     if (typeof updateMap === 'function') updateMap();
     if (typeof refreshCards === 'function') refreshCards();
@@ -445,6 +460,8 @@ const ONLINE = (() => {
   function _serializeG() {
     try {
       return JSON.parse(JSON.stringify({
+        gameOver:       !!G.gameOver,
+        result:         G.result || null,
         round:          G.round,
         phase:          G.phase,
         currentFaction: G.currentFaction,

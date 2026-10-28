@@ -596,7 +596,7 @@ function _autoDistributeFaction(fk) {
 
 function showSoldierCounter(fk, id, validTers, evt) {
   const maxAdd = G.setup.soldiersLeft[fk]||0;
-  if(maxAdd === 0) return;
+  if(maxAdd === 0 && !(G.factions[fk].mechs>0)) return;
   const existing = document.getElementById('soldier-counter-popup');
   if(existing) existing.remove();
 
@@ -616,7 +616,7 @@ function showSoldierCounter(fk, id, validTers, evt) {
     background:#08080b;border:1px solid ${FDATA[fk].color};padding:12px 16px;z-index:700;
     font-family:Orbitron,sans-serif;text-align:center;min-width:130px;`;
 
-  let qty = 1;
+  let qty = maxAdd>0 ? 1 : 0;
   const mechsAvail = G.factions[fk].mechs||0;
   let mechQty = 0;
 
@@ -684,6 +684,7 @@ function showSoldierCounter(fk, id, validTers, evt) {
 }
 
 function doPlaceSoldier(fk, id, qty) {
+  if(!Number.isInteger(qty) || qty<=0 || !G.territories[id] || G.territories[id].owner!==fk) return;
   G.setup.claimCallback = null;
   const existing = document.getElementById('soldier-counter-popup');
   if(existing) existing.remove();
@@ -699,18 +700,8 @@ function doPlaceSoldier(fk, id, qty) {
     if(ring){ring.setAttribute('stroke',FDATA[fk].color);ring.setAttribute('stroke-width','1.5');}
   });
 
-  const solLeft = G.setup.soldiersLeft[fk]||0;
-  const mechLeft = G.factions[fk].mechs||0;
-  if(solLeft > 0 || mechLeft > 0) {
-    // Still has units to place — sync partial state and continue
-    if (_isOnline()) _syncSetup('SOLDIER_PARTIAL', { fk, terId: id, qty });
-    setTimeout(()=>setupStep_Soldiers_ForFaction(fk), 100);
-  } else {
-    // Done — sync and advance to next faction
-    if (_isOnline()) ONLINE.pushActionWithState('SETUP_SYNC', { subtype: 'SOLDIER_DONE', fk });
-    G.setup.orderIdx = (G.setup.orderIdx+1) % G.setup.order.length;
-    setTimeout(setupStep_Soldiers_Next, 200);
-  }
+  if (_isOnline()) _syncSetup('DEPLOY', { fk, terId: id, qty });
+  setTimeout(()=>setupStep_Deploy_ForFaction(fk), 100);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -853,16 +844,13 @@ function setupStep_Deploy_ForFaction(fk) {
     'bar');
 
   if(!isMe) {
-    if(!isHuman) {
-      _autoDistributeFaction(fk);
-      const unclaimed = Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
-      let n = nukLeft;
-      for(const t of unclaimed){ if(n<=0) break; t.hasNuclear=true; n--; }
-      G.setup.nukesLeft[fk]=0;
-      updateMap();
-    }
+    G.setup.claimCallback=null;
+    if(isHuman || !_amHost()) return;
+    _autoDistributeFaction(fk);
+    placeSetupNuclearsAutomatically(fk);
     G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
-    setTimeout(setupStep_Deploy_Next, isHuman?200:600);
+    _syncSetup('DEPLOY', {fk});
+    setTimeout(setupStep_Deploy_Next,600);
     return;
   }
 
@@ -887,6 +875,7 @@ function setupStep_Deploy_ForFaction(fk) {
       _autoDistributeFaction(fk);
       G.setup.claimCallback=null;
       updateMap();
+      _syncSetup('DEPLOY', {fk});
       setupStep_Deploy_ForFaction(fk); // re-render: will show nuclear phase if nuks remain
     },'#333'));
 
@@ -900,12 +889,10 @@ function setupStep_Deploy_ForFaction(fk) {
     // AUTO button for nukes
     acts.appendChild(setupBtn('AUTO COLOCAR NUCLEARES',()=>{
       G.setup.claimCallback=null; G.nuclearMode=false;
-      const available=Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear);
-      let n=nukLeft;
-      for(const t of available){ if(n<=0) break; t.hasNuclear=true; n--; }
-      G.setup.nukesLeft[fk]=0;
+      placeSetupNuclearsAutomatically(fk);
       updateMap();
       G.setup.deployIdx=(G.setup.deployIdx+1)%G.setup.order.length;
+      _syncSetup('DEPLOY', {fk});
       setupStep_Deploy_Next();
     },'#333'));
 
@@ -916,6 +903,16 @@ function setupStep_Deploy_ForFaction(fk) {
   }
 
   updateMap();
+}
+
+function placeSetupNuclearsAutomatically(fk) {
+  let remaining=G.setup.nukesLeft[fk]||0;
+  for(const t of Object.values(G.territories).filter(t=>t.owner===fk&&!t.hasNuclear)) {
+    if(remaining<=0) break;
+    t.hasNuclear=true;
+    remaining--;
+  }
+  G.setup.nukesLeft[fk]=remaining;
 }
 
 function activateNuclearMode_Setup(fk) {
@@ -943,6 +940,7 @@ function activateNuclearMode_Setup(fk) {
       if(ring){ring.setAttribute('stroke',FDATA[t2.owner]?FDATA[t2.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}
     });
     updateMap();
+    _syncSetup('DEPLOY', {fk});
     const remainingNuks = G.setup.nukesLeft[fk]||0;
     if(remainingNuks > 0) {
       // More nukes to place — stay in nuclear mode for this player
@@ -960,6 +958,9 @@ function activateNuclearMode_Setup(fk) {
 
 
 function endSetupPhase(){
+  const pending=G.setup.order.some(fk =>
+    (G.setup.soldiersLeft[fk]||0)>0 || (G.factions[fk].mechs||0)>0 || (G.setup.nukesLeft[fk]||0)>0);
+  if(pending){ setupStep_Deploy_Next(); return; }
   hideSetupPanel();
   G.setup.claimCallback=null;
   G.setup._inSetup=false;

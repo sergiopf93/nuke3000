@@ -16,6 +16,7 @@ let G_combat = null;
 
 // Called when PLAYER attacks
 function openDice(targetId) {
+  if(G.gameOver) return;
   const srcId=G.sel;
   if(!srcId){addLog('Selecciona tu territorio origen primero','sys');return;}
   const src=G.territories[srcId], tgt=G.territories[targetId];
@@ -30,6 +31,7 @@ function openDice(targetId) {
 
 // Called when CPU attacks player
 function openDiceCpu(srcId, targetId, cpuFk, callback) {
+  if(G.gameOver) return;
   const src=G.territories[srcId], tgt=G.territories[targetId];
   const isPlayerDef=(tgt.owner===G.pf);
   G_combat={srcId,targetId,attFk:cpuFk,defFk:tgt.owner,round:1,done:false,
@@ -239,6 +241,7 @@ function uselInlineConfirm(side){
 }
 
 function doPlayerAttackRoll() {
+  if(G.gameOver) return;
   const ctx=G_combat;
   if(!ctx.attSelected||ctx.attSelected.length===0){ctx.attSelected=ctx.attPool.slice(0,RULES.combat.maxAttackDice);}
   if(!ctx.defSelected||ctx.defSelected.length===0){ctx.defSelected=ctx.defPool.slice(0,RULES.combat.maxDefenseDice);}
@@ -246,6 +249,7 @@ function doPlayerAttackRoll() {
 }
 
 function doPlayerDefendRoll() {
+  if(G.gameOver) return;
   const ctx=G_combat;
   if(!ctx.defSelected||ctx.defSelected.length===0){ctx.defSelected=ctx.defPool.slice(0,RULES.combat.maxDefenseDice);}
   if(!ctx.attSelected||ctx.attSelected.length===0){ctx.attSelected=ctx.attPool.slice(0,RULES.combat.maxAttackDice);}
@@ -264,6 +268,7 @@ function applyLoss(terr) {
 }
 
 function resolveCombatRound(auto) {
+  if(G.gameOver) return;
   const Rc=RULES.combat, ctx=G_combat;
   if(!ctx) return;
   const src=G.territories[ctx.srcId], tgt=G.territories[ctx.targetId];
@@ -283,6 +288,7 @@ function resolveCombatRound(auto) {
 function rollCombat(){ doPlayerAttackRoll(); }
 
 function rollAttackerThenDefend() {
+  if(G.gameOver) return;
   const Rc=RULES.combat, ctx=G_combat; if(!ctx) return;
   const att=ctx.attSelected;
   const aR=att.map(d=>Math.floor(Math.random()*d.sides)+1);
@@ -311,6 +317,7 @@ function rollAttackerThenDefend() {
 }
 
 function resolveDefenseRoll(aR) {
+  if(G.gameOver) return;
   const ctx=G_combat; if(!ctx) return;
   const def=ctx.defSelected;
   const dR=def.map(d=>Math.floor(Math.random()*d.sides)+1);
@@ -321,6 +328,7 @@ function resolveDefenseRoll(aR) {
 }
 
 function applyBattleResult(aR,dR) {
+  if(G.gameOver) return;
   const Rc=RULES.combat, ctx=G_combat; if(!ctx) return;
   const src=G.territories[ctx.srcId], tgt=G.territories[ctx.targetId];
   const aS=[...aR].sort((a,b)=>b-a), dS=[...dR].sort((a,b)=>b-a);
@@ -374,7 +382,7 @@ function applyBattleResult(aR,dR) {
     if(!tgt.owner) tgt.owner=ctx.attFk;
     res.innerHTML='<div style="color:#88cc44;font-size:13px;">✅ CONQUISTA: '+ctx.targetId+'</div><div style="font-size:10px;color:#777;">Atq-'+aL+' Def-'+dL+'</div>';
     addLog('⚔ CONQUISTA '+ctx.targetId,'combat');
-    checkElimination(ctx.defFk);checkWinCondition();
+    checkElimination(ctx.defFk, ctx.attFk);checkWinCondition();
   }
     else{res.innerHTML='<div style="color:#cc4444;">Sin unidades atacantes</div>';addLog('⚔ Sin unidades.','combat');}
     if(rollBtn)rollBtn.style.display='none';if(retreatBtn)retreatBtn.style.display='none';
@@ -700,6 +708,7 @@ function showReinforcementCounter(id, evt) {
 }
 
 function placeReinforcements(id, qty) {
+  if(G.gameOver) return;
   const t = G.territories[id];
   t.soldiers += qty;
   G.reinforcementMode.left -= qty;
@@ -760,6 +769,7 @@ function runEndPhase() {
 
 // ── MISSILES ──────────────────────────────────────────────────
 function doMissileBuild() {
+  if(G.gameOver) return;
   const myF = G.factions[G.pf];
   const R = RULES.prep;
   if(R.buildBeforeFire && (myF.missilesFiredThisTurn||0)>0){
@@ -780,6 +790,7 @@ function doMissileBuild() {
 }
 
 function doMissileFire() {
+  if(G.gameOver) return;
   const id = G.sel;
   const myF = G.factions[G.pf];
   const R = RULES.prep, Rc = RULES.combat;

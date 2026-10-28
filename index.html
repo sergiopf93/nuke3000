@@ -752,13 +752,6 @@ function startGame() {
   startSetupPhase();
 }
 
-// ── declareVictory ──────────────────────────────────────────
-const _origDeclareVictory = typeof declareVictory === 'function' ? declareVictory : null;
-function declareVictory(goal) {
-  if (_origDeclareVictory) _origDeclareVictory(goal);
-  if (ONLINE.isOnline()) ONLINE.signalGameEnd();
-}
-
 // ── Panel toggle (mobile) ───────────────────────────────────
 function togglePanel(side) {
   const main = document.getElementById('main');
