@@ -882,7 +882,7 @@ function updateMap(){
     const reg=REGIONS.find(r=>r.id===t.region);
     const isSelected=id===G.sel;
     const isMoveTarget=G.moveSrc&&canMoveTarget(id);
-    const isAttackTarget=G.phase==='combat'&&t.owner&&t.owner!==G.pf&&isAdjOwned(id);
+    const isAttackTarget=G.phase==='combat'&&t.owner&&t.owner!==G.pf&&(typeof GameUX!=='undefined'&&GameUX.isMobile()?G.attackSrc&&validAttack(G.attackSrc,id,G.pf):isAdjOwned(id));
     const bg=document.getElementById('tc-'+id); if(!bg) return;
     const reg2=REGIONS.find(r=>r.id===t.region);
     let fillColor=reg2?reg2.color:'#0a0a0e';
@@ -946,6 +946,7 @@ function updateMap(){
     if(!G.sel||!l.id.includes(G.sel)){l.setAttribute('stroke','rgba(255,255,255,0.06)');l.setAttribute('stroke-width','0.8');}
   });
   svgG.setAttribute('transform',`translate(${G.vx},${G.vy}) scale(${G.vscale})`);
+  if(typeof GameUX!=='undefined')GameUX.refresh();
 }
 
 function armyPoints(t){return t.soldiers+t.mechs*3+t.aircraft*3+t.scorpions*6;}
@@ -990,7 +991,7 @@ function totalAircraft(){return Object.values(G.territories).filter(t=>t.owner==
 
 function onTerritoryClick(id,event){
   if(G.gameOver) return;
-  if(!G.setup?._inSetup && !G_step.isMyTurn)return;
+  if(!G.setup?._inSetup && !G_step.isMyTurn){if(typeof GameUX!=='undefined'&&GameUX.isMobile())selectTerritory(id);return;}
   if(G.setup&&G.setup.claimCallback){const handled=G.setup.claimCallback(id,event);if(handled)return;return;}
   if(G.reinforcementMode&&G.reinforcementMode.callback){const handled=G.reinforcementMode.callback(id,event);if(handled)return;return;}
   if(G.pendingCpuAttack&&G.pendingCpuAttack[id]){const pending=G.pendingCpuAttack[id];if(pending.spectator){if(pending._timer)clearTimeout(pending._timer);delete G.pendingCpuAttack[id];clearAttackFlash(id);openCombatModal('cpu-att-cpu-def');}else{openCombatModal('cpu-att-player-def');}return;}
@@ -998,6 +999,7 @@ function onTerritoryClick(id,event){
   if(G.nuclearMode){const tgt=G.territories[id];if(tgt&&tgt.owner===G.pf&&!tgt.hasNuclear){G.sel=id;doAct('nuke');G.nuclearMode=false;Object.values(G.territories).forEach(t=>{const ring=document.getElementById('tr-'+t.id);if(ring){ring.setAttribute('stroke',FDATA[t.owner]?FDATA[t.owner].color:'#1a1a20');ring.setAttribute('stroke-width','1.5');}});return;}}
   if(G.missileFiringMode){const tgt=G.territories[id];if(!tgt||!tgt.owner||tgt.owner===G.pf){addLog('Selecciona un territorio ENEMIGO para el misil.','sys');return;}G.missileFiringMode=false;G.sel=id;doMissileFire();return;}
   if(G.dragging)return;
+  if(typeof GameUX!=='undefined'&&GameUX.territoryTap(id))return;
   if(G.moveSrc){const src=G.territories[G.moveSrc],dst=G.territories[id];if(id===G.moveSrc){G.moveSrc=null;G.moveTargets=null;document.getElementById('map-wrap').classList.remove('moving');updateMap();return;}if(!G.moveTargets)G.moveTargets=getMovableTargets(G.moveSrc,RULES.prep.movementRange||2);if(dst&&G.moveTargets.has(id)){showMoveUnitsPopup(G.moveSrc,id,event);}else{addLog(`${terName(id)} no es destino válido (fuera de rango).`,'sys');}return;}
   if(G.moveMode&&G.territories[id]?.owner===G.pf&&armyPoints(G.territories[id])>0){G.moveSrc=id;G.moveTargets=getMovableTargets(id,RULES.prep.movementRange||2);document.getElementById('map-wrap').classList.add('moving');addLog(`Origen: ${terName(id)}. Clic en destino.`,'move');updateMap();return;}
   if(G_step&&G_step.phase==='combat'&&G_step.isMyTurn){const tgt=G.territories[id];if(G.attackSrc&&tgt&&tgt.owner&&tgt.owner!==G.pf){const src=G.territories[G.attackSrc];if(src&&src.adj&&src.adj.includes(id)){const btn=document.getElementById('ba-attack');if(btn){btn.disabled=false;btn.onclick=()=>{G.sel=G.attackSrc;openDice(id);};btn.textContent='⚔ ATACAR '+id;}selectTerritory(id);return;}else{addLog('Territorio no adyacente.','sys');}}if(tgt&&tgt.owner===G.pf&&Battle.canAttack(tgt)){G.attackSrc=id;G.moveTargets=null;const btn=document.getElementById('ba-attack');if(btn){btn.disabled=true;btn.textContent='⚔ ATACAR TERRITORIO SELECCIONADO';}selectTerritory(id);addLog(`Origen: ${terName(id)}. Clic en enemigo adyacente.`,'sys');return;}}

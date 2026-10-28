@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
 
   <!-- PWA -->
@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/mobile-ux.css">
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -346,18 +347,24 @@
 <div id="hdr" style="display:none">
   <h1>NUKE 3000<small>ARMAGEDDON PROTOCOL · PLAYTESTER v0.3</small></h1>
   <div id="turn-ui">
+    <button id="mobile-players" class="hbtn secondary" aria-expanded="false" aria-controls="lp">JUGADORES</button>
+    <button id="mobile-log" class="hbtn secondary" aria-expanded="false" aria-controls="rp-log">REGISTRO</button>
     <span id="rnd-info">RONDA <strong id="rnum">1</strong> · <span id="curturn" style="color:#888">—</span></span>
     <div id="phase-badge">PREP</div>
     <button class="hbtn secondary" onclick="if(typeof showRules==='function')showRules()" title="Editor de Reglas">⚙ REGLAS</button>
     <button class="hbtn" id="btn-next" onclick="nextStep()">SIGUIENTE ▶</button>
   </div>
+  <div id="mobile-resources"></div>
 </div>
+<div id="orientation-hint">Para ver mejor el tablero, gira el teléfono en horizontal.</div>
+<button id="mobile-panel-backdrop" aria-label="Cerrar panel"></button>
 
 <!-- ══════════════════════════════════════════════════════════
      GAME MAIN
      ══════════════════════════════════════════════════════════ -->
 <div id="main" style="display:none">
   <div id="lp">
+    <button class="mobile-drawer-close">CERRAR JUGADORES ✕</button>
     <button id="lp-toggle" onclick="togglePanel('lp')" title="Colapsar panel">◀</button>
     <div id="turn-header" style="display:none;padding:5px 8px;border-bottom:1px solid #0e0e12;">
       <div id="turn-phase-lbl" style="font-family:Orbitron,sans-serif;font-size:7px;letter-spacing:3px;color:#C8A800;margin-bottom:4px;">TURNO</div>
@@ -365,6 +372,7 @@
     </div>
     <div class="ptitle">FACCIONES</div>
     <div id="fcards"></div>
+    <button id="mobile-exit" class="mobile-drawer-exit">VOLVER AL LOBBY</button>
   </div>
 
   <div id="board-area" style="position:relative;overflow:hidden;">
@@ -407,6 +415,7 @@
       <svg id="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <div id="region-legend"></div>
+    <div id="territory-inspector"><div><strong id="territory-name">Toca un territorio</strong><div id="territory-units"></div><div id="territory-hint"></div></div><button id="territory-clear" aria-label="Cancelar selección" hidden>✕</button></div>
   </div>
 
   <div id="rp">
@@ -434,6 +443,7 @@
     </div>
 
     <div id="rp-log">
+      <button class="mobile-drawer-close">CERRAR REGISTRO ✕</button>
       <div style="font-family:Orbitron,sans-serif;font-size:9px;letter-spacing:3px;color:#999;padding:5px 10px;border-bottom:1px solid #0e0e12;flex-shrink:0;">REGISTRO</div>
       <div id="clog" style="flex:1;overflow-y:auto;padding:6px 10px;font-size:11px;"></div>
     </div>
@@ -451,11 +461,14 @@
       <div class="dl-item">✈ D12</div>
       <div class="dl-item">🦂 D20</div>
     </div>
-    <div style="display:flex;gap:24px;justify-content:center;">
+    <div id="combat-armies"><div id="combat-army-att"></div><div id="combat-army-def"></div></div>
+    <div id="combat-dice" style="display:flex;gap:24px;justify-content:center;">
       <div class="dside"><div class="dlbl" id="dlba">ATACANTE</div><div class="drow" id="datt"></div><div class="dtot att" id="dtot-a">—</div></div>
       <div style="display:flex;align-items:center;font-size:18px;color:#1e1e22;padding-top:16px;">VS</div>
       <div class="dside"><div class="dlbl" id="dlbd">DEFENSOR</div><div class="drow" id="ddef"></div><div class="dtot def" id="dtot-d">—</div></div>
     </div>
+    <div id="combat-summary" role="status"></div>
+    <button id="combat-detail-toggle" class="combat-detail-toggle" aria-expanded="false" aria-controls="dres">VER TIRADAS Y CÁLCULO</button>
     <div id="dres">Selecciona unidades y lanza los dados</div>
     <div class="dbtns">
       <button id="btn-retreat" style="display:none;background:#0a0a0d;border:1px solid #555;color:#888;padding:8px 16px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:2px;cursor:pointer;margin-right:8px;" onclick="retreatCombat()">↩ RETIRAR</button>
@@ -489,6 +502,7 @@
 <script src="js/engine.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/mobile-ux.js"></script>
 <script src="js/online.js"></script>
 <script src="js/firebase-config.js"></script>
 

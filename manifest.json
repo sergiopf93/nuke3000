@@ -5,7 +5,7 @@
   "start_url": "/nuke3000/",
   "scope": "/nuke3000/",
   "display": "fullscreen",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#030305",
   "theme_color": "#030305",
   "icons": [

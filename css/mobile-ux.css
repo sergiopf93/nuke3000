@@ -1,0 +1,91 @@
+/* View-only adaptation: board artwork, palette and SVG geometry remain in game.css/map.js. */
+#mobile-resources,#mobile-players,#mobile-log,#territory-inspector,#mobile-panel-backdrop,.mobile-drawer-close,.mobile-drawer-exit,#orientation-hint{display:none}
+#map-wrap{touch-action:none}
+#dbox{max-height:94dvh;max-width:96vw;overflow-y:auto}
+#combat-summary,#combat-armies,.combat-detail-toggle{display:none}
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ body{height:100dvh;min-height:0;-webkit-text-size-adjust:100%}
+ button,input,select{font-size:14px!important;touch-action:manipulation}
+ button,.cb{min-height:44px;min-width:44px}
+ #hdr{padding:2px max(8px,env(safe-area-inset-right)) 3px max(8px,env(safe-area-inset-left));gap:0;flex-wrap:wrap}
+ #hdr h1{display:none}
+ #turn-ui{width:100%;margin:0;gap:6px;min-width:0}
+ #rnd-info{font-size:11px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #phase-badge{font-size:9px;letter-spacing:0;padding:5px}
+ #turn-ui .hbtn{font-size:10px!important;letter-spacing:0;padding:4px 7px;flex-shrink:0}
+ #mobile-players,#mobile-log{display:inline-flex;align-items:center;justify-content:center}
+ #mobile-resources{display:block;width:100%;font-size:12px;line-height:18px;color:var(--tx);white-space:normal;margin-bottom:5px}
+ #main,#main.lp-collapsed,#main.rp-collapsed,#main.lp-collapsed.rp-collapsed{grid-template-columns:minmax(0,1fr) 216px;min-height:0}
+ #board-area{min-width:0;grid-column:1;grid-row:1}
+ #map-wrap{height:auto;min-height:0}
+ #rp,#main.rp-collapsed #rp{grid-column:2;grid-row:1;width:auto;height:100%;min-height:0;border-left:1px solid var(--bdr)}
+ #lp,#rp-log,#lp-toggle,#rp-toggle,#region-legend,#roombar{display:none}
+ #rp-top{flex:1;min-height:0}
+ #phase-header{padding:5px 8px!important}
+ #phase-header>div:first-child{margin-bottom:3px!important}
+ #pg-phase{font-size:10px!important;letter-spacing:1px!important}
+ #pg-turn-owner{font-size:11px!important}
+ #step-instruction{padding:5px!important}
+ #step-title{font-size:11px!important;letter-spacing:0!important}
+ #step-dots,#objective-section{display:none!important}
+ #step-actions{padding:6px!important}
+ #ba-attack,#ba-move-btn{display:none}
+ #step-actions button{white-space:normal;font-size:12px!important;letter-spacing:0!important}
+ #bcontrols{top:4px;left:4px;gap:3px}
+ #bcontrols>*{width:44px!important;height:44px!important;font-size:18px!important}
+ #bcontrols>*:last-child{display:none}
+ #territory-inspector{display:flex;position:relative;flex-shrink:0;margin:4px;z-index:25;align-items:center;gap:6px;padding:6px 8px;background:rgba(10,10,13,.96);border:1px solid var(--bdr);font-size:12px;pointer-events:none}
+ #territory-inspector>div{flex:1;min-width:0}
+ #territory-inspector strong{color:#C8A800}
+ #territory-inspector button{pointer-events:auto;background:var(--panel);color:var(--tx);border:1px solid var(--bdr)}
+ #territory-units{font-size:13px;line-height:1.5}
+ #territory-hint{color:#999;font-size:12px;line-height:1.4}
+ #mobile-panel-backdrop{position:fixed;inset:0;background:#000a;z-index:299}
+ body[data-mobile-panel] #mobile-panel-backdrop{display:block}
+ body[data-mobile-panel="players"] #lp,body[data-mobile-panel="log"] #rp-log{display:flex;position:fixed;inset:0 auto 0 0;width:min(340px,92vw);height:100dvh!important;z-index:300;padding:8px;background:var(--panel);overflow-y:auto;border:1px solid var(--bdr)}
+ .mobile-drawer-exit{display:block;flex-shrink:0;background:var(--panel);color:var(--tx);border:1px solid #555;padding:8px}
+ .mobile-drawer-close{display:block;flex-shrink:0;align-self:flex-end;background:var(--panel);border:1px solid #555;color:var(--tx);padding:6px 12px}
+ #mobile-panel-backdrop{border:0}
+ .fc-name{font-size:12px}.fsv{font-size:14px}.fsl{font-size:11px;color:#999}
+ #tip{display:none!important}
+ #lin{width:96vw;max-height:96dvh}
+ #lbody{padding:8px 12px}
+ .fp{min-height:70px}.fpn{font-size:12px}.fpt,.fpl{color:#999}
+ #dbox{width:min(740px,98vw);min-width:0;max-height:98dvh;padding:8px 12px;position:relative;display:flex;flex-direction:column}
+ #dbox h2{font-size:12px;margin-bottom:4px;letter-spacing:1px}
+ #cdesc{margin-bottom:4px;font-size:11px}
+ #combat-guard{min-height:44px}
+ .die-legend{display:none}
+ #combat-armies{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin:4px 0}
+ #combat-armies>div{border:1px solid var(--bdr);padding:5px}
+ #combat-summary{display:block;font-size:13px;line-height:1.5;margin:5px 0;color:var(--tx)}
+ #combat-summary strong{color:#C8A800}
+ .combat-detail-toggle{display:block;min-height:44px;font-size:12px!important;color:#999;background:var(--panel);border:1px solid var(--bdr)}
+ #dres{display:none;letter-spacing:0;font-family:Rajdhani,sans-serif;line-height:1.5;text-align:left;font-size:12px;margin:4px 0}
+ #dres.details-open{display:block}
+ #combat-dice{gap:10px!important}
+ .drow{gap:3px;flex-wrap:wrap}.die{width:32px;height:32px;font-size:13px}.dtot{font-size:13px}
+ .dlbl{font-size:10px;letter-spacing:0}
+ .dbtns{position:sticky;bottom:-8px;background:#09090d;padding:5px 0;margin-top:4px;order:10;flex-shrink:0}
+ .dbtn{font-size:12px!important;padding:5px 12px;letter-spacing:0}
+ #combat-unit-choice>summary{min-height:44px;padding:12px 4px;cursor:pointer;color:#999;font-size:12px}
+ #unit-sel-att,#unit-sel-def{font-size:12px;padding:5px!important;margin:4px 0!important}
+ #unit-sel-att button,#unit-sel-def button{min-width:44px;min-height:44px}
+ #unit-sel-att>button,#unit-sel-def>button{width:100%}
+ #unit-sel-att>div,#unit-sel-def>div{display:inline-flex!important;margin-right:10px!important}
+ #unit-sel-att>div:first-child,#unit-sel-def>div:first-child{display:block!important}
+ #move-popup,#soldier-counter-popup,#reinf-counter-popup{left:50%!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%);width:min(440px,96vw);max-height:96dvh;overflow:auto;box-shadow:0 0 0 100vmax #0008}
+ #move-popup button,#soldier-counter-popup button,#reinf-counter-popup button{min-width:44px;min-height:44px}
+ #upgrade-confirm>div,#missile-modal>div,#maint-modal>div,#online-decision-modal>div,#rules-modal>div,#game-start-overlay>div,#game-result>div{max-width:96vw!important;max-height:96dvh!important;overflow:auto;padding:12px!important}
+ #game-result>div>div:first-child{font-size:28px!important;letter-spacing:3px!important}
+ #rules-modal table{font-size:12px}#rules-modal{overflow:auto}
+ #orientation-hint{display:none}
+}
+@media (max-width:600px) and (orientation:portrait){
+ #orientation-hint{display:block;background:var(--panel);color:#C8A800;text-align:center;padding:6px;font-size:12px}
+ #main,#main.lp-collapsed,#main.rp-collapsed,#main.lp-collapsed.rp-collapsed{grid-template-columns:1fr;grid-template-rows:minmax(240px,1fr) minmax(160px,34%)}
+ #rp,#main.rp-collapsed #rp{grid-column:1;grid-row:2}
+ #turn-ui{flex-wrap:wrap}#rnd-info{min-width:110px}#phase-badge{display:none}
+ #mobile-resources{font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){.die.spin{animation:none}}

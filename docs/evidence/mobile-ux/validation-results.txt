@@ -1,0 +1,178 @@
+CHECK motor
+✔ sol pierde frente a sol: baja del dado correcto (9.018646ms)
+✔ sol pierde frente a mech: baja del dado correcto (2.016297ms)
+✔ sol pierde frente a air: baja del dado correcto (4.225007ms)
+✔ sol pierde frente a scorp: baja del dado correcto (1.801925ms)
+✔ mech pierde frente a sol: baja del dado correcto (1.99614ms)
+✔ mech pierde frente a mech: baja del dado correcto (1.716284ms)
+✔ mech pierde frente a air: baja del dado correcto (4.35312ms)
+✔ mech pierde frente a scorp: baja del dado correcto (1.86799ms)
+✔ air pierde frente a sol: baja del dado correcto (2.147145ms)
+✔ air pierde frente a mech: baja del dado correcto (3.149085ms)
+✔ air pierde frente a air: baja del dado correcto (1.836561ms)
+✔ air pierde frente a scorp: baja del dado correcto (1.76992ms)
+✔ scorp pierde frente a sol: baja del dado correcto (2.086849ms)
+✔ scorp pierde frente a mech: baja del dado correcto (1.832297ms)
+✔ scorp pierde frente a air: baja del dado correcto (28.89568ms)
+✔ scorp pierde frente a scorp: baja del dado correcto (9.661535ms)
+✔ empates: defensor gana; dados empatados ordenan caras y mech antes que aircraft (2.757041ms)
+✔ HOLY WAR e IMPERIAL DEFENSE afectan a todos los dados sin recortar el bonus (2.311301ms)
+✔ una unidad blindada sola no puede atacar; defensa usa hasta 4 dados aunque ataque 1 (1.920099ms)
+✔ bajas simultáneas no vuelven a golpear las unidades recién degradadas (7.084579ms)
+✔ ataque inválido, selección duplicada o sin guarnición se rechaza antes de mutar (4.371472ms)
+✔ combate completo degrada hasta conquista, preserva guarnición y termina en cota finita (18.078664ms)
+✔ sin dados defensivos no hay bucle: combate vacío se rechaza (1.914049ms)
+✔ sol defiende y pierde ante sol: degradación simétrica (2.022103ms)
+✔ sol defiende y pierde ante mech: degradación simétrica (3.652041ms)
+✔ sol defiende y pierde ante air: degradación simétrica (1.864563ms)
+✔ sol defiende y pierde ante scorp: degradación simétrica (17.819086ms)
+✔ mech defiende y pierde ante sol: degradación simétrica (1.969582ms)
+✔ mech defiende y pierde ante mech: degradación simétrica (1.689378ms)
+✔ mech defiende y pierde ante air: degradación simétrica (1.761574ms)
+✔ mech defiende y pierde ante scorp: degradación simétrica (1.751921ms)
+✔ air defiende y pierde ante sol: degradación simétrica (1.917089ms)
+✔ air defiende y pierde ante mech: degradación simétrica (3.638482ms)
+✔ air defiende y pierde ante air: degradación simétrica (2.118946ms)
+✔ air defiende y pierde ante scorp: degradación simétrica (1.851423ms)
+✔ scorp defiende y pierde ante sol: degradación simétrica (3.540724ms)
+✔ scorp defiende y pierde ante mech: degradación simétrica (4.343883ms)
+✔ scorp defiende y pierde ante air: degradación simétrica (1.67205ms)
+✔ scorp defiende y pierde ante scorp: degradación simétrica (2.477756ms)
+✔ guarnición escogida queda fuera del pool y no puede sufrir bajas (2.026222ms)
+[ONLINE] Remote: NEXT_STEP
+[ONLINE] Remote: FULL_SYNC
+✔ la victoria registra al vencedor y solo muestra un resultado (16.714793ms)
+✔ la eliminación se acredita al atacante una sola vez (2.594982ms)
+✔ la rotación omite eliminados y cuenta la vuelta de ronda (4.368219ms)
+✔ las transiciones pendientes no avanzan una partida finalizada (2.58677ms)
+✔ un invitado online no ejecuta ingresos ni pasos CPU (2.568358ms)
+✔ la entrada HTML conserva la función de victoria del motor (2.206463ms)
+✔ el resultado remoto se muestra sin emitir una victoria de vuelta (2.971984ms)
+✔ el protocolo remoto aplica NEXT_STEP exactamente una vez (5.796723ms)
+✔ el snapshot incluye el resultado y la recepción finaliza sin eco (6.07096ms)
+✔ la colocación manual no salta al flujo antiguo de soldados (4.14575ms)
+✔ endSetupPhase impide iniciar si queda una central obligatoria (3.190285ms)
+✔ la colocación manual rechaza cantidades negativas y territorios ajenos (5.582508ms)
+✔ setup 3J conserva reservas y coloca centrales automáticamente (21.086983ms)
+✔ setup 4J conserva reservas y coloca centrales automáticamente (6.509472ms)
+✔ setup 5J conserva reservas y coloca centrales automáticamente (14.769526ms)
+✔ setup 6J conserva reservas y coloca centrales automáticamente (7.389188ms)
+✔ automatizar centrales no borra reservas imposibles de colocar (2.787334ms)
+✔ victoria imp solo en su turno y momento V3 (3.786993ms)
+✔ facción eliminada imp no gana su objetivo (25.304374ms)
+✔ victoria lib solo en su turno y momento V3 (3.728613ms)
+✔ facción eliminada lib no gana su objetivo (2.448497ms)
+✔ victoria clt solo en su turno y momento V3 (5.781003ms)
+✔ facción eliminada clt no gana su objetivo (11.629355ms)
+✔ victoria erb solo en su turno y momento V3 (3.29935ms)
+✔ facción eliminada erb no gana su objetivo (5.615358ms)
+✔ victoria prm solo en su turno y momento V3 (2.899894ms)
+✔ facción eliminada prm no gana su objetivo (14.462291ms)
+✔ victoria shn solo en su turno y momento V3 (3.151524ms)
+✔ facción eliminada shn no gana su objetivo (3.287842ms)
+✔ condiciones no cumplidas, mitad impar redondeada y cero bases (27.211411ms)
+✔ turno completo CPU avanza sin intervención hasta el siguiente humano (10.21528ms)
+✔ temporizador obsoleto y botón humano no saltan turnos CPU (10.324378ms)
+✔ repetir runCurrentStep no duplica CPU o ingresos (16.339904ms)
+✔ combate CPU–CPU termina y notifica una sola vez sin DOM de dados (4.894631ms)
+✔ explosión conserva exactamente un soldiers elegido (3.234767ms)
+✔ explosión conserva exactamente un mechs elegido (2.634369ms)
+✔ explosión conserva exactamente un scorpions elegido (2.336145ms)
+✔ explosión con aircraft conserva solo los aviones, sin fabricar soldados (2.335732ms)
+✔ mantenimiento CPU usa tirada de cada base y ejecuta callback una vez (2.867325ms)
+✔ última unidad blindada protegida y Aircraft impactado con 5 (5.511422ms)
+✔ intercepción usa regla del dado y consume ambos misiles sin bajas (2.593098ms)
+✔ mejoras consumen tropas del tablero y costes configurados (3.121827ms)
+✔ refuerzos fallback no se reparten en dos territorios de la misma región (2.865786ms)
+✔ Erebus puede autorreforzar fuera de bases y el resto solo en bases (2.514683ms)
+✔ Aircraft transporta hasta tres soldados o un mech a territorio distante (3.150818ms)
+✔ simulación del motor: partida completa 3J sin UI ni ganador impuesto (62.245951ms)
+✔ simulación del motor: partida completa 4J sin UI ni ganador impuesto (24.128042ms)
+✔ simulación del motor: partida completa 5J sin UI ni ganador impuesto (25.011142ms)
+✔ simulación del motor: partida completa 6J sin UI ni ganador impuesto (17.127367ms)
+✔ ataque con 2 unidades y elección de guarnición no deja territorios vacíos (2.901411ms)
+✔ hook de transición evalúa victoria imp antes de ejecutar otro turno (2.450254ms)
+✔ hook de transición evalúa victoria lib antes de ejecutar otro turno (2.370674ms)
+✔ hook de transición evalúa victoria clt antes de ejecutar otro turno (2.61093ms)
+✔ hook de transición evalúa victoria erb antes de ejecutar otro turno (2.320863ms)
+✔ hook de transición evalúa victoria prm antes de ejecutar otro turno (2.247581ms)
+✔ hook de transición evalúa victoria shn antes de ejecutar otro turno (2.369572ms)
+✔ tiradas de setup duplicadas u obsoletas no consumen otro resultado (3.437517ms)
+✔ fases bloquean saltos durante setup, refuerzos pendientes y mantenimiento no resuelto (3.29881ms)
+✔ callbacks de setup finalizado no reabren despliegue ni reclaman territorios (2.563072ms)
+✔ configuración inválida no puede dejar a CPU mejorando indefinidamente (2.756241ms)
+✔ editor rechaza dados/cantidades imposibles y no cambia reglas en partida (2.809741ms)
+✔ reclamación y tiradas fuera del turno/etapa se rechazan (2.401366ms)
+✔ mantenimiento desactivado no tira dados ni abre modal y avanza una vez (2.506754ms)
+✔ Libertos solo recibe recompensa al destruir una base propia y coloca mech inmediato (2.428991ms)
+✔ Shinin no gana empatando AP en siete regiones (3.042879ms)
+✔ una unidad no encadena movimientos pero vuelve a estar disponible en reagrupamiento (4.074751ms)
+✔ misiles: construir antes de disparar sigue permitido; después de disparar queda bloqueado (2.364091ms)
+✔ 60 territorios únicos, 7 de Rusia y tamaños regionales coherentes (1.531954ms)
+✔ grafo conectado, sin vecinos inexistentes y con adyacencias recíprocas (1.542639ms)
+✔ los 59 territorios originales son idénticos salvo conexiones autorizadas (7.316478ms)
+✔ 60 territorios se reparten por igual entre 3 participantes (9.354804ms)
+✔ 60 territorios se reparten por igual entre 4 participantes (0.42223ms)
+✔ 60 territorios se reparten por igual entre 5 participantes (0.246844ms)
+✔ 60 territorios se reparten por igual entre 6 participantes (0.17105ms)
+✔ dos clientes: espera decisión humana, respuesta única y sin snapshot del defensor (17.039196ms)
+✔ respuesta de otro participante no consume la decisión ni aplica su estado (3.015863ms)
+✔ un remitente que no dirige el turno no solicita decisiones (4.79037ms)
+✔ cancelar invalida respuestas tardías y cierra la pregunta remota (41.175109ms)
+✔ una solicitud histórica no hace retroceder ronda o paso al reconectar (12.71859ms)
+✔ CPU dirigida por host solicita intercepción al humano y acepta NO sin automatizar (7.33327ms)
+✔ fallo al enviar libera la espera sin inventar una defensa (5.666597ms)
+ℹ tests 121
+ℹ suites 0
+ℹ pass 121
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 702.803872
+CHECK smoke
+PASS integración Chrome: setup manual, combate/guarnición, mejoras, misil y decisiones remotas por clics (transporte controlado)
+PASS navegador 1440x900: lobby, arranque, territorios y cierre controlado sin errores JS
+PASS navegador 844x390: lobby, arranque, territorios y cierre controlado sin errores JS
+CHECK remote-desktop
+PASS Chrome 2 clientes: combate humano/CPU por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+CHECK remote-touch
+PASS Chrome 2 clientes: combate humano/CPU por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+CHECK touch-matrix
+PASS UX 1440x900 desktop
+PASS UX 844x390 touch
+PASS UX 667x375 touch
+PASS UX 932x430 touch
+PASS UX 390x844 touch
+CHECK desktop-comparison
+PASS comparación desktop: mapa y combate sin diferencias fuera de código de sala, tooltip y LED animado
+CHECK full-desktop
+E2E 0 {"setup":true,"step":0,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 25 {"setup":true,"step":1,"roll":3,"auto":true,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 50 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":1,"fk":"prm","phase":"prep","idx":1}
+E2E 75 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":2,"fk":"imp","phase":"combat","idx":0}
+E2E 100 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":3,"fk":"lib","phase":"combat","idx":0}
+E2E 125 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":4,"fk":"imp","phase":"combat","idx":0}
+E2E 150 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":5,"fk":"prm","phase":"end","idx":0}
+E2E 175 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":6,"fk":"prm","phase":"end","idx":1}
+E2E 200 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 225 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 250 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":8,"fk":"imp","phase":"combat","idx":0}
+E2E 275 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":10,"fk":"prm","phase":"prep","idx":4}
+E2E 300 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":11,"fk":"imp","phase":"combat","idx":0}
+E2E 325 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":12,"fk":"lib","phase":"end","idx":0}
+PASS E2E real 1440x900 mouse: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 233 acciones UI; 0 mutaciones del estado desde el test
+CHECK full-touch
+E2E 0 {"setup":true,"step":0,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 25 {"setup":true,"step":1,"roll":3,"auto":true,"result":null,"round":1,"phase":"prep","idx":0}
+E2E 50 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":1,"fk":"prm","phase":"end","idx":1}
+E2E 75 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":3,"fk":"prm","phase":"prep","idx":1}
+E2E 100 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":4,"fk":"prm","phase":"end","idx":0}
+E2E 125 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":5,"fk":"prm","phase":"prep","idx":1}
+E2E 150 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":6,"fk":"prm","phase":"end","idx":0}
+E2E 175 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":7,"fk":"imp","phase":"combat","idx":0}
+E2E 200 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":8,"fk":"prm","phase":"prep","idx":1}
+E2E 225 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":9,"fk":"imp","phase":"end","idx":1}
+E2E 250 {"setup":false,"step":2,"roll":3,"auto":true,"result":null,"round":11,"fk":"prm","phase":"end","idx":1}
+PASS E2E real 844x390 touch: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 190 acciones UI; 0 mutaciones del estado desde el test
+PASS validación final completa

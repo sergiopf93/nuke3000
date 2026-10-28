@@ -109,6 +109,7 @@ function openCombatModal() {
   }
   document.getElementById('dlba').textContent=af.name;
   document.getElementById('dlbd').textContent=df.name;
+  document.getElementById('combat-unit-choice')?.remove();
   for(const id of ['unit-sel-att','unit-sel-def'])document.getElementById(id)?.remove();
   document.getElementById('dtot-a').textContent='';document.getElementById('dtot-d').textContent='';
   const info='Iniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restantes '+Battle.count(src)+' / '+Battle.count(tgt);
@@ -119,10 +120,11 @@ function openCombatModal() {
   cancel.textContent='CANCELAR';cancel.style.display=ctx.isPlayerAtt?'inline-block':'none';cancel.onclick=retreatCombat;
   retreat.style.display='none';
   if(ctx.isPlayerAtt) {
-    const chosen=units=>{if(G_combat!==ctx||ctx.done)return;ctx.attSelected=units;renderDicePools();roll.textContent='⚄ LANZAR DADOS';roll.style.display='inline-block';roll.onclick=()=>resolveCombatRound();};
+    const chosen=units=>{if(G_combat!==ctx||ctx.done)return;ctx.attSelected=units;renderDicePools();roll.disabled=false;roll.textContent='⚄ LANZAR DADOS';roll.style.display='inline-block';roll.onclick=()=>resolveCombatRound();};
     if(RULES.combat.allowUnitSelection)showUnitSelectorInModal('att',ctx.attPool,maxAtt,chosen);else chosen(ctx.attSelected);
   } else rollAttackerThenDefend();
   document.getElementById('dmodal').classList.add('open');
+  if(typeof GameUX!=='undefined')GameUX.combat(ctx);
 }
 function buildPool(territory) { return Battle.pool(territory,RULES.combat); }
 function defDiceCount(attCount,maxDef,defUnits) { return Math.min(maxDef,defUnits); }
@@ -163,6 +165,13 @@ function showUnitSelectorInModal(side, pool, maxN, callback) {
   const dbox=document.getElementById('dbox');
   dbox.insertBefore(selDiv, document.querySelector('.die-legend')||dbox.firstChild);
   window['_usel_'+side]=selDiv;
+  if(typeof GameUX!=='undefined'&&GameUX.isMobile()){
+    const details=document.createElement('details');details.id='combat-unit-choice';
+    const summary=document.createElement('summary');summary.textContent='Unidades sugeridas · CAMBIAR SELECCIÓN';
+    selDiv.replaceWith(details);details.append(summary,selDiv);
+    callback(pool.slice(0,maxN));
+    details.addEventListener('toggle',()=>{if(details.isConnected)document.getElementById('btn-roll').disabled=details.open;});
+  }
 }
 
 function uselInline(side,type,delta,max){
@@ -184,7 +193,7 @@ function uselInlineConfirm(side){
     div._pool.forEach(u=>{if((counts[u.type]||0)>0){selected.push(u);counts[u.type]--;}});
   }
   if(div._callback) div._callback(selected);
-  div.remove();
+  const details=div.closest('details');if(details)details.remove();else div.remove();
   delete window['_usel_'+side];
 }
 
@@ -230,14 +239,16 @@ function resolveCombatRound() {
   updateMap();refreshCards();
 }
 function displayBattleResult(ctx,result) {
+  if(typeof GameUX!=='undefined')GameUX.combat(ctx,result);
   document.getElementById('dtot-a').textContent=result.attRolls.map(d=>d.value).join(' · ');
   document.getElementById('dtot-d').textContent=result.defRolls.map(d=>d.value).join(' · ');
   const changes=list=>list.map(c=>c.from+' → '+(c.to||'eliminado')).join(', ')||'ninguna';
+  const dieText=d=>d.type+' D'+d.sides+' ['+d.raw+(d.bonus?' + '+d.bonus:'')+' = '+d.value+']';
   const src=G.territories[ctx.srcId],tgt=G.territories[ctx.targetId];
   document.getElementById('dres').textContent=
     'Ronda '+ctx.round+' · '+(result.status==='conquered'?'CONQUISTA':result.status==='repelled'?'DEFENSA EXITOSA':'CONTINÚA')+
     '\nBajas ataque: '+changes(result.losses.attacker)+'\nBajas defensa: '+changes(result.losses.defender)+
-    '\nComparaciones: '+result.pairs.map(p=>p.att.type+' D'+p.att.sides+'='+p.att.value+' vs '+p.def.type+' D'+p.def.sides+'='+p.def.value+' ('+p.loser+' pierde)').join('; ')+
+    '\nComparaciones: '+result.pairs.map(p=>dieText(p.att)+' vs '+dieText(p.def)+' ('+p.loser+' pierde)').join('; ')+
     '\nIniciales '+ctx.initialAtt+' / '+ctx.initialDef+' · Restantes '+Battle.count(src)+' / '+Battle.count(tgt);
   document.getElementById('dres').style.whiteSpace='pre-line';
   addLog('⚔ '+terName(ctx.srcId)+' → '+terName(ctx.targetId)+': '+result.status+'; bajas '+changes(result.losses.attacker)+' / '+changes(result.losses.defender),'combat');
@@ -353,8 +364,10 @@ function closeDice(){
   const ctx=G_combat;
   if(ctx&&!ctx.done){if(ctx.isPlayerAtt)retreatCombat();return;}
   document.getElementById('dmodal').classList.remove('open');
+  document.getElementById('combat-unit-choice')?.remove();
   for(const side of ['att','def']){document.getElementById('unit-sel-'+side)?.remove();window['_usel_'+side]=null;}
   G_combat=null;G.attackSrc=null;
+  if(typeof GameUX!=='undefined'&&GameUX.isMobile())updateMap();
 }
 
 // ── PHASES ────────────────────────────────────────────────────

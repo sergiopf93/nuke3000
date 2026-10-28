@@ -1,9 +1,10 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v2-engine';
+const CACHE = 'nuke3000-v3-mobile-ux';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',
   '/nuke3000/css/game.css',
+  '/nuke3000/css/mobile-ux.css',
   '/nuke3000/js/assets.js',
   '/nuke3000/js/data.js',
   '/nuke3000/js/setup.js',
@@ -12,6 +13,7 @@ const ASSETS = [
   '/nuke3000/js/engine.js',
   '/nuke3000/js/combat.js',
   '/nuke3000/js/ui.js',
+  '/nuke3000/js/mobile-ux.js',
   '/nuke3000/js/online.js',
   '/nuke3000/js/firebase-config.js',
   '/nuke3000/manifest.json',

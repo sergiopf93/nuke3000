@@ -1,3 +1,9 @@
+## UX móvil horizontal en desarrollo (28/10/2026)
+
+Rama `dev/mobile-gameplay-ux` desde la base estabilizada `ec9a955`. Primera iteración de mapa contextual, gestos táctiles y combate rápido/detallado, conservando tablero y reglas V3. [Diseño, pasos antes/después y límites](docs/UX_MOBILE.md), [capturas y pruebas](docs/evidence/mobile-ux/README.md). Probado en Chrome con toque emulado; pendiente validación del propietario y dispositivo físico. Sin push/merge/despliegue.
+
+Pruebas Node22: `npm test`, `npm run test:browser`, `npm run test:e2e`, `npm run test:e2e:mobile`, `npm run test:all`.
+
 ## Estabilización V3 en desarrollo (28/10/2026)
 
 Rama `dev/stabilization-gameplay`; estabilización local del Bloque A validada automáticamente y lista para validación del propietario, sin publicación. El motor activo se carga desde index.html: data → setup → map → **battle** → engine → combat → ui → online. battle.js contiene el cálculo puro de combate. El mapa actual conserva 60 territorios (7 Rusia). Central nuclear: 4 Pu; misil contra Aircraft: D6≥5.

@@ -4,9 +4,10 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "test:engine": "node --test tests/*.test.cjs",
-    "test:browser": "node tests/browser-smoke.cjs && node tests/online-combat.browser.cjs",
+    "test:browser": "node tests/browser-smoke.cjs && node tests/online-combat.browser.cjs && NUKE_TOUCH_ONLINE=1 node tests/online-combat.browser.cjs && node tests/mobile-ux.browser.cjs && node tests/desktop-visual.browser.cjs",
     "test:e2e": "node tests/full-game.e2e.cjs",
-    "test:all": "npm run test:engine && npm run test:browser && npm run test:e2e"
+    "test:all": "npm run test:engine && npm run test:browser && npm run test:e2e && npm run test:e2e:mobile",
+    "test:e2e:mobile": "NUKE_E2E_WIDTH=844 NUKE_E2E_HEIGHT=390 NUKE_E2E_TOUCH=1 NUKE_E2E_ARTIFACT=/tmp/nuke-mobile-game node tests/full-game.e2e.cjs"
   },
   "engines": {
     "node": ">=22"

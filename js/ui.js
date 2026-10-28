@@ -139,7 +139,7 @@ function showTip(e,id){
   const fc=t.owner?FDATA[t.owner]:null;
   const reg=REGIONS.find(r=>r.id===t.region);
   const tip=document.getElementById('tip');
-  tip.innerHTML=`<strong>${t.name}</strong>${reg.name}<br>${fc?`Control: ${fc.name}`:'Sin control'}<br>AP: ${armyPoints(t)}${t.hasNuclear?'<br>⚡ Nuclear Complex':''}`;
+  tip.innerHTML=`<strong>${terName(id)}</strong>${reg.name}<br>${fc?`Control: ${fc.name}`:'Sin control'}<br>AP: ${armyPoints(t)}${t.hasNuclear?'<br>⚡ Nuclear Complex':''}`;
   tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-12)+'px';tip.className='show';
 }
 function hideTip(){ document.getElementById('tip').className=''; }
@@ -150,133 +150,59 @@ function pickF(el){ document.querySelectorAll('.fp').forEach(e=>e.classList.remo
 // ── PAN & ZOOM ─────────────────────────────────────────────────
 function setupPanZoom(){
   const wrap=document.getElementById('map-wrap');
-  const bw=wrap.clientWidth, bh=wrap.clientHeight;
-  svgEl.setAttribute('width', bw);
-  svgEl.setAttribute('height', bh);
-  svgEl.setAttribute('viewBox', '0 0 '+bw+' '+bh);
-  const sc=Math.min(bw/1400, bh/787)*0.93;
-  G.vscaleMin=sc; G.vscale=sc;
-  G.vx=(bw-1400*sc)/2; G.vy=(bh-787*sc)/2;
-  updateMap();
-
-  wrap.addEventListener('click',e=>{
-    if(G.dragging) return;
-    const el=document.elementFromPoint(e.clientX,e.clientY);
-    if(!el) return;
-    let tid=null;
-    for(const [id,g] of Object.entries(pathEls)){
-      if(g===el||g.contains(el)){tid=id;break;}
+  resetV();
+  if(wrap._panZoomReady)return;
+  wrap._panZoomReady=true;
+  const pointers=new Map();let origin=null,pinch=null,gesture=false,suppressUntil=0;
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const center=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  function hit(x,y,event){
+    const el=document.elementFromPoint(x,y);
+    const entry=Object.entries(pathEls).find(([,g])=>g===el||g.contains(el));
+    if(entry)onTerritoryClick(entry[0],event);
+    else{G.sel=G.attackSrc=G.moveSrc=G.moveTargets=null;wrap.classList.remove('moving');updateMap();}
+  }
+  // One pointer path for mouse/touch. A drag, pinch or cancellation never becomes a tap.
+  wrap.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;
+    if(e.pointerType==='touch')e.preventDefault();
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});wrap.setPointerCapture(e.pointerId);
+    if(pointers.size===1){origin={x:e.clientX,y:e.clientY,vx:G.vx,vy:G.vy};gesture=false;G.dragging=false;}
+    else{gesture=true;G.dragging=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),center:center(a,b)};}
+  });
+  wrap.addEventListener('pointermove',e=>{
+    if(!pointers.has(e.pointerId))return;
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pointers.size===1&&origin&&!pinch){
+      if(Math.hypot(e.clientX-origin.x,e.clientY-origin.y)>6){gesture=true;G.dragging=true;G.vx=origin.vx+e.clientX-origin.x;G.vy=origin.vy+e.clientY-origin.y;updateMap();}
+    }else if(pointers.size===2){
+      const [a,b]=[...pointers.values()],dist=distance(a,b),mid=center(a,b),rect=wrap.getBoundingClientRect();
+      if(pinch&&pinch.distance>0){const scale=Math.min(4,Math.max(G.vscaleMin,G.vscale*dist/pinch.distance));
+        G.vx=mid.x-rect.left-(pinch.center.x-rect.left-G.vx)*scale/G.vscale;
+        G.vy=mid.y-rect.top-(pinch.center.y-rect.top-G.vy)*scale/G.vscale;G.vscale=scale;updateMap();}
+      pinch={distance:dist,center:mid};
     }
-    if(tid) onTerritoryClick(tid,e);
-    else{G.sel=null;G.moveSrc=null;wrap.classList.remove('moving');updateMap();}
   });
-
-  let ds=null;
-  wrap.addEventListener('mousedown',e=>{G.dragging=false;ds={x:e.clientX-G.vx,y:e.clientY-G.vy};});
-  window.addEventListener('mousemove',e=>{
-    if(!ds)return;
-    const dx=e.clientX-ds.x-G.vx,dy=e.clientY-ds.y-G.vy;
-    if(Math.hypot(dx,dy)>5){G.dragging=true;G.vx=e.clientX-ds.x;G.vy=e.clientY-ds.y;updateMap();}
-  });
-  window.addEventListener('mouseup',()=>{setTimeout(()=>G.dragging=false,50);ds=null;});
-
+  function finish(e,cancelled){
+    if(!pointers.has(e.pointerId))return;
+    const tap=pointers.size===1&&!gesture&&!cancelled;
+    pointers.delete(e.pointerId);suppressUntil=performance.now()+500;
+    if(pointers.size===0){G.dragging=false;origin=pinch=null;if(tap)hit(e.clientX,e.clientY,e);}
+    else{origin=null;gesture=true;}
+  }
+  wrap.addEventListener('pointerup',e=>finish(e,false));
+  wrap.addEventListener('pointercancel',e=>finish(e,true));
+  wrap.addEventListener('lostpointercapture',e=>finish(e,true));
+  // The synthesized click may land on a dialog opened by pointerup. Suppress that
+  // same gesture at document capture; a new physical press always clears the guard.
+  document.addEventListener('pointerdown',()=>{suppressUntil=0;},true);
+  document.addEventListener('click',e=>{if(e.detail>0&&performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
   wrap.addEventListener('wheel',e=>{
-    e.preventDefault();
-    const factor=e.deltaY<0?1.12:0.89;
-    const rect=wrap.getBoundingClientRect();
-    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-    const newScale=Math.min(4, Math.max(G.vscaleMin||0.1, G.vscale*factor));
-    G.vx=mx-(mx-G.vx)*(newScale/G.vscale);
-    G.vy=my-(my-G.vy)*(newScale/G.vscale);
-    G.vscale=newScale;
-    updateMap();
+    e.preventDefault();const rect=wrap.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    const scale=Math.min(4,Math.max(G.vscaleMin||0.1,G.vscale*(e.deltaY<0?1.12:0.89)));
+    G.vx=mx-(mx-G.vx)*scale/G.vscale;G.vy=my-(my-G.vy)*scale/G.vscale;G.vscale=scale;updateMap();
   },{passive:false});
-
-  window.addEventListener('resize',()=>{
-    const bw2=wrap.clientWidth,bh2=wrap.clientHeight;
-    svgEl.setAttribute('width',bw2); svgEl.setAttribute('height',bh2);
-    svgEl.setAttribute('viewBox','0 0 '+bw2+' '+bh2);
-    const sc2=Math.min(bw2/1400,bh2/787)*0.93;
-    G.vscaleMin=sc2; G.vscale=sc2;
-    G.vx=(bw2-1400*sc2)/2; G.vy=(bh2-787*sc2)/2;
-    updateMap();
-  });
-
-  // ── Touch: pan + pinch zoom ────────────────────────────
-  let _touches = {};
-  let _lastPinchDist = null;
-
-  wrap.addEventListener('touchstart', e => {
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(t => {
-      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
-    });
-    if (Object.keys(_touches).length === 1) {
-      const t = e.changedTouches[0];
-      ds = { x: t.clientX - G.vx, y: t.clientY - G.vy };
-      G.dragging = false;
-    }
-    _lastPinchDist = null;
-  }, { passive: false });
-
-  wrap.addEventListener('touchmove', e => {
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(t => {
-      _touches[t.identifier] = { x: t.clientX, y: t.clientY };
-    });
-    const touchIds = Object.keys(_touches);
-    if (touchIds.length === 1 && ds) {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - ds.x - G.vx;
-      const dy = t.clientY - ds.y - G.vy;
-      if (Math.hypot(dx, dy) > 3) {
-        G.dragging = true;
-        G.vx = t.clientX - ds.x;
-        G.vy = t.clientY - ds.y;
-        updateMap();
-      }
-    } else if (touchIds.length === 2) {
-      const [id1, id2] = touchIds;
-      const t1 = _touches[id1], t2 = _touches[id2];
-      const dist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-      if (_lastPinchDist !== null) {
-        const factor = dist / _lastPinchDist;
-        const rect = wrap.getBoundingClientRect();
-        const mx = (t1.x + t2.x) / 2 - rect.left;
-        const my = (t1.y + t2.y) / 2 - rect.top;
-        const newScale = Math.min(4, Math.max(G.vscaleMin || 0.1, G.vscale * factor));
-        G.vx = mx - (mx - G.vx) * (newScale / G.vscale);
-        G.vy = my - (my - G.vy) * (newScale / G.vscale);
-        G.vscale = newScale;
-        updateMap();
-      }
-      _lastPinchDist = dist;
-      ds = null;
-    }
-  }, { passive: false });
-
-  wrap.addEventListener('touchend', e => {
-    const touch = e.changedTouches[0];
-    Array.from(e.changedTouches).forEach(t => {
-      delete _touches[t.identifier];
-    });
-    _lastPinchDist = null;
-    if (Object.keys(_touches).length === 0) {
-      // Detect tap: if we didn't drag, treat as a click on the territory
-      if (!G.dragging && touch) {
-        const el = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (el) {
-          let tid = null;
-          for (const [id, g] of Object.entries(pathEls)) {
-            if (g === el || g.contains(el)) { tid = id; break; }
-          }
-          if (tid) onTerritoryClick(tid, e);
-        }
-      }
-      setTimeout(() => { G.dragging = false; }, 50);
-      ds = null;
-    }
-  }, { passive: false });
+  new ResizeObserver(()=>resetV()).observe(wrap);
 }
 
 function resetV(){
@@ -567,4 +493,5 @@ function refreshCards() {
   });
   // Update turn order dots
   if(typeof updateTurnOrderBar === 'function') updateTurnOrderBar();
+  if(typeof GameUX!=='undefined')GameUX.refresh();
 }

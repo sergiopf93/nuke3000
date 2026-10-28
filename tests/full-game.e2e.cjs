@@ -2,6 +2,7 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
+const viewport={width:Number(process.env.NUKE_E2E_WIDTH||1440),height:Number(process.env.NUKE_E2E_HEIGHT||900)},touch=!!process.env.NUKE_E2E_TOUCH,artifact=process.env.NUKE_E2E_ARTIFACT||'/tmp/nuke-full-game';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':url.pathname));
  if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}
@@ -11,7 +12,7 @@ const server=http.createServer((req,res)=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser,context;
  try{
   browser=await chromium.launch({channel:'chrome',headless:true});
-  context=await browser.newContext({viewport:{width:1440,height:900},serviceWorkers:'block'});
+  context=await browser.newContext({viewport,hasTouch:touch,isMobile:touch,serviceWorkers:'block'});
   await context.tracing.start({screenshots:false,snapshots:false});
   const origin=`http://127.0.0.1:${server.address().port}`;
   await context.route('**/*',route=>{
@@ -25,10 +26,10 @@ const server=http.createServer((req,res)=>{
    const timeout=window.setTimeout.bind(window);window.setTimeout=(fn,delay,...args)=>timeout(fn,Math.min((delay||0)*0.02,30),...args);
   },Number(process.env.NUKE_E2E_SEED||123));
   const page=await context.newPage();page.setDefaultTimeout(3000);const errors=[],actions=[];page.on('pageerror',err=>errors.push(err.message));
-  await page.goto(origin);await page.locator('#faction-grid [data-f="prm"]').click();
-  await page.locator('#pcount').selectOption('3');await page.locator('#pname').fill('QA V3');await page.locator('#btnstart').click();
+  await page.goto(origin);await page.locator('#faction-grid [data-f="prm"]')[touch?'tap':'click']();
+  await page.locator('#pcount').selectOption('3');await page.locator('#pname').fill('QA V3');await page.locator('#btnstart')[touch?'tap':'click']();
   let start=null,finished=false;
-  const click=async(selector)=>{const locator=page.locator(selector).first();if(await locator.isVisible()){await locator.click({timeout:2000});actions.push(selector);return true;}return false;};
+  const click=async(selector)=>{const locator=page.locator(selector).first();if(await locator.isVisible()){await locator[touch?'tap':'click']({timeout:2000});actions.push(selector);return true;}return false;};
   for(let action=0;action<600;action++){
    if(errors.length)throw Error(errors.join('\n'));
    const state=await page.evaluate(()=>({setup:G.setup._inSetup,step:G.setup._stepIdx,roll:G.setup.rollResults[G.pf],auto:G.setup._autoClaimEnabled,
@@ -51,7 +52,7 @@ const server=http.createServer((req,res)=>{
     // All choices are made through the same visible buttons a player uses.
     const buttons=page.locator('#step-actions button:enabled');
     const next=buttons.filter({hasText:/COLOCAR REFUERZOS|AUTO-DISTRIBUIR|SIGUIENTE|PASAR A FASE FINAL|LANZAR DADOS DE MANTENIMIENTO/}).first();
-    if(await next.isVisible()&&await next.isEnabled()){actions.push(await next.innerText());await next.click();}
+    if(await next.isVisible()&&await next.isEnabled()){actions.push(await next.innerText());await next[touch?'tap':'click']();}
    }
    await page.waitForTimeout(25);
   }
@@ -65,11 +66,11 @@ const server=http.createServer((req,res)=>{
   assert.ok(legitimate,'La condición de victoria debe cumplirse en el estado real');
   assert.equal(await page.locator('#btn-next').isDisabled(),true);
   assert.deepEqual(await page.evaluate(()=>({result:G.result,phase:G.phase,gameOver:G.gameOver,step:G_step.idx,round:G.round,turn:G.currentFaction})),final);
-  await page.screenshot({path:'/tmp/nuke-full-game-victory.png'});
-  fs.writeFileSync('/tmp/nuke-full-game-report.json',JSON.stringify({seed:Number(process.env.NUKE_E2E_SEED||123),start,final,actions,errors},null,2));
-  console.log(`PASS E2E real: lobby → dados/setup 60 territorios → turnos → victoria ${final.result.winner}, ronda ${final.round}; ${actions.length} acciones UI; 0 mutaciones del estado desde el test`);
+  await page.screenshot({path:artifact+'-victory.png'});
+  fs.writeFileSync(artifact+'-report.json',JSON.stringify({seed:Number(process.env.NUKE_E2E_SEED||123),viewport,touch,start,final,actions,errors},null,2));
+  console.log(`PASS E2E real ${viewport.width}x${viewport.height} ${touch?'touch':'mouse'}: lobby → dados/setup 60 territorios → turnos → victoria ${final.result.winner}, ronda ${final.round}; ${actions.length} acciones UI; 0 mutaciones del estado desde el test`);
  }finally{
-  if(context)await context.tracing.stop({path:'/tmp/nuke-full-game-trace.zip'});
+  if(context)await context.tracing.stop({path:artifact+'-trace.zip'});
   if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));
  }
 })().catch(err=>{console.error(err);process.exitCode=1;});

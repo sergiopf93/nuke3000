@@ -1,0 +1,46 @@
+{
+  "baseline": "ec9a955",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "ignored": [
+    {
+      "label": "Código aleatorio de sala",
+      "rect": [
+        1000,
+        50,
+        1185,
+        80
+      ]
+    },
+    {
+      "label": "Tooltip de hover (nombre corregido)",
+      "rect": [
+        820,
+        610,
+        950,
+        710
+      ]
+    },
+    {
+      "label": "LED de turno animado",
+      "rect": [
+        30,
+        115,
+        60,
+        150
+      ]
+    }
+  ],
+  "results": [
+    {
+      "stage": "map",
+      "changedPixelsOutsideIgnored": 0
+    },
+    {
+      "stage": "combat",
+      "changedPixelsOutsideIgnored": 0
+    }
+  ]
+}

@@ -1,3 +1,17 @@
+# UX/UI — ampliación 28/10/2026
+
+Las 121 regresiones de motor del bloque A se conservan. `test:browser` añade matriz táctil de 667×375, 844×390, 932×430 y 390×844, escritorio 1440×900 y comparación visual frente a ec9a955. Se comprueban setup manual, selección, movimiento, mejoras, construcción/lanzamiento de misiles, ataque/defensa, conquista, continuación/retirada, gestos/cancelación, orientación, recursos y cierre de paneles/reglas. Los escenarios preparados no son partidas E2E completas.
+
+El test multicliente admite `NUKE_TOUCH_ONLINE=1`: usa toques en dos páginas 844×390 y conserva las decisiones del humano remoto. Sigue sustituyendo Firestore por transporte local.
+
+`npm run test:e2e:mobile` añade una partida completa UI real 3J a 844×390, `hasTouch` + `isMobile` y `tap()`, sin mutar dominio: Libertos ronda 12, 190 acciones UI; escritorio sigue completando Libertos ronda 12, 233 acciones. Setup, refuerzos, defensa humana, CPU y mantenimiento hasta ganador válido. El PRNG y timers son las únicas inyecciones del E2E.
+
+[Diseño y límites](UX_MOBILE.md), [capturas/resultados](evidence/mobile-ux/README.md). No hay dispositivo físico/Safari ni Firebase real. Las comparaciones desktop excluyen tres zonas explícitas: código de sala, LED animado y tooltip corregido. Se conserva el tablero, datos y cálculo puro sin diff.
+
+Comando nuevo: `npm run test:e2e:mobile`. `npm run test:all` incluye motor, matriz de navegador y ambas partidas completas. Node22 y Playwright existentes, sin nueva dependencia.
+
+---
+
 # Estado actual — bloque A, 28/10/2026
 
 **121 pruebas Node pasan** (sin porcentaje de cobertura inventado): motor, combate puro, integración aislada, simulaciones de partidas completas 3–6J, mapa y validaciones básicas del editor.

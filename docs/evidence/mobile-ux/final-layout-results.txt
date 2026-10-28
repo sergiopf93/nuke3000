@@ -1,0 +1,6 @@
+PASS UX 1440x900 desktop
+PASS UX 844x390 touch
+PASS UX 667x375 touch
+PASS UX 932x430 touch
+PASS UX 390x844 touch
+PASS comparación desktop: mapa y combate sin diferencias fuera de código de sala, tooltip y LED animado
