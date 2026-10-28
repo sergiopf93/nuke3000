@@ -16,6 +16,10 @@ El diagnóstico histórico completo permanece en PROJECT_ANALYSIS.md. Esta lista
 | H12/H14 | Reconexión/replay/autoridad y nombres remotos inseguros pendientes; no probados contra Firebase |
 | H15–H17 | Copias históricas, PWA y rendimiento pendientes; standalone intacta |
 | BUG-01 | Móvil todavía no validado como jugable. Smoke horizontal solo verifica carga/cierre |
-| Rusia | 59 territorios conservados; falta referencia física para añadir el número 60 |
+| Rusia | Corregido según reglamento V3 p.6: 60 territorios, 7 Rusia, enlace transcontinental. Grafo y conservación de 59 originales probados; capturas antes/después. Selección real en Chrome; partida completa/online real pendientes |
 
 No se considera cerrado el bloque A. Los defectos restantes impiden certificar estabilidad.
+
+## Contraste con V3 recibido
+
+Ver RULES_SPEC.md con páginas. Nuevos fallos confirmados: bajas sin degradaciones ni identidad del dado, desempate por caras/tipo ausente, defensa limitada por dados atacantes, Aircraft sin vuelo/transporte y momentos de victoria incorrectos. Estos fallos mantienen abierto el bloque A. Contradicciones del resumen resueltas por el propietario: 4 Pu/base y D6≥5 contra Aircraft.

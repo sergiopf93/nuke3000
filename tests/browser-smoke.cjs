@@ -25,6 +25,7 @@ const server = http.createServer((req, res) => {
       await context.route('**/*', route => {
         const url = route.request().url();
         if (!url.startsWith(origin) && !url.startsWith('data:')) return route.abort();
+        if (process.env.NUKE_MAP_BASELINE_DATA && url.endsWith('/js/data.js')) return route.fulfill({contentType:'text/javascript',body:fs.readFileSync(process.env.NUKE_MAP_BASELINE_DATA,'utf8')});
         // No inicializar Firebase: pruebas locales sin tocar producción.
         if (url.endsWith('/js/firebase-config.js')) return route.fulfill({contentType:'text/javascript',body:''});
         return route.continue();
@@ -36,8 +37,18 @@ const server = http.createServer((req, res) => {
       await page.locator('#faction-grid [data-f="imp"]').click();
       await page.locator('#pname').fill('QA');
       await page.locator('#btnstart').click();
-      assert.equal(await page.locator('[id^="tg-"]').count(), 59);
+      assert.equal(await page.locator('[id^="tg-"]').count(), process.env.NUKE_MAP_BASELINE_DATA ? 59 : 60);
       await page.screenshot({path:`/tmp/nuke3000-${viewport.width}-setup.png`});
+      await page.evaluate(() => { hideSetupPanel(); G.setup.claimCallback=null; updateMap(); });
+      const tag=process.env.NUKE_MAP_BASELINE_DATA ? 'before' : 'after';
+      await page.screenshot({path:`/tmp/nuke-map-${tag}-${viewport.width}.png`});
+      const geometry=await page.locator('[id^="tg-"]').evaluateAll(els=>Object.fromEntries(els.map(el=>[el.id,el.outerHTML])));
+      fs.writeFileSync(`/tmp/nuke-map-${tag}-${viewport.width}.json`,JSON.stringify(geometry));
+      if(!process.env.NUKE_MAP_BASELINE_DATA) {
+        await page.evaluate(()=>{G.setup._inSetup=false});
+        await page.locator('#tc-06_07').click();
+        assert.equal(await page.evaluate(()=>G.sel),'06_07');
+      }
       await page.evaluate(() => {
         G.setup.order=['imp','lib','clt'];
         G.factions.lib.alive=false; G.factions.clt.alive=false;
@@ -48,7 +59,7 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => G.gameOver && G.result.winner==='imp'), true);
       await page.screenshot({path:`/tmp/nuke3000-${viewport.width}-result.png`});
       assert.deepEqual(errors, []);
-      console.log(`PASS navegador ${viewport.width}x${viewport.height}: lobby, arranque, 59 territorios y cierre controlado sin errores JS`);
+      console.log(`PASS navegador ${viewport.width}x${viewport.height}: lobby, arranque, territorios y cierre controlado sin errores JS`);
       await context.close();
     }
   } finally {

@@ -9,7 +9,7 @@ Bloque A **en curso**, no aceptado como completo. Primera iteración: regresione
 | Bloque | Pendiente para validarlo |
 |---|---|
 | A | Unificar combate/dados/bajas; evitar callbacks obsoletos y bucles; reparar setup manual/mixto, mantenimiento, misiles y confirmación de mejoras; comprobar momentos de victoria |
-| B | Referencia física para Rusia; validar grafo; E2E reales y partidas completas 3–6J; capturas comparativas |
+| B | Rusia y grafo corregidos según p.6 (no supone cierre del bloque); E2E reales y partidas completas 3–6J; capturas comparativas |
 | C | Diseño e implementación móvil horizontal, acciones contextuales y combate claro; regresión escritorio |
 | D | Reglas versionadas/validadas, copia por partida, editor soportado por motor, presets/importación/exportación |
 | E | Autoridad, deduplicación, reconexión, setup online y pruebas multicliente en entorno seguro; seguridad/persistencia |
@@ -18,4 +18,8 @@ Orden siguiente: reproducciones deterministas de combate y setup; corregir antes
 
 ## Dependencias externas
 
-Se necesita referencia física que confirme coordenadas y adyacencias del hexágono de Rusia. No se ha inventado ninguna conexión ni cambiado mapa/paleta. El reglamento nuevo sigue pendiente: conservar mecánicas vigentes y registrar diferencias sin decidir balance. Firebase de producción queda fuera de pruebas.
+Recibidos reglamento V3 y lore V1. Rusia confirmada e incorporada; mapa/paleta conservados. El futuro reglamento definitivo no se da por recibido: V3 es la referencia actual; divergencias y decisiones en RULES_SPEC.md. Firebase de producción queda fuera de pruebas.
+
+## Iteración de referencia física
+
+24 tests pasan, incluyendo siete del mapa/reparto y las regresiones de reservas ahora sobre 60 territorios. Chrome verifica 59 antes y 60 después en dos tamaños, clic real en 06_07 y DOM idéntico de los 59 originales. Siguiente prioridad A: resolución común de dados tipados con degradaciones y guard de una unidad, según V3 p.10; no avanzar dando por cerrado el motor.

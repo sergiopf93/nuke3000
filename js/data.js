@@ -1,5 +1,5 @@
 const TERRITORIES_DEF = [
-  {id:'01_01',region:'r01',cx:212.0,cy:136.2,adj:['01_02']},
+  {id:'01_01',region:'r01',cx:212.0,cy:136.2,adj:['01_02','06_07']},
   {id:'01_02',region:'r01',cx:278.0,cy:174.3,adj:['01_01','01_03','01_04','01_05']},
   {id:'01_03',region:'r01',cx:278.0,cy:250.5,adj:['01_02','01_05','01_06','03_01']},
   {id:'03_01',region:'r03',cx:278.0,cy:326.7,adj:['01_03','01_06','03_02']},
@@ -49,7 +49,9 @@ const TERRITORIES_DEF = [
   {id:'10_01',region:'r10',cx:1004.0,cy:441.1,adj:['09_03','09_05','10_02']},
   {id:'11_02',region:'r11',cx:1004.0,cy:593.5,adj:['11_01','11_03','11_04','11_05']},
   {id:'11_03',region:'r11',cx:1004.0,cy:669.7,adj:['11_01','11_02','11_05']},
-  {id:'06_06',region:'r06',cx:1070.0,cy:174.3,adj:['06_05','09_06']},
+  {id:'06_06',region:'r06',cx:1070.0,cy:174.3,adj:['06_05','09_06','06_07']},
+  // Rule book V3, p.6: far-right Russia hex connects across the map to North America.
+  {id:'06_07',region:'r06',cx:1136.0,cy:136.2,adj:['06_06','01_01']},
   {id:'09_06',region:'r09',cx:1070.0,cy:250.5,adj:['06_05','06_06','09_04','09_07']},
   {id:'09_07',region:'r09',cx:1070.0,cy:326.7,adj:['09_04','09_05','09_06']},
   {id:'10_02',region:'r10',cx:1070.0,cy:479.2,adj:['10_01','11_04']},
@@ -68,7 +70,7 @@ const REGIONS = [
   {id:'r03',name:'Central America',color:'#162214',borderColor:'#4a8840',size:2},
   {id:'r04',name:'South America',color:'#241a32',borderColor:'#7a44bb',size:7},
   {id:'r05',name:'Europe',color:'#1a2800',borderColor:'#88cc00',size:7},
-  {id:'r06',name:'Russia',color:'#102020',borderColor:'#3a8888',size:6},
+  {id:'r06',name:'Russia',color:'#102020',borderColor:'#3a8888',size:7},
   {id:'r07',name:'Middle East',color:'#281808',borderColor:'#bb7018',size:3},
   {id:'r08',name:'Africa',color:'#280e0e',borderColor:'#bb2a2a',size:8},
   {id:'r09',name:'Asia',color:'#101828',borderColor:'#3366aa',size:7},
@@ -204,7 +206,7 @@ const SETUP = {
 
 
 // Verify count
-console.assert(TERRITORIES_DEF.length === 59, 'Expected 59 territories, got ' + TERRITORIES_DEF.length);
+console.assert(TERRITORIES_DEF.length === 60, 'Expected 60 territories, got ' + TERRITORIES_DEF.length);
 
 // ── GAME STATE ─────────────────────────────────────────────────
 let G = {

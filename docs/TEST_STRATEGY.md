@@ -32,3 +32,11 @@ Chrome real: 1440×900 y 844×390; seleccionar facción y comenzar por botones, 
 Dados/azar inyectables, combate/setup/economía/misiles/habilidades con límites; simulaciones completas 3/4/5/6J; E2E reales de acciones y al menos una partida completa; emulación táctil/zoom/orientación/móvil pequeño; comparación visual antes/después del cambio de mapa. Firebase Emulator y multicliente: no implementados ni ejecutados. Dispositivos físicos: pendientes.
 
 No existe todavía suite completa, comando E2E ni lint/build/typecheck del proyecto. Mantener esta distinción en entregas.
+
+## Evidencia de Rusia — 28/10/2026
+
+24 pruebas Node pasan. tests/map.test.cjs verifica 60 IDs únicos, 7 Rusia, tamaños, conectividad, reciprocidad y hash de datos originales sin las dos conexiones nuevas; reparto 3–6J. Los tests de reservas existentes se ejecutan también con 60 territorios.
+
+Chrome aislado en 1440×900 y 844×390: ejecución antes con datos de HEAD previo y después con datos actuales, capturas en evidence/russia/{before,after}-{1440,844}.png. Los 59 grupos SVG originales tienen outerHTML idéntico; se añade únicamente tg-06_07. El renderer, fondo, assets y CSS no se modifican. Clic real en el nuevo territorio confirma G.sel=06_07 en ambos tamaños. No equivale a completar partidas ni a probar red real o dispositivos táctiles físicos.
+
+Reproducir baseline: extraer js/data.js del commit 8475104 a un archivo temporal y pasar NUKE_MAP_BASELINE_DATA=/ruta/archivo a test:browser. Sin esta variable se comprueba la versión actual con 60 territorios.

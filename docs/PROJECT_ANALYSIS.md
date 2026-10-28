@@ -312,3 +312,7 @@ Comprobación de continuidad: el contexto identifica commit, entrada activa, cop
 ## 12. Desarrollo posterior — 28/10/2026
 
 Comenzada estabilización en dev/stabilization-gameplay. Diagnóstico histórico intacto; estado actualizado en KNOWN_ISSUES.md y plan en IMPROVEMENT_PLAN.md. Se implementan regresiones y correcciones parciales del bloque A. No se certifica partida completa ni se cierran los bloques B–E.
+
+## 13. Referencias originales recibidas — 28/10/2026
+
+Reglamento V3 y lore V1 disponibles; páginas/contradicciones y diferencias reales en RULES_SPEC.md. Corregida Rusia según p.6 sin alterar 59 territorios originales. Nuevas evidencias de combate exigen bajas tipadas/degradaciones, no eliminar la unidad más barata. El análisis inicial de 59 territorios y de ausencia de PDF se conserva como registro histórico.
