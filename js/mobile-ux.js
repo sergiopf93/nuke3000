@@ -57,7 +57,7 @@ const GameUX=(()=>{
     const value=document.createElement('span');value.className='die-value';value.textContent=rolls?die.value:'—';
     const status=document.createElement('span');status.className='die-outcome';
     const index=remainingLosses.findIndex(c=>c.from===die.type),change=lost&&index>=0?remainingLosses.splice(index,1)[0]:null;
-    status.textContent=lost?(change?.to?'→ '+labels[change.to]:'BAJA'):pair?'GANA':rolls?'SIN PAR':'LISTO';
+    status.textContent=lost?(change?.to?'→ '+labels[change.to]:'BAJA'):pair?'GANA':rolls?(result?'SIN PAR':'TIRADO'):'LISTO';
     tile.title=rolls?labels[die.type]+' D'+die.sides+': '+die.raw+' + '+die.bonus+' = '+die.value:labels[die.type]+' D'+die.sides;
     tile.setAttribute('aria-label',tile.title+' · '+status.textContent);tile.dataset.pair=pair?String(pairs.indexOf(pair)+1):'';
     tile.append(kind,value,status);row.appendChild(tile);

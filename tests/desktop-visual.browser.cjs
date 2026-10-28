@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),fs=require
 const evidence=process.env.NUKE_UX_EVIDENCE||path.resolve(__dirname,'../docs/evidence/visual-consistency');
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
  const page=await browser.newPage(),results=[];
- const ignored=[{label:'Código aleatorio de sala',rect:[995,50,1185,80]},{label:'Tooltip de hover (nombre corregido)',rect:[820,610,950,710]},{label:'LED de turno animado',rect:[30,115,60,150]}];
+ const ignored=[{label:'Contenedor de sala: ancho variable según el código',rect:[960,50,1190,80]},{label:'Tooltip de hover (nombre corregido)',rect:[820,610,950,710]},{label:'LED de turno animado',rect:[30,115,60,150]}];
  for(const stage of ['map']){
   const files=[path.resolve(__dirname,'../docs/evidence/mobile-ux/after-1440x900-'+stage+'.png'),path.join(evidence,'after-1440x900-'+stage+'.png')];
   const images=files.map(file=>'data:image/png;base64,'+fs.readFileSync(file).toString('base64'));

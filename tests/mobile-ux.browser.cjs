@@ -77,6 +77,7 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  // Human defense: the choice remains explicit, even when the CPU drives its turn.
  await page.evaluate(()=>{clearInteractionModes();G.phase='combat';G_step={currentFk:'clt',phase:'combat',idx:0,isMyTurn:false};Object.assign(G.territories['01_02'],{owner:'clt',soldiers:3,mechs:0,aircraft:0});Object.assign(G.territories['01_01'],{owner:'imp',soldiers:2,mechs:0});openDiceCpu('01_02','01_01','clt',()=>{});});
  assert.equal(await page.evaluate(()=>G_combat.history.length),0);
+ assert.equal(await page.locator('#datt .die-outcome').first().innerText(),'TIRADO','La tirada atacante pendiente de defensa no se presenta como sin par');
  if(!touch)await press('#unit-sel-def > button');
  await press('#btn-roll');assert.equal(await page.evaluate(()=>G_combat.history.length),1);
  await press('#btn-cancel');
