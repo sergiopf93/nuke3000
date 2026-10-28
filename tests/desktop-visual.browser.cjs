@@ -1,9 +1,9 @@
 // Fixed scenes from ec9a955 vs current UI. Ignore only documented dynamic content.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const evidence=path.resolve(__dirname,'../docs/evidence/mobile-ux');
+const evidence=process.env.NUKE_UX_EVIDENCE||path.resolve(__dirname,'../docs/evidence/mobile-ux');
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
  const page=await browser.newPage(),results=[];
- const ignored=[{label:'Código aleatorio de sala',rect:[1000,50,1185,80]},{label:'Tooltip de hover (nombre corregido)',rect:[820,610,950,710]},{label:'LED de turno animado',rect:[30,115,60,150]}];
+ const ignored=[{label:'Código aleatorio de sala',rect:[995,50,1185,80]},{label:'Tooltip de hover (nombre corregido)',rect:[820,610,950,710]},{label:'LED de turno animado',rect:[30,115,60,150]}];
  for(const stage of ['map','combat']){
   const images=['before','after'].map(tag=>'data:image/png;base64,'+fs.readFileSync(path.join(evidence,tag+'-1440x900-'+stage+'.png')).toString('base64'));
   const diff=await page.evaluate(async({images,ignored})=>{

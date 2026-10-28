@@ -1,7 +1,7 @@
 // Touch UI integration with prepared scenarios; full-game.e2e.cjs covers a complete UI-only game.
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),evidence=path.join(root,'docs/evidence/mobile-ux');fs.mkdirSync(evidence,{recursive:true});
+const root=path.resolve(__dirname,'..'),evidence=process.env.NUKE_UX_EVIDENCE||path.join(root,'docs/evidence/mobile-ux');fs.mkdirSync(evidence,{recursive:true});
 const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end();return;}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);});});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{browser=await chromium.launch({channel:'chrome',headless:true});const origin=`http://127.0.0.1:${server.address().port}`;
