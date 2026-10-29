@@ -12,6 +12,7 @@ for(const viewport of [{width:1440,height:900},{width:844,height:390},{width:667
  await page.goto(origin+'?rules=v3');await press('#faction-grid [data-f="imp"]');await page.locator('#pname').fill('QA UX');await press('#btnstart');
  await page.evaluate(()=>{hideSetupPanel();G.setup.claimCallback=null;G.setup._inSetup=false;G.awaitingStart=false;G.setup.order=['imp','lib','clt'];G.phase='combat';G.currentFaction='imp';G_step={currentFk:'imp',phase:'combat',idx:0,isMyTurn:true};for(const t of Object.values(G.territories))Object.assign(t,{owner:'lib',soldiers:1,mechs:0,aircraft:0,scorpions:0,hasNuclear:false});Object.assign(G.territories['01_01'],{owner:'imp',soldiers:5,mechs:1});G.territories['01_03'].owner='imp';Math.random=()=>0.99;updateStepUI(STEPS.combat[0]);updateMap();resetV();});
  await page.evaluate(()=>document.fonts.ready);
+ if(!touch)await page.mouse.move(5,5);
  const tag=process.env.NUKE_UX_BASELINE?'before':'after',size=`${viewport.width}x${viewport.height}`;
  await page.screenshot({path:path.join(evidence,`${tag}-${size}-map.png`)});
  await page.evaluate(()=>beginCombat('01_01','01_02','imp'));

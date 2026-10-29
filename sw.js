@@ -1,5 +1,5 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v11-settings';
+const CACHE = 'nuke3000-v12-setup-map';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',

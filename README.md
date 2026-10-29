@@ -1,3 +1,17 @@
+# NUKE3000 — selección táctil y zoom V12
+
+Se refuerza la entrada del mapa para reclamar territorios y colocar nucleares manualmente: el territorio se conserva desde el inicio del toque, aunque el hit-test SVG cambie, se pierda la captura o el navegador la rechace. El fin del gesto se recoge también fuera del mapa; arrastres, pellizcos y cancelaciones no ejecutan una selección accidental.
+
+Los destinos permitidos permanecen resaltados al mover o ampliar el mapa. La reclamación explica los tres territorios iniciales en la región de origen; los destinos inválidos muestran una indicación visible. Nucleares indica territorios propios sin base y las unidades pendientes. Se conservan V4 y la excepción de Libertos sin bases iniciales.
+
+El zoom conserva el centro y la ampliación relativa cuando cambia el tamaño visible del tablero. Al retirar un dedo después de pellizcar se puede continuar arrastrando con el restante. Inicio/centrar siguen ajustando el mapa completo.
+
+[Pruebas y evidencia V12](docs/evidence/setup-map/README.md). `npm run test:setup-map` cubre las seis facciones en escritorio y táctil, incluyendo reclamación manual, colocación nuclear, captura SVG, zoom y pellizco. La emulación no certifica Safari/iPhone físico; se publica para validar el problema reportado en el dispositivo.
+
+---
+
+## Iteración anterior V10/V11
+
 # NUKE3000 — audio V10
 
 Música ambiental única y continua durante toda la partida, incluidos combates, turnos y paneles. Se activa tras interacción, entra con fundido y se atenúa al resultado final. Se integran los 17 sonidos de la entrega del usuario: dados, disparos, golpes, degradaciones, caídas, misiles, intercepción, impacto, alerta/explosión nuclear, turno, victoria y derrota. Aeronaves reutilizan discretamente el disparo de meca.

@@ -153,22 +153,23 @@ function setupPanZoom(){
   resetV();
   if(wrap._panZoomReady)return;
   wrap._panZoomReady=true;
-  const pointers=new Map();let origin=null,pinch=null,gesture=false,suppressUntil=0;
+  const pointers=new Map();let origin=null,pinch=null,gesture=false,suppressUntil=0,tapTerritory=null;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const center=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
   function hit(x,y,event){
     const el=document.elementFromPoint(x,y);
-    const entry=Object.entries(pathEls).find(([,g])=>g===el||g.contains(el));
-    if(entry)onTerritoryClick(entry[0],event);
+    const entry=tapTerritory?Object.entries(pathEls).find(([,g])=>g===tapTerritory):Object.entries(pathEls).find(([,g])=>g===el||g.contains(el));
+    if(entry){onTerritoryClick(entry[0],event);return true;}
     else{G.sel=G.attackSrc=G.moveSrc=G.moveTargets=null;wrap.classList.remove('moving');updateMap();}
   }
   // One pointer path for mouse/touch. A drag, pinch or cancellation never becomes a tap.
   wrap.addEventListener('pointerdown',e=>{
-    if(e.button!==0)return;
+    if(e.button!==0||e.target.closest?.('button,input,select,textarea,a'))return;
     if(e.pointerType==='touch')e.preventDefault();
-    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});wrap.setPointerCapture(e.pointerId);
-    if(pointers.size===1){origin={x:e.clientX,y:e.clientY,vx:G.vx,vy:G.vy};gesture=false;G.dragging=false;}
-    else{gesture=true;G.dragging=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),center:center(a,b)};}
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    try{wrap.setPointerCapture(e.pointerId);}catch{} // Document pointerup remains available if capture is refused.
+    if(pointers.size===1){origin={x:e.clientX,y:e.clientY,vx:G.vx,vy:G.vy};tapTerritory=e.target.closest?.('[id^="tg-"]')||null;gesture=false;G.dragging=false;}
+    else{tapTerritory=null;gesture=true;G.dragging=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),center:center(a,b)};}
   });
   wrap.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;
@@ -187,12 +188,13 @@ function setupPanZoom(){
     if(!pointers.has(e.pointerId))return;
     const tap=pointers.size===1&&!gesture&&!cancelled;
     pointers.delete(e.pointerId);suppressUntil=performance.now()+500;
-    if(pointers.size===0){G.dragging=false;origin=pinch=null;if(tap)hit(e.clientX,e.clientY,e);}
-    else{origin=null;gesture=true;}
+    if(pointers.size===0){G.dragging=false;origin=pinch=null;if(tap&&!hit(e.clientX,e.clientY,e))suppressUntil=0;tapTerritory=null;}
+    else{const remaining=[...pointers.values()][0];origin={...remaining,vx:G.vx,vy:G.vy};pinch=null;gesture=true;tapTerritory=null;}
   }
-  wrap.addEventListener('pointerup',e=>finish(e,false));
+  document.addEventListener('pointerup',e=>finish(e,!wrap.contains(e.target)));
   wrap.addEventListener('pointercancel',e=>finish(e,true));
-  wrap.addEventListener('lostpointercapture',e=>finish(e,true));
+  // Keep an unmoved tap until pointerup even if SVG pointer capture is lost.
+  // The document listener also cancels releases outside the map.
   // The synthesized click may land on a dialog opened by pointerup. Suppress that
   // same gesture at document capture; a new physical press always clears the guard.
   document.addEventListener('pointerdown',()=>{suppressUntil=0;},true);
@@ -202,18 +204,34 @@ function setupPanZoom(){
     const scale=Math.min(4,Math.max(G.vscaleMin||0.1,G.vscale*(e.deltaY<0?1.12:0.89)));
     G.vx=mx-(mx-G.vx)*scale/G.vscale;G.vy=my-(my-G.vy)*scale/G.vscale;G.vscale=scale;updateMap();
   },{passive:false});
-  new ResizeObserver(()=>resetV()).observe(wrap);
+  new ResizeObserver(()=>resizeMapView()).observe(wrap);
 }
 
 function resetV(){
   const wrap=document.getElementById('map-wrap');
   const bw=wrap.clientWidth,bh=wrap.clientHeight;
+  if(!bw||!bh)return;
+  wrap._mapViewport={width:bw,height:bh};
   svgEl.setAttribute('width',bw); svgEl.setAttribute('height',bh);
   svgEl.setAttribute('viewBox','0 0 '+bw+' '+bh);
   const sc=Math.min(bw/1400,bh/787)*0.93;
   G.vscaleMin=sc; G.vscale=sc;
   G.vx=(bw-1400*sc)/2; G.vy=(bh-787*sc)/2;
   updateMap();
+}
+
+// Browser bars and panel layout changes preserve the user's zoom and map center.
+function resizeMapView(){
+  const wrap=document.getElementById('map-wrap'),previous=wrap._mapViewport;
+  const width=wrap.clientWidth,height=wrap.clientHeight;
+  if(!width||!height)return;
+  if(!previous||!G.vscaleMin){resetV();return;}
+  if(previous.width===width&&previous.height===height)return;
+  const x=(previous.width/2-G.vx)/G.vscale,y=(previous.height/2-G.vy)/G.vscale;
+  const fit=Math.min(width/1400,height/787)*.93;
+  const scale=Math.min(4,Math.max(fit,G.vscale/G.vscaleMin*fit));
+  svgEl.setAttribute('width',width);svgEl.setAttribute('height',height);svgEl.setAttribute('viewBox','0 0 '+width+' '+height);
+  wrap._mapViewport={width,height};G.vscaleMin=fit;G.vscale=scale;G.vx=width/2-x*scale;G.vy=height/2-y*scale;updateMap();
 }
 
 function resetMapView(){ resetV(); }

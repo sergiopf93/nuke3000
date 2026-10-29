@@ -865,6 +865,11 @@ function terName(id){
 }
 
 function updateMap(){
+  const setupTargets=new Set();
+  if(G.setup?._inSetup&&G.setup.claimCallback){
+    if(G.setup._stepIdx===1){const fk=G.setup.order[G.setup.orderIdx%G.setup.order.length];if(isMyFaction(fk))for(const t of (typeof V4Game!=='undefined'&&V4Game.enabled()?V4Game.claimCandidates(fk):Object.values(G.territories).filter(t=>!t.owner)))setupTargets.add(t.id);}
+    else if(G.setup._stepIdx===2){const fk=G.setup.order[G.setup.deployIdx%G.setup.order.length];if(isMyFaction(fk))for(const t of Object.values(G.territories))if(t.owner===fk&&(!G.nuclearMode||!t.hasNuclear))setupTargets.add(t.id);}
+  }
   Object.keys(G.territories).forEach(id=>{
     const t=G.territories[id];
     const fc=t.owner?FDATA[t.owner]:null;
@@ -880,7 +885,8 @@ function updateMap(){
     bg.setAttribute('fill',fillColor); bg.setAttribute('opacity','0.88');
     const ring=document.getElementById('tr-'+id);
     if(ring){
-      if(isSelected){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','3.5');ring.setAttribute('filter','url(#fx-glow)');}
+      if(setupTargets.has(id)){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','3');ring.setAttribute('filter','url(#fx-glow)');}
+      else if(isSelected){ring.setAttribute('stroke','#C8A800');ring.setAttribute('stroke-width','3.5');ring.setAttribute('filter','url(#fx-glow)');}
       else if(isMoveTarget){ring.setAttribute('stroke','#4488cc');ring.setAttribute('stroke-width','2.5');ring.setAttribute('filter','');}
       else if(isAttackTarget){ring.setAttribute('stroke','#cc2222');ring.setAttribute('stroke-width','2.5');ring.setAttribute('filter','');}
       else{ring.setAttribute('stroke',reg?reg.borderColor:'#444');ring.setAttribute('stroke-width','1.5');ring.setAttribute('filter','');}

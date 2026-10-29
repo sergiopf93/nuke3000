@@ -480,6 +480,11 @@ function setupStep_Claim_Next() {
   });
 
   if(isMe) {
+    const instruction=document.createElement('p');instruction.id='setup-claim-hint';instruction.setAttribute('role','status');
+    const homeland=typeof V4Game!=='undefined'&&V4Game.enabled()?REGIONS.find(r=>r.id===V4Game.homelands[fk]):null;
+    const claimed=Object.values(G.territories).filter(t=>t.owner===fk).length;
+    const hint=homeland&&claimed<3?'Toca un territorio amarillo de '+homeland.name+' · Primeros territorios: '+claimed+'/3.':'Toca un territorio libre resaltado en amarillo.';
+    instruction.textContent=hint;
     // If auto-claim is enabled, pick automatically
     if(G.setup._autoClaimEnabled) {
       setTimeout(_doAutoClaimOne, 200);
@@ -487,12 +492,14 @@ function setupStep_Claim_Next() {
     }
     G.setup.claimCallback = (id) => {
       const t = G.territories[id];
-      if(t.owner) return false;
+      if(!t||t.owner){instruction.textContent='Ese territorio ya tiene dueño. '+hint;return false;}
+      if(!highlighted.some(candidate=>candidate.id===id)){instruction.textContent='Ese territorio no está disponible. '+hint;return false;}
       doClaimTerritory(fk, id);
       return true;
     };
     const acts = getSetupActionsDiv();
     acts.innerHTML = '';
+    acts.appendChild(instruction);
     acts.appendChild(setupBtn('AUTO-RECLAMAR RESTO', () => {
       autoClaimAll();
     }, '#444'));
@@ -960,7 +967,7 @@ function setupStep_Deploy_ForFaction(fk) {
     // ── FASE 2: COLOCAR NUCLEARES ──────────────────────────────
     const instr=document.createElement('div');
     instr.style.cssText='font-size:10px;color:#888;margin-bottom:8px;';
-    instr.textContent=`Coloca tus ${nukLeft} Nuclear Base(s) — clic en el mapa`;
+    instr.id='setup-nuclear-hint';instr.setAttribute('role','status');instr.textContent=`Toca un territorio propio resaltado en amarillo, sin base nuclear · Pendientes: ${nukLeft}.`;
     acts.appendChild(instr);
     activateNuclearMode_Setup(fk);
     // AUTO button for nukes
@@ -1008,7 +1015,8 @@ function activateNuclearMode_Setup(fk) {
   // Override territory click for setup nuclear placement
   G.setup.claimCallback = (id) => {
     const t = G.territories[id];
-    if(!G.setup._inSetup||!(G.setup.nukesLeft[fk]>0)||!t || t.owner !== fk || t.hasNuclear) return false;
+    if(!G.setup._inSetup||!(G.setup.nukesLeft[fk]>0))return false;
+    if(!t||t.owner!==fk||t.hasNuclear){const hint=document.getElementById('setup-nuclear-hint');if(hint)hint.textContent='Elige un territorio propio amarillo que todavía no tenga base nuclear.';return false;}
     t.hasNuclear = true;
     G.setup.nukesLeft[fk] = Math.max(0, (G.setup.nukesLeft[fk]||0) - 1);
     // Clear nuclear highlights

@@ -88,7 +88,7 @@ test('committed army occupies enemy territory emptied by missile without unneces
 test('real setup keeps claim callback after invalid homeland click and next valid click advances once',()=>{
  const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),data=realData(),timers=[];
  const G={pf:'imp',territories:Object.fromEntries(data.territories.map(t=>[t.id,{...t,owner:null,soldiers:0}])),factions:{imp:{soldiers:60},lib:{soldiers:60}},setup:{_inSetup:true,_stepIdx:1,order:['imp','lib'],orderIdx:0,soldiersLeft:{imp:60,lib:60}}};
- const ctx=vm.createContext({G,RulesV4:R,DEFAULT_RULES:data.rules,RULES:data.rules,FDATA:data.factions,URLSearchParams,location:{search:''},document:{addEventListener:()=>{},getElementById:()=>null,createElement:()=>({style:{}})},setTimeout:fn=>{timers.push(fn);},updateMap:()=>{},refreshCards:()=>{},addLog:()=>{}});
+ const ctx=vm.createContext({G,RulesV4:R,DEFAULT_RULES:data.rules,RULES:data.rules,FDATA:data.factions,REGIONS:data.regions,URLSearchParams,location:{search:''},document:{addEventListener:()=>{},getElementById:()=>null,createElement:()=>({style:{},setAttribute(){}})},setTimeout:fn=>{timers.push(fn);},updateMap:()=>{},refreshCards:()=>{},addLog:()=>{}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/v4-game.js'),'utf8').replace('V4Game.install();',''),ctx);
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/setup.js'),'utf8'),ctx);
  vm.runInContext('showSetupPanel=()=>{};getSetupActionsDiv=()=>({innerHTML:"",appendChild(){}});_isOnline=()=>false;setupStep_Claim_Next();',ctx);
