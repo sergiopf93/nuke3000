@@ -2,6 +2,8 @@
 
 Música ambiental única y continua durante toda la partida, incluidos combates, turnos y paneles. Se activa tras interacción, entra con fundido y se atenúa al resultado final. Se integran los 17 sonidos de la entrega del usuario: dados, disparos, golpes, degradaciones, caídas, misiles, intercepción, impacto, alerta/explosión nuclear, turno, victoria y derrota. Aeronaves reutilizan discretamente el disparo de meca.
 
+El botón **AJUSTES** del menú inicial utiliza el estilo oscuro de los botones secundarios del juego.
+
 **AJUSTES → AUDIO:** volumen general, música, efectos y silencio, persistentes por dispositivo y disponibles durante la partida. Web Audio con control de ganancia, reanudación tras gesto e interrupciones, pausa de pestaña sin reiniciar la música, límite de voces y cancelación al omitir escenas. MP3 con respaldo OGG; recursos precargados para uso offline bajo `/nuke3000/`.
 
 Se conservan las reglas V4, el mapa original de 60 territorios y las animaciones. El audio no calcula resultados ni modifica el estado o la red; los identificadores de presentación evitan repetir sonidos al recibir de nuevo un evento.
