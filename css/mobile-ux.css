@@ -89,3 +89,21 @@
  #mobile-resources{font-size:11px}
 }
 @media (prefers-reduced-motion:reduce){.die.spin{animation:none}}
+
+/* Keep fixed context compact; only variable choices scroll. */
+@media (max-width:1024px) and (max-height:600px), (max-width:600px){
+ body{padding-bottom:env(safe-area-inset-bottom)}
+ #hdr{padding-top:max(2px,env(safe-area-inset-top))}
+ #rp{padding-right:env(safe-area-inset-right)}
+ #phase-header{padding:3px 6px!important}#phase-header>div:first-child{margin-bottom:2px!important}
+ #mobile-resources{margin-bottom:2px;line-height:15px;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px}
+ #step-instruction{padding:3px 5px!important}#step-title{margin-bottom:0!important}
+ #actions-area{overscroll-behavior:contain}#step-actions{padding:4px 6px!important}
+ #step-actions button{padding:5px 7px!important}#step-actions>div{margin-bottom:4px!important}
+ #btn-next{position:relative;flex-shrink:0}
+}
+@media(max-height:500px) and (orientation:landscape){
+ body.nuke-cinema #rp-top{display:grid;grid-template-columns:minmax(180px,30%) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+ body.nuke-cinema #phase-header{min-height:0}body.nuke-cinema #actions-area{min-height:0}
+ #turn-ui{gap:4px}#turn-ui .hbtn{padding:3px 5px;font-size:9px!important}#phase-badge{display:none}
+}

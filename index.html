@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="nuke-release" content="official-miniatures-v7">
+<meta name="nuke-release" content="compact-dice-v8">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
@@ -338,6 +338,7 @@
           padding:10px 24px;font-family:Orbitron,sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;">
           ⚙ EDITAR REGLAS
         </button>
+        <button type="button" onclick="DiceSequence.settings()">⚙ AJUSTES</button>
         <button id="btnstart" onclick="startGame()" style="flex:1;">☢ INICIAR PARTIDA LOCAL</button>
       </div>
       <div class="lquote">"Now I am become death, the destroyer of worlds" — Oppenheimer, 1945</div>
@@ -355,6 +356,7 @@
     <button id="mobile-log" class="hbtn secondary" aria-expanded="false" aria-controls="rp-log">REGISTRO</button>
     <span id="rnd-info">RONDA <strong id="rnum">1</strong> · <span id="curturn" style="color:#888">—</span></span>
     <div id="phase-badge">PREP</div>
+    <button class="hbtn secondary" id="game-settings" onclick="DiceSequence.settings()">⚙ AJUSTES</button>
     <button class="hbtn secondary" onclick="if(typeof showRules==='function')showRules()" title="Editor de Reglas">⚙ REGLAS</button>
     <button class="hbtn" id="btn-next" onclick="nextStep()">SIGUIENTE ▶</button>
   </div>
@@ -766,6 +768,7 @@ function startGame() {
   G.pname = document.getElementById('pname').value.trim() || 'COMANDANTE';
   if (!ONLINE.isOnline()) G.playerCount = parseInt(document.getElementById('pcount').value);
 
+  if(typeof DiceSequence!=='undefined')DiceSequence.beginGame();
   initGame();
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('hdr').style.display = 'flex';

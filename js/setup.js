@@ -23,6 +23,7 @@ function animateSetupDie(fk,roll,generation){
   const promise=PhaseVisuals.dice('setup:'+generation+':'+fk,[{kind:'d6',value:roll,raw:roll,effective:roll,bonus:0,label:FDATA[fk].name}],cause,container,false,{controls:false}).then(()=>{
     setupDicePendingCount--;
     if(card?.isConnected)card.setAttribute('aria-busy','false');
+    if(!setupDicePendingCount)document.getElementById('setup-dice-controls')?.remove();
   });
   setupDicePresentations.set(generation+':'+fk,promise);
   if(setupDicePresentations.size>60)setupDicePresentations.delete(setupDicePresentations.keys().next().value);

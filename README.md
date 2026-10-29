@@ -1,14 +1,20 @@
-# NUKE3000 — miniaturas oficiales y dados animados
+# NUKE3000 — UX compacta, dados y figuras persistentes
 
-Se conserva el tablero original y el Reglamento V4. La presentación utiliza recortes reales del material oficial: soldados, mecas, aeronaves, escorpiones, misiles, bases y dados D6/D12/D20. No usa el fondo del prototipo ni miniaturas SVG genéricas.
+Se conserva el tablero SVG original, sus 60 territorios y el motor del Reglamento V4. La demo `NUKE3000_animaciones_v2` se usa como referencia visual; no sustituye el repositorio ni calcula resultados de la partida.
 
-Dados comunes en sorteo/desempates, combate, intercepción, accidente y mantenimiento. Disparos dirigidos al perdedor real, degradaciones y supervivientes entre rondas. Mantenimiento muestra todos los resultados antes de elegir bases. Opciones cinematográfica/rápida/mínima y omisión, sin cambiar reglas ni resultados.
+En móvil horizontal corto, la escena temporal ocupa aproximadamente la mitad del área anterior del tablero y deja las acciones debajo, en columnas compactas. El mapa recupera su distribución habitual al cerrar la escena. Cabeceras y márgenes se reducen; las opciones variables tienen scroll y la continuación permanece accesible. Se usan `dvh` y safe areas.
 
-[Jugar](https://sergiopf93.github.io/nuke3000/) · [Capturas, vídeos y comparativa del mapa](docs/evidence/official-animations/index.html) · [Contrato visual](docs/COMBAT_VISUAL_DESIGN.md) · [Procedencia/calidad](docs/ASSET_INVENTORY.md).
+D6/D12/D20 muestran un único resultado dentro de una cara SVG nítida, con giro y rebote 2D. Sorteo, desempates, batalla, intercepción, accidente y mantenimiento reciben los valores del motor. El resultado natural, el mínimo aplicado y los bonos se consultan en «Detalle de tirada». El resumen solo explica consecuencias.
 
-Pruebas: `npm test` (337); `npm run test:cinematic`; `npm run test:browser`; `npm run test:v4:browser`; partidas completas `npm run test:v4:e2e` / `npm run test:v4:e2e:mobile`. Node22 y Playwright1.63 con Chrome. La grabación necesita el codificador gratuito de Playwright; el juego no depende de él.
+Las miniaturas supervivientes conservan sus nodos entre dados y rondas, incluso al cambiar de modo. Las degradaciones mantienen su identidad; una baja retira únicamente su figura. Los ejércitos grandes usan representantes estables y contadores exactos. Misiles conservan objetivos/base visibles; mantenimiento muestra las centrales y todos los D12 antes de habilitar la elección de accidentes, sin asignar dados a bases.
 
-Pendientes: validación artística, Safari/iPhone físico y Firebase real/reconexión. Las imágenes del PDF son provisionales: para mejorar se necesitan fotos frontal/3⁄4/lateral de las figuras, fondo neutro y ≥2000 px de alto.
+**AJUSTES**, en lobby y cabecera, permite elegir animación cinematográfica, rápida o sin animación para la partida; la preferencia se hereda en la siguiente. Las escenas solo ofrecen **OMITIR** mientras se representan. Omitir o reducir movimiento no elimina decisiones. Disparos: 520 ms frente a 600 ms anteriores (13% más ágiles); se conservan las pausas de lectura.
+
+[Jugar](https://sergiopf93.github.io/nuke3000/) · [Evidencia de esta iteración](docs/evidence/compact-ux/README.md) · [Contrato visual](docs/COMBAT_VISUAL_DESIGN.md) · [Procedencia/calidad de los recortes provisionales](docs/ASSET_INVENTORY.md).
+
+Pruebas: `npm test` (337); `npm run test:all` agrupa regresiones de motor, navegador, dos clientes, PWA, partidas completas V3/V4 y presentación. `npm run test:cinematic` incluye la matriz compacta 1440×900, 844×390, 667×375 y 390×844. Node 22, Playwright y Chrome; no hay build ni nuevas dependencias del juego.
+
+Pendientes de dispositivo/cuenta: Safari/iPhone físico (barras y safe areas reales), dirección artística y Firebase real/reconexión. La emulación táctil Chrome y el transporte local de pruebas no certifican estos entornos.
 
 ---
 

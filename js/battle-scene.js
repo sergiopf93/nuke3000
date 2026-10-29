@@ -38,14 +38,14 @@ const BattleScene = (() => {
     camera?.cancel();camera=null;
     if(!smooth||!from||!world||!duration(1))return;
     const base=typeof G!=='undefined'?'translate('+G.vx+'px,'+G.vy+'px) scale('+G.vscale+')':'none';
-    try { const returning=world.animate([{transform:from},{transform:base}],{duration:duration(450),easing:'ease-out'});camera=returning;returning.finished.then(()=>{returning.cancel();if(camera===returning)camera=null;},()=>{}); } catch {}
+    try { const returning=world.animate([{transform:from},{transform:base}],{duration:duration(390),easing:'ease-out'});camera=returning;returning.finished.then(()=>{returning.cancel();if(camera===returning)camera=null;},()=>{}); } catch {}
   }
   function focusCamera(session) {
     restoreCamera();const t=territory(session.ctx.targetId),world=document.getElementById('world-g'),wrap=document.getElementById('map-wrap');
     if(!t||!world||!wrap||!duration(1)||!world.animate)return;
     const scale=Math.min(2.4,Math.max(typeof G!=='undefined'?G.vscale:.5,wrap.clientHeight/190));
     const from=typeof G!=='undefined'?'translate('+G.vx+'px,'+G.vy+'px) scale('+G.vscale+')':'none';
-    try { camera=world.animate([{transform:from},{transform:'translate('+(wrap.clientWidth/2-t.cx*scale)+'px,'+(wrap.clientHeight/2-t.cy*scale)+'px) scale('+scale+')'}],{duration:duration(1000),fill:'forwards',easing:'ease-in-out'}); } catch {}
+    try { camera=world.animate([{transform:from},{transform:'translate('+(wrap.clientWidth/2-t.cx*scale)+'px,'+(wrap.clientHeight/2-t.cy*scale)+'px) scale('+scale+')'}],{duration:duration(870),fill:'forwards',easing:'ease-in-out'}); } catch {}
   }
   function position(session) {
     const wrap=document.getElementById('map-wrap'),rect=wrap?.getBoundingClientRect();if(!rect)return;
@@ -59,15 +59,21 @@ const BattleScene = (() => {
   }
   function arrange(session) {
     for(const side of ['att','def']) {
-      const alive=session.roster[side].filter(u=>u.alive),visible=alive.filter(u=>u.participant).slice(0,5);
-      for(const type of ['scorp','mech','air','sol']){const group=alive.filter(u=>u.type===type);for(const unit of group.slice(0,2)){if(visible.length<9&&!visible.includes(unit))visible.push(unit);}}
+      const alive=session.roster[side].filter(u=>u.alive);
+      // Keep surviving representatives in their slots across rolls and rounds.
+      const visible=alive.filter(u=>u.el&&!u.el.hidden).sort((a,b)=>a.slot-b.slot).slice(0,9);
+      const include=unit=>{if(unit&&visible.length<9&&!visible.includes(unit))visible.push(unit);};
+      alive.filter(u=>u.participant).forEach(include);
+      for(const type of ['scorp','mech','air','sol'])alive.filter(u=>u.type===type).slice(0,2).forEach(include);
+      if(alive.length<=9)alive.forEach(include);
       alive.forEach(u=>{if(u.el)u.el.hidden=!visible.includes(u);});
-      visible.forEach((unit,index)=>{
-        const el=drawUnit(session,unit),col=index%3,row=Math.floor(index/3);
-        el.hidden=false;el.style.left=(side==='att'?17+col*9:83-col*9)+'%';el.style.top=(62+row*9)+'%';el.style.zIndex=String(5+row);
+      const occupied=new Set(visible.filter(u=>u.slot!==undefined).map(u=>u.slot));
+      visible.forEach(unit=>{if(unit.slot===undefined){unit.slot=Array.from({length:9},(_,i)=>i).find(i=>!occupied.has(i));occupied.add(unit.slot);}});
+      visible.forEach(unit=>{
+        const index=unit.slot,el=drawUnit(session,unit),col=index%3,row=Math.floor(index/3);
+        el.hidden=false;el.style.setProperty('--unit-col',col);el.style.setProperty('--unit-row',row);el.style.setProperty('--compact-col',index%5);el.style.setProperty('--compact-row',Math.floor(index/5));el.style.left=(side==='att'?17+col*9:83-col*9)+'%';el.style.top=(62+row*9)+'%';el.style.zIndex=String(5+row);
       });
-      const fallen=session.roster[side].filter(u=>!u.alive&&u.el);
-      fallen.slice(0,Math.max(0,fallen.length-8)).forEach(u=>{u.el.remove();u.el=null;});
+
     }
   }
   function syncArmy(session,side,army) {
@@ -84,7 +90,7 @@ const BattleScene = (() => {
     }
   }
   function skip(session=current) {
-    if(!session)return;session.skipped=true;cancelVisual(session);DiceSequence.skip();restoreCamera();session.root.classList.add('cin-skipped');
+    if(!session)return;session.root.querySelector('.ds-controls').hidden=true;session.skipped=true;cancelVisual(session);DiceSequence.skip();restoreCamera();session.root.classList.add('cin-skipped');
     document.dispatchEvent(new CustomEvent('battle-scene-skip',{detail:{targetId:session.ctx.targetId,round:session.ctx.round}}));
   }
   function makeSession(ctx,before,kind='battle') {
@@ -118,8 +124,8 @@ const BattleScene = (() => {
     const shot=node('span','cin-shot cin-shot-'+source.type);Object.assign(shot.dataset,{sourceUnit:source.id,targetUnit:target.id,winnerSide:winner,sourceX:String(from.x),targetX:String(to.x)});
     const angle=Math.atan2(to.y-from.y,to.x-from.x)*180/Math.PI;
     Object.assign(shot.style,{left:from.x+'px',top:from.y+'px',transform:'rotate('+angle+'deg)'});session.effects.append(shot);
-    animate(session,shot,[{left:from.x+'px',top:from.y+'px',opacity:1},{left:to.x+'px',top:to.y+'px',opacity:1}],600,{easing:'ease-in',fill:'forwards'});
-    await wait(session,600);shot.remove();await blast(session,to,650);
+    animate(session,shot,[{left:from.x+'px',top:from.y+'px',opacity:1},{left:to.x+'px',top:to.y+'px',opacity:1}],520,{easing:'ease-in',fill:'forwards'});
+    await wait(session,520);shot.remove();await blast(session,to,565);
   }
   async function blast(session,point,ms=900,nuclear=false) {
     if(session.skipped||session.controller.signal.aborted||!duration(1))return;
@@ -129,19 +135,20 @@ const BattleScene = (() => {
   }
   async function casualty(session,unit,change) {
     if(!unit||!change)return;
-    const el=drawUnit(session,unit);el.classList.add('cin-hit');await wait(session,350);el.classList.remove('cin-hit');
+    if(!unit.el){if(change.to)unit.type=change.to;else unit.alive=false;return;}
+    const el=unit.el;el.classList.add('cin-hit');await wait(session,305);el.classList.remove('cin-hit');
     if(change.to){
       animate(session,el,[{filter:'brightness(1)',opacity:1},{filter:'brightness(2)',opacity:.3,offset:.5},{filter:'brightness(1)',opacity:1}],850);
-      await wait(session,450);unit.type=change.to;el.dataset.type=unit.type;el.querySelector('img').src='assets/cinematic/'+types[unit.type]+'.png';el.querySelector('.cin-unit-label').textContent=names[unit.type];
-      await wait(session,400);
+      await wait(session,390);unit.type=change.to;el.dataset.type=unit.type;el.querySelector('img').src='assets/cinematic/'+types[unit.type]+'.png';el.querySelector('.cin-unit-label').textContent=names[unit.type];
+      await wait(session,350);
     }else{
-      unit.alive=false;el.dataset.alive='false';el.classList.add('cin-fallen');
-      animate(session,el,[{transform:'translate(-50%,-65%) rotate(0deg)',opacity:1},{transform:'translate(-50%,-10%) rotate(85deg) scaleY(.65)',opacity:.25}],900,{fill:'forwards'});await wait(session,900);
+      unit.alive=false;el.dataset.alive='false';el.style.zIndex='1';el.classList.add('cin-fallen');
+      animate(session,el,[{transform:'translate(-50%,-65%) rotate(0deg)',opacity:1},{transform:'translate(-50%,-10%) rotate(85deg) scaleY(.65)',opacity:.25}],900,{fill:'forwards'});await wait(session,900);el.remove();unit.el=null;
     }
   }
   async function runRound(session,ctx,result) {
     if(current!==session)return {status:'cancelled'};
-    session.round++;
+    session.round++;session.root.querySelector('.ds-controls').hidden=session.skipped||!duration(1);
     const planned=planRound(result),assigned=planned.map(event=>({...event,a:unitForRoll(session,'att',event.attacker),d:unitForRoll(session,'def',event.defender)}));
     for(const u of session.roster.att.concat(session.roster.def))u.participant=false;
     assigned.forEach(event=>{if(event.a)event.a.participant=true;if(event.d)event.d.participant=true;});arrange(session);
@@ -152,13 +159,14 @@ const BattleScene = (() => {
     await DiceSequence.play({dice,cause:'RONDA '+(ctx.round||session.round),container:session.dice,signal:session.controller.signal,controls:false});
     for(const event of assigned){
       const winner=event.winner==='attacker'?'att':'def',source=winner==='att'?event.a:event.d,target=winner==='att'?event.d:event.a;
-      session.status.textContent=event.attacker.value+' vs '+event.defender.value+' · '+(winner==='att'?'ATAQUE':'DEFENSA')+' GANA'+(event.casualty?' · '+names[event.casualty.from]+' → '+(names[event.casualty.to]||'BAJA'):'');
+      session.status.textContent=(winner==='att'?'ATAQUE':'DEFENSA')+' GANA'+(event.casualty?' · '+names[event.casualty.from]+' → '+(names[event.casualty.to]||'BAJA'):'');
       const rollIndexes={att:(result.attRolls||[]).findIndex(d=>d.type===event.attacker.type&&d.index===event.attacker.index),def:(result.defRolls||[]).findIndex(d=>d.type===event.defender.type&&d.index===event.defender.index)};
       for(const side of ['att','def'])session.dice.querySelectorAll('.ds-die[data-side="'+side+'"]').forEach((el,index)=>{el.dataset.comparison=index===rollIndexes[side]?(side===winner?'winner':'loser'):'';});
       await wait(session,1200);await projectile(session,source,target,winner);await casualty(session,target,event.casualty);
     }
     syncArmy(session,'att',result.attacker);syncArmy(session,'def',result.defender);arrange(session);counts(session,result.attacker,result.defender);
     session.status.textContent=result.status==='conquered'?'TERRITORIO CONQUISTADO':result.status==='repelled'?'LA DEFENSA RESISTE':'RONDA RESUELTA · Supervivientes en posición';
+    session.root.querySelector('.ds-controls').hidden=true;
     await wait(session,1800);return {status:session.skipped?'skipped':session.controller.signal.aborted?'cancelled':'completed'};
   }
   function result(ctx,result) {
@@ -188,7 +196,7 @@ const BattleScene = (() => {
     const centers=explosion?.centers||[];for(const id of centers){
       if(current!==session)return;
       session.status.textContent='ACCIDENTE NUCLEAR · '+(typeof terName==='function'?terName(id):id);
-      const p=missilePoint(session,id,{x:session.root.clientWidth/2,y:session.root.clientHeight*.6});await blast(session,p,1200,true);await wait(session,350);
+      const p=missilePoint(session,id,{x:session.root.clientWidth/2,y:session.root.clientHeight*.6});await blast(session,p,1200,true);await wait(session,305);
     }
   }
   function presentMissile({type,event={},dice,explosion}={}) {
@@ -202,6 +210,7 @@ const BattleScene = (() => {
     const key=type+':'+(snapshot.revision??'')+':'+JSON.stringify(provided||[]);if(session.seen.has(key))return session.queue;session.seen.add(key);
     session.queue=session.queue.then(async()=>{
       if(current!==session)return {status:'cancelled'};
+      session.root.querySelector('.ds-controls').hidden=session.skipped||!duration(1);
       const w=session.root.clientWidth,h=session.root.clientHeight,origin=missilePoint(session,snapshot.sourceTerritory||snapshot.sourceId,{x:w*.12,y:h*.7}),destination=missilePoint(session,targetId,{x:w*.78,y:h*.65}),mid={x:(origin.x+destination.x)/2,y:h*.4};
       if(type==='launch'){
         session.status.textContent='MISIL LANZADO · Objetivo elegido: '+(snapshot.target==='mech'?'1 meca':'hasta 3 soldados');await missileFlight(session,origin,mid);
@@ -219,10 +228,11 @@ const BattleScene = (() => {
         session.status.textContent='IMPACTO · '+(snapshot.destroyed||0)+' '+(snapshot.target==='mech'?'meca':'soldados')+' destruidos';await wait(session,1000);
       }else if(type==='accident'){
         const raw=snapshot.accidentRoll;await DiceSequence.play({dice:provided||[{kind:'d12',value:raw,raw,label:'Accidente nuclear',side:'def'}],cause:'ACCIDENTE NUCLEAR D12',container:session.dice,signal:session.controller.signal,controls:false});
-        session.status.textContent=raw===1?'D12 = 1 · ACCIDENTE NUCLEAR':'D12 = '+raw+' · Sin accidente';if(ex){await nuclear(session,ex);if(snapshot.after){syncArmy(session,'def',snapshot.after);arrange(session);counts(session,{},snapshot.after);}const base=session.units.querySelector('.cin-base');if(base)base.hidden=true;}await wait(session,1000);
+        session.status.textContent=raw===1?'ACCIDENTE NUCLEAR':'Sin accidente';if(ex){await nuclear(session,ex);if(snapshot.after){syncArmy(session,'def',snapshot.after);arrange(session);counts(session,{},snapshot.after);}const base=session.units.querySelector('.cin-base');if(base)base.hidden=true;}await wait(session,1000);
       }else if(type==='end'){
         session.status.textContent=snapshot.blocked?'MISIL INTERCEPTADO · 0 bajas':'MISIL RESUELTO · '+(snapshot.destroyed||0)+' bajas';await wait(session,1200);if(current===session)close();
       }
+      session.root.querySelector('.ds-controls').hidden=true;
       return {status:session.skipped?'skipped':session.controller.signal.aborted?'cancelled':'completed'};
     }).catch(error=>{console.warn('[NUKE scene]',error);return {status:'cancelled'};});return session.queue;
   }

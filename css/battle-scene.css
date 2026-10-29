@@ -4,3 +4,24 @@ body.nuke-cinema #dmodal{visibility:hidden;pointer-events:none}.nuke-cinematic{p
 body.nuke-cinema #tip{display:none!important}
 
 .nuke-cinematic[data-kind="nuclear"] .cin-armies,.nuke-cinematic[data-kind="nuclear"] .cin-counters{display:none}
+
+/* In short landscape, reserve a distinct lane for dice and living miniatures. */
+.cin-header .ds-controls{border:0;background:transparent;padding:0}.cin-header .ds-controls button{min-height:32px}.cin-dice .dice-sequence{background:transparent;border:0;backdrop-filter:none;padding:0}.cin-dice .ds-field{flex-wrap:wrap}.cin-dice .ds-details{position:absolute;top:100%;left:50%;transform:translateX(-50%);min-width:150px;text-align:center}.cin-dice .ds-details[open]{width:min(520px,85vw);text-align:left}.cin-dice .ds-summary{display:none}
+@media(max-height:500px) and (orientation:landscape){
+ body.nuke-cinema #main,body.nuke-cinema #main.lp-collapsed,body.nuke-cinema #main.rp-collapsed,body.nuke-cinema #main.lp-collapsed.rp-collapsed{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(170px,48%) minmax(0,1fr)}
+ body.nuke-cinema #board-area{grid-column:1;grid-row:1}body.nuke-cinema #rp,body.nuke-cinema #main.rp-collapsed #rp{grid-column:1;grid-row:2;border-left:0;border-top:1px solid var(--bdr)}
+ body.nuke-cinema #territory-inspector{display:none}
+ .cin-header{top:2px}.cin-title{max-width:65%}.cin-armies{top:25px;left:3%;right:3%}.cin-army-name{padding-left:5px}.cin-army-name strong{font-size:11px}.cin-army-name small{font-size:8px}
+ .cin-dice{top:27%;left:24%;right:24%}.cin-dice .ds-cause{display:none}.cin-dice .ds-field{gap:3px;padding:0}.cin-dice .ds-tile{min-width:30px;max-width:39px}.cin-dice .ds-die{height:34px;width:33px}.cin-dice .ds-label{font-size:8px;max-width:39px}.cin-dice .ds-details summary{font-size:10px;padding:2px;min-height:24px}
+ .cin-unit{width:37px;height:43px}.cin-unit-label{font-size:8px;border:0;padding:0 2px}.cin-unit{left:calc(3% + var(--compact-col)*4.5%)!important;top:calc(52px + var(--compact-row)*44px)!important;transform:translate(-50%,0)}.cin-unit.cin-def{left:calc(97% - var(--compact-col)*4.5%)!important}.cin-unit[data-alive="false"]{display:none}
+ .cin-footer{bottom:1px;padding:2px 5px}.cin-status{font-size:10px;margin:0}.cin-counters{font-size:9px;gap:6px}.cin-base{top:62%;left:91%;width:30px;height:42px}
+ .cin-dice .ds-details{top:auto;bottom:100%}.cin-dice .ds-details[open]{max-height:100px}
+}
+@media(max-width:600px) and (orientation:portrait){
+ .cin-header{flex-wrap:nowrap}.cin-title{font-size:10px;max-width:65%}.cin-header .ds-controls{width:auto}.cin-armies{top:11%;left:4%;right:4%}
+ .cin-dice{top:22%;left:4%;right:4%}.cin-dice .ds-field{gap:3px}.cin-dice .ds-tile{min-width:34px;max-width:40px}.cin-dice .ds-die{width:37px;height:39px}.cin-dice .ds-label{font-size:9px}.cin-dice .ds-cause{font-size:9px}.cin-dice .ds-details summary{padding:2px;min-height:24px}
+ .cin-unit{width:36px;height:48px;left:calc(8% + var(--unit-col)*12%)!important;top:calc(51% + var(--unit-row)*13%)!important;transform:translate(-50%,0)}.cin-unit.cin-def{left:calc(92% - var(--unit-col)*12%)!important}.cin-unit-label{font-size:8px;padding:0 2px}.cin-unit[data-alive="false"]{display:none}
+ .cin-footer{left:4px;right:4px;bottom:3px;padding:4px}.cin-status{font-size:11px}.cin-counters{font-size:9px;gap:6px}.cin-base{width:30px;height:45px;left:88%;top:78%}
+}
+body.nuke-cinema #bcontrols,body.nuke-cinema #roombar{visibility:hidden}
+@media(max-height:500px) and (orientation:landscape){.cin-armies{top:35px}}

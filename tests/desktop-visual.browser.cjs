@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),fs=require
 const evidence=process.env.NUKE_UX_EVIDENCE||path.resolve(__dirname,'../docs/evidence/visual-consistency');
 (async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});try{
  const page=await browser.newPage(),results=[];
- const ignored=[{label:'Contenedor de sala: ancho variable según el código',rect:[960,50,1190,80]},{label:'Tooltip de hover (nombre corregido)',rect:[820,610,950,710]},{label:'LED de turno y halo animado (box-shadow hasta 12px)',rect:[20,115,65,150]}];
+ const ignored=[{label:'Cabecera: nuevo acceso a AJUSTES de partida',rect:[0,0,1440,44]},{label:'Contenedor de sala: ancho variable según el código',rect:[960,50,1190,80]},{label:'Tooltip de hover: unión de los dos recuadros inspeccionados',rect:[820,610,990,720]},{label:'LED de turno y halo animado (box-shadow hasta 12px)',rect:[20,115,65,150]}];
  for(const stage of ['map']){
   const files=[path.resolve(__dirname,'../docs/evidence/mobile-ux/after-1440x900-'+stage+'.png'),path.join(evidence,'after-1440x900-'+stage+'.png')];
   const images=files.map(file=>'data:image/png;base64,'+fs.readFileSync(file).toString('base64'));
@@ -17,5 +17,5 @@ const evidence=process.env.NUKE_UX_EVIDENCE||path.resolve(__dirname,'../docs/evi
  }
  fs.writeFileSync(path.join(evidence,'desktop-visual-comparison.json'),JSON.stringify({baseline:'cd5d921',viewport:{width:1440,height:900},ignored,results},null,2));
  for(const result of results)assert.equal(result.changedPixelsOutsideIgnored,0,JSON.stringify(result));
- console.log('PASS comparación desktop: tablero sin diferencias fuera de código de sala, tooltip y LED animado');
+ console.log('PASS comparación desktop: tablero sin diferencias fuera de cabecera con AJUSTES, código de sala, tooltip y LED animado');
 }finally{await browser.close();}})().catch(err=>{console.error(err);process.exitCode=1});

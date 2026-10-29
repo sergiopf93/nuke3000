@@ -1,3 +1,13 @@
+# Iteración compacta V8 — 29/10/2026
+
+Petición: ZIP NUKE3000_animaciones_v2 como referencia. Sin cambios a rules-v4/battle/engine/data/map. Dados SVG con valor dentro, giro 2D y cálculo bajo detalle; preferencia única en AJUSTES de partida/lobby, heredada del almacenamiento. OMITIR solo durante presentación. Representantes supervivientes ya visibles conservan nodos/visibilidad entre rondas; degradaciones conservan identidad, bajas retiran únicamente su figura. Disparos 520 ms (antes 600), pausas de lectura conservadas. Mantenimiento muestra centrales junto a todos los D12 sin asignación previa y separa opciones con scroll.
+
+En horizontal corto, solo durante escena, mapa/overlay arriba (mínimo170 px,48% del área disponible) y acciones abajo en columnas; mapa habitual al cerrar. Dados y figuras tienen carriles separados también en vertical estrecho. PWA V8: nuke3000-v8-compact-dice, marca compact-dice-v8. Nueva regresión tests/compact-ux.browser.cjs incluida en test:cinematic. Evidencia y resultados: docs/evidence/compact-ux/README.md. Safari/iPhone físico y Firebase real siguen pendientes.
+
+La implementación se realizó en copia aislada /tmp/nuke3000-ux.HhWPKi desde main 7bc0cb1; el checkout del escritorio conserva archivos locales sin seguimiento. Publicación en main autorizada expresamente por la petición si pasan las comprobaciones. Verificar estado remoto antes de retomar.
+
+---
+
 # Estado vigente — miniaturas oficiales y dados comunes
 
 Solicitud: `PROMPT_PARA_R2.md` y ZIP NUKE3000 de animaciones. Se sustituye solo presentación: recortes PNG oficiales, escena transparente sobre el mapa original y DiceSequence común a sorteo/desempates, combate, intercepciones, accidente y mantenimiento. Se retiran SVG genéricos y efectos ornamentales sobre el tablero. No se integra el fondo de la demo ni su motor ficticio.

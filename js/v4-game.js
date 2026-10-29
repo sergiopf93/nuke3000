@@ -161,15 +161,24 @@ const V4Game = (() => {
     const visual=typeof BattleScene!=='undefined'?BattleScene.result(ctx,result):Promise.resolve();
     publishCombatView(ctx,result);return visual;
   }
+  function maintenanceBases(box,fk){
+    box.classList.add('maintenance-panel');
+    const stations=document.createElement('div');stations.className='maintenance-bases';stations.setAttribute('aria-label','Centrales en mantenimiento; dados sin asignación');
+    for(const t of Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear)){
+      const base=document.createElement('figure'),image=document.createElement('img'),label=document.createElement('figcaption');
+      base.dataset.baseId=t.id;image.src='assets/cinematic/nuclear_base.png';image.alt='Central nuclear';label.textContent=terName(t.id);base.append(image,label);stations.append(base);
+    }
+    box.append(stations);
+  }
   async function maintenance(fk,callback){
     const key=currentStepKey();if(G.gameOver||G_step.maintenanceDone===key||G.v4Maintenance?.key===key)return;
     const m=RulesV4.maintenance(state(),fk);const st=G.v4Maintenance={key,fk,rolls:m.rolls,remaining:m.rolls.filter(n=>n===1).length};
     const finish=()=>{G_step.maintenanceDone=key;G.v4Maintenance=null;document.getElementById('maint-modal')?.remove();sync('Mantenimiento completado');if(callback)callback();};
     const choose=async id=>{const t=G.territories[id];if(st.resolving||!t?.hasNuclear||t.owner!==fk||st.remaining<1)return;st.resolving=true;document.getElementById('maint-modal')?.remove();const r=RulesV4.explode(state(),id);apply(r.state);updateEliminations(null);st.remaining--;sync('Accidente nuclear');await effect('nuclear',{targetId:id,centers:r.centers,frames:r.frames});st.resolving=false;if(G.v4Maintenance===st&&!G.gameOver&&currentStepKey()===key)draw();};
     const draw=async()=>{const bases=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear);st.remaining=Math.min(st.remaining,bases.length);if(fk!==G.pf){while(st.remaining){const next=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).sort((a,b)=>RulesV4.count(a)-RulesV4.count(b)||a.id.localeCompare(b.id))[0];if(!next)break;const r=RulesV4.explode(state(),next.id);apply(r.state);updateEliminations(null);st.remaining--;st.remaining=Math.min(st.remaining,Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length);sync('Accidente nuclear');await effect('nuclear',{targetId:next.id,centers:r.centers,frames:r.frames});if(G.v4Maintenance!==st||G.gameOver||currentStepKey()!==key)return;}finish();return;}
-      const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');const dice=document.createElement('div');box.appendChild(dice);if(typeof DiceSequence!=='undefined')DiceSequence.play({dice:m.rolls.map((value,index)=>({kind:'d12',value,raw:value,effective:value,bonus:0,label:'Dado '+(index+1)})),cause:'RESULTADOS DE MANTENIMIENTO',container:dice,speed:'minimal',controls:false});const info=document.createElement('p');info.textContent=st.remaining?'Accidentes pendientes: '+st.remaining+'. Elige qué base explota.':'Todas las tiradas resueltas.';box.appendChild(info);if(st.remaining)for(const t of bases)box.appendChild(button('EXPLOTAR '+terName(t.id),()=>choose(t.id)));else box.appendChild(button('FINALIZAR MANTENIMIENTO',finish));};
+      const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');maintenanceBases(box,fk);const dice=document.createElement('div');dice.className='maintenance-dice';box.appendChild(dice);if(typeof DiceSequence!=='undefined')DiceSequence.play({dice:m.rolls.map((value,index)=>({kind:'d12',value,raw:value,effective:value,bonus:0,label:'Dado '+(index+1)})),cause:'RESULTADOS DE MANTENIMIENTO',container:dice,speed:'minimal',controls:false});const info=document.createElement('p');info.textContent=st.remaining?'Accidentes pendientes: '+st.remaining+'. Elige qué base explota.':'Todas las tiradas resueltas.';box.appendChild(info);if(st.remaining){const choices=document.createElement('div');choices.className='maintenance-choices';for(const t of bases)choices.appendChild(button('EXPLOTAR '+terName(t.id),()=>choose(t.id)));box.appendChild(choices);}else box.appendChild(button('FINALIZAR MANTENIMIENTO',finish));};
     const box=dialog('maint-modal','MANTENIMIENTO NUCLEAR');
-    const host=document.createElement('div');box.appendChild(host);
+    maintenanceBases(box,fk);const host=document.createElement('div');host.className='maintenance-dice';box.appendChild(host);
     const instructions=document.createElement('p');instructions.textContent='Lanzando todos los D12. Después podrás elegir las bases accidentadas.';box.appendChild(instructions);
     await PhaseVisuals.dice('maintenance:'+key,m.rolls.map((value,index)=>({kind:'d12',value,raw:value,effective:value,bonus:0,label:'Dado '+(index+1)})),'MANTENIMIENTO NUCLEAR',host,true);
     if(G.gameOver||G.v4Maintenance!==st||currentStepKey()!==key)return;

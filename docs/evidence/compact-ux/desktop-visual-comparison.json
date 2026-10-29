@@ -1,0 +1,51 @@
+{
+  "baseline": "cd5d921",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "ignored": [
+    {
+      "label": "Cabecera: nuevo acceso a AJUSTES de partida",
+      "rect": [
+        0,
+        0,
+        1440,
+        44
+      ]
+    },
+    {
+      "label": "Contenedor de sala: ancho variable según el código",
+      "rect": [
+        960,
+        50,
+        1190,
+        80
+      ]
+    },
+    {
+      "label": "Tooltip de hover: unión de los dos recuadros inspeccionados",
+      "rect": [
+        820,
+        610,
+        990,
+        720
+      ]
+    },
+    {
+      "label": "LED de turno y halo animado (box-shadow hasta 12px)",
+      "rect": [
+        20,
+        115,
+        65,
+        150
+      ]
+    }
+  ],
+  "results": [
+    {
+      "stage": "map",
+      "changedPixelsOutsideIgnored": 0
+    }
+  ]
+}
