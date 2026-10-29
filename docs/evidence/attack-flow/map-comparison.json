@@ -1,0 +1,32 @@
+[
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "baseline": "a70a285",
+    "territories": 60,
+    "geometryIdentical": true,
+    "width": 1000,
+    "height": 856,
+    "rawChanged": 18902,
+    "meaningfulChanged": 0,
+    "tolerance": 1,
+    "excludedOverlay": "Control de sala en esquina superior derecha; no es fondo ni hexágono"
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "baseline": "a70a285",
+    "territories": 60,
+    "geometryIdentical": true,
+    "width": 628,
+    "height": 278,
+    "rawChanged": 0,
+    "meaningfulChanged": 0,
+    "tolerance": 1,
+    "excludedOverlay": null
+  }
+]

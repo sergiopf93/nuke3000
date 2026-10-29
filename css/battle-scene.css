@@ -25,3 +25,5 @@ body.nuke-cinema #tip{display:none!important}
 }
 body.nuke-cinema #bcontrols,body.nuke-cinema #roombar{visibility:hidden}
 @media(max-height:500px) and (orientation:landscape){.cin-armies{top:35px}}
+
+.cin-intercept-spark{width:30px;height:30px;border-color:#d8f5ff;background:radial-gradient(circle,#fff 0 12%,#91ddff 18%,#428ccd88 38%,transparent 70%);box-shadow:0 0 18px #91ddff99}

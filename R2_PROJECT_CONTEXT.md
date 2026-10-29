@@ -1,3 +1,15 @@
+# Iteración V9 — ataques y misiles, 29/10/2026
+
+Base b1087e9, main y publicación autorizados. Trabajo aislado /tmp/nuke-attack.OJZNN4, sincronizar original tras publicar. Bug reproducido en Chrome desktop/844: movedUnits sobrevivía al cambio de turno y bloqueaba tropas legales. Se reinicia en applyIncome idempotente; selector usa movableArmy sin unidades gastadas y sin reservar una guarnición adicional si ya hay llegados inmóviles. Objetivos V4 pendientes resaltados y updateMap al cambiar fase.
+
+RulesV4.round limita defensa a min(defLimit,attRolls.length), conservando orden fuerte automático. AttackOrigins por territorio/facción almacena fuentes y compromisos; viaja en snapshots de territories y sourceIds en COMBAT_VIEW; G.attackView es presentación local. Bordes cian/coral estáticos con texto, persistentes al cerrar. Cámara encuadra ambos. No se reconstruye la capa de miniaturas.
+
+Misil lineal: aparcado a40% de trayecto durante decisión, después impacto exacto en hexágono o choque simultáneo con interceptor a50%; orientación constante y geometría fijada tras cámara. ASSETS.nuclear apunta al PNG usado en mantenimiento y escenas, eliminando el base64 anterior. DiceSequence.attackPace=2/3, aplicado a BattleScene.duration y a sus dados; setup/selección mantienen sus tiempos.
+
+PWA nuke3000-v9-attack-flow, marca attack-flow-v9. Tests 343 + test:attack; evidencia docs/evidence/attack-flow. Safari físico/Firebase real no certificados. No alterar documentos históricos como especificación actual.
+
+---
+
 # Iteración compacta V8 — 29/10/2026
 
 Petición: ZIP NUKE3000_animaciones_v2 como referencia. Sin cambios a rules-v4/battle/engine/data/map. Dados SVG con valor dentro, giro 2D y cálculo bajo detalle; preferencia única en AJUSTES de partida/lobby, heredada del almacenamiento. OMITIR solo durante presentación. Representantes supervivientes ya visibles conservan nodos/visibilidad entre rondas; degradaciones conservan identidad, bajas retiran únicamente su figura. Disparos 520 ms (antes 600), pausas de lectura conservadas. Mantenimiento muestra centrales junto a todos los D12 sin asignación previa y separa opciones con scroll.

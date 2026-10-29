@@ -98,3 +98,13 @@ test('real setup keeps claim callback after invalid homeland click and next vali
  const valid=Object.values(G.territories).find(t=>t.region==='r05');G.setup.claimCallback(valid.id);
  assert.equal(valid.owner,'imp');assert.equal(valid.soldiers,1);assert.equal(G.factions.imp.soldiers,59);assert.equal(G.setup.soldiersLeft.imp,59);assert.equal(G.setup.orderIdx,1);assert.equal(G.setup.claimCallback,null);assert.equal(timers.length,1);
 });
+
+for(const [attackers,expected] of [[1,1],[2,2],[4,4],[5,4],[8,4]])test(`defensores limitados por atacante comprometido: ${attackers} → ${expected}`,()=>{
+ let calls=0;const r=R.round(a(attackers),a(10,3,2,2),{random:()=>{calls++;return .4;},rules:{maxAttackDice:5,maxDefenseDice:4}});
+ assert.equal(r.attRolls.length,Math.min(5,attackers));assert.equal(r.defRolls.length,expected);assert.equal(calls,r.attRolls.length+expected,'Solo se tiran dados de las unidades participantes');
+ assert.deepEqual(r.defRolls.map(d=>d.type),['scorp','scorp','mech','mech'].slice(0,expected));
+});
+test('límite defensivo se recalcula en cada ronda con supervivientes y límites configurables',()=>{
+ const first=R.round(a(2),a(10),{random:()=>0,rules:{maxAttackDice:1,maxDefenseDice:8}});assert.equal(first.defRolls.length,1);
+ const next=R.round(first.attacker,first.defender,{random:()=>.9,rules:{maxAttackDice:5,maxDefenseDice:4}});assert.equal(next.attRolls.length,1);assert.equal(next.defRolls.length,1);
+});

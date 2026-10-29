@@ -1,3 +1,25 @@
+# NUKE3000 — ataques V4, misiles y nucleares V9
+
+La nueva iteración conserva las reglas V4 salvo la restricción defensiva solicitada: en cada ronda, defensa automática con los dados más fuertes y como máximo `min(máximo de defensa, dados atacantes realmente usados)`. No se generan dados defensivos adicionales.
+
+**Ataques legales:** el registro de unidades ya movidas se reinicia una vez al comenzar el turno, sin permitir moverlas dos veces en la misma fase. El selector excluye unidades gastadas; si estas ya conservan la guarnición, no reserva otra. MOVIMIENTO Y ATAQUES compromete tropas en un destino enemigo; COMBATES OBLIGATORIOS resuelve esos destinos. Las ayudas explican ambas fases.
+
+**Tablero:** borde cian continuo «ATACA DESDE» y coral discontinuo «OBJETIVO». Se conservan los orígenes reales de los compromisos (también varios), se transmiten con los territorios/sucesos de combate y permanecen señalados al regresar al mapa. La cámara encuadra origen y destino; el inspector indica las tropas comprometidas. Los objetivos elegibles se recalculan al cambiar de fase.
+
+**Misiles:** trayectoria recta con orientación fija. El misil atacante espera visible mientras se decide la intercepción. Si esta tiene éxito, ambos misiles convergen en un choque; no hay impacto en el objetivo. Si falla, el misil continúa al centro real del hexágono, explota y representa las bajas; el D12 nuclear posterior solo existe cuando lo emite el motor. La trayectoria permanece fija entre eventos.
+
+**Nucleares:** mapa, mantenimiento y escenas comparten `ASSETS.nuclear`, el recurso `assets/cinematic/nuclear_base.png`; se retira el antiguo recurso incrustado del mapa.
+
+**Ritmo:** `DiceSequence.attackPace = 2/3` reduce aproximadamente un tercio la duración del flujo de ataque, incluidos dados, comparaciones, disparos, entrada, bajas, resúmenes y retorno. Es independiente de la preferencia normal/rápida/sin animación de AJUSTES y respeta reducción de movimiento. Setup conserva su ritmo.
+
+[Jugar](https://sergiopf93.github.io/nuke3000/) · [Pruebas y evidencia V9](docs/evidence/attack-flow/README.md).
+
+Pruebas: `npm test` (343), `npm run test:all`; regresiones específicas `npm run test:attack` (reproducción histórica del bloqueo, flujo legal con gestos y matriz de ocho misiles), E2E V3/V4, dos clientes, responsive y PWA. Node22, Playwright y Chrome. Safari/iPhone físico, Firebase real y validación artística quedan a comprobación en sus entornos.
+
+---
+
+## Iteración anterior V8
+
 # NUKE3000 — UX compacta, dados y figuras persistentes
 
 Se conserva el tablero SVG original, sus 60 territorios y el motor del Reglamento V4. La demo `NUKE3000_animaciones_v2` se usa como referencia visual; no sustituye el repositorio ni calcula resultados de la partida.

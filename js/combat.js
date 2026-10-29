@@ -177,7 +177,7 @@ function scheduleCombat(ctx,action,delay){
 }
 function combatView(ctx,result=null){
   return {srcId:ctx.srcId,targetId:ctx.targetId,attFk:ctx.attFk,defFk:ctx.defFk,
-    visualId:ctx.visualId,round:result?ctx.history.length:ctx.round,initialAtt:ctx.initialAtt,initialDef:ctx.initialDef,
+    sourceIds:ctx.sourceIds,visualId:ctx.visualId,round:result?ctx.history.length:ctx.round,initialAtt:ctx.initialAtt,initialDef:ctx.initialDef,
     attSelected:ctx.attSelected,defSelected:ctx.defSelected,before:ctx.before,done:ctx.done,result};
 }
 function publishCombatView(ctx,result=null){
@@ -267,14 +267,16 @@ function showMoveUnitsPopup(srcId,dstId,evt){
   if(evt&&evt.clientX){popX=Math.min(evt.clientX-70,window.innerWidth-200);popY=Math.max(evt.clientY-160,10);}
   const ap=armyPoints(src);
   const leaveKey=src.soldiers>0?'soldiers':src.mechs>0?'mechs':src.aircraft>0?'aircraft':'scorpions';
+  const v4Available=typeof V4Game!=='undefined'&&V4Game.enabled()?V4Game.movableArmy(srcId):null;
+  const airOnly=v4Available&&!RulesV4.groundPath(V4Game.state(),src.owner,srcId,dstId,RULES);
   const unitDefs=[
     {key:'soldiers',label:'Soldados',max:src.soldiers>0?(leaveKey==='soldiers'?Math.max(0,src.soldiers-1):src.soldiers):0},
     {key:'mechs',label:'Mechs',max:src.mechs>0?(leaveKey==='mechs'?Math.max(0,src.mechs-1):src.mechs):0},
     {key:'aircraft',label:'Aircraft',max:src.aircraft>0?(leaveKey==='aircraft'?Math.max(0,src.aircraft-1):src.aircraft):0},
     {key:'scorpions',label:'Scorpions',max:src.scorpions>0?(leaveKey==='scorpions'?Math.max(0,src.scorpions-1):src.scorpions):0},
-  ].filter(u=>u.max>0);
+  ].map(u=>({...u,max:!v4Available?u.max:!airOnly||u.key==='aircraft'?v4Available[u.key]:u.key==='scorpions'?0:Math.min(v4Available[u.key],v4Available.aircraft*(u.key==='soldiers'?3:1))})).filter(u=>u.max>0);
   if(!unitDefs.length){addLog('Solo 1 unidad en origen — no hay movimiento posible.','sys');G.moveSrc=null;return;}
-  const chosen={};unitDefs.forEach(u=>chosen[u.key]=Math.min(1,u.max));
+  const chosen={};unitDefs.forEach(u=>chosen[u.key]=airOnly&&u.key!=='aircraft'?0:Math.min(1,u.max));
   const popup=document.createElement('div');
   popup.id='move-popup';
   popup.style.cssText='position:fixed;left:'+popX+'px;top:'+popY+'px;background:#08080b;border:1px solid #3388bb;padding:14px;z-index:700;font-family:Orbitron,sans-serif;min-width:190px;';

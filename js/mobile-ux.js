@@ -18,7 +18,9 @@ const GameUX=(()=>{
   title.textContent=t?terName(id)+' · '+(FDATA[t.owner]?.name||'Sin control'):'Toca un territorio';
   detail.textContent=t?units(t)+(t.hasNuclear?' · Nuclear':''):'';
   const step=STEPS[G_step.phase]?.[G_step.idx]?.id;
-  hint.textContent=G.setup?._inSetup?'Completa el despliegue en el mapa':!G_step.isMyTurn?'Observando · Defensa automática; intercepción de misiles cuando corresponda':G.moveSrc?'Toca un destino azul · ✕ cancela el origen':G.attackSrc?'Toca un enemigo adyacente rojo para preparar el ataque':['move','regroup'].includes(step)?'Toca origen propio y destino · Una vez por unidad en esta fase':step==='attack'?'Toca origen propio y después enemigo adyacente':step==='upgrade'?'Selecciona territorio propio y elige mejora':step==='missile'?'Construye antes de disparar · Usa Lanzar para elegir objetivo':'Acciones disponibles en el panel';
+  const v4=RULES.version==='v4';
+  if(v4&&t?.attackers?.[G.pf])detail.textContent+=' · ATACANTES: '+units(t.attackers[G.pf]);
+  hint.textContent=v4&&step==='attack'?'Toca un OBJETIVO con tropas comprometidas para combatir':v4&&step==='move'?'ATACA DESDE origen propio → OBJETIVO enemigo · Confirma las tropas':G.setup?._inSetup?'Completa el despliegue en el mapa':!G_step.isMyTurn?'Observando · Defensa automática; intercepción de misiles cuando corresponda':G.moveSrc?'Toca un destino azul · ✕ cancela el origen':G.attackSrc?'Toca un enemigo adyacente rojo para preparar el ataque':['move','regroup'].includes(step)?'Toca origen propio y destino · Una vez por unidad en esta fase':step==='attack'?'Toca origen propio y después enemigo adyacente':step==='upgrade'?'Selecciona territorio propio y elige mejora':step==='missile'?'Construye antes de disparar · Usa Lanzar para elegir objetivo':'Acciones disponibles en el panel';
   document.getElementById('territory-clear').hidden=!t;
  }
  function territoryTap(id){

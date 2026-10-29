@@ -7,6 +7,8 @@ const DiceSequence = (() => {
   const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mode = () => currentMode;
   const duration = (ms, speed = currentMode) => reduced() || document.hidden || speed === 'minimal' ? 0 : speed === 'fast' ? ms / 3 : ms;
+  const attackPace = 2 / 3;
+  const attackDuration = (ms,speed=currentMode) => duration(ms*attackPace,speed);
   function element(tag, className, text) {
     const el = document.createElement(tag); if (className) el.className = className; if (text !== undefined) el.textContent = text; return el;
   }
@@ -65,7 +67,7 @@ function diceFace(type,value,side){
  return `<svg viewBox="0 0 100 100" class="die-svg" aria-hidden="true" focusable="false"><path d="${outline}" fill="#111b27" stroke="${accent}" stroke-width="4"/>${facets}<path d="${outline}" fill="none" stroke="${accent}" stroke-opacity=".52" stroke-width="2"/><text class="ds-face" x="50" y="59" text-anchor="middle" fill="${ink}" font-size="${type==='d20'?'34':'37'}" font-family="system-ui, sans-serif" font-weight="900" stroke="#08101a" stroke-width="2.3" paint-order="stroke" dominant-baseline="middle">${value}</text></svg>`;
 }
 
-  function play({dice = [],cause = 'TIRADA',container,signal,speed,controls:showControls = true} = {}) {
+  function play({dice = [],cause = 'TIRADA',container,signal,speed,pace=1,controls:showControls = true} = {}) {
     let values;
     try { values = normalizeDice(dice); } catch { return Promise.resolve({status:'cancelled',reason:'cancelled'}); }
     if (typeof container === 'string') container = document.querySelector(container);
@@ -113,7 +115,7 @@ function diceFace(type,value,side){
       const abort = () => session.finish('cancelled');
       if (showControls) root.append(controls({onSkip:() => session.finish('skipped')}));
       active.add(session); signal?.addEventListener('abort',abort,{once:true});
-      const rollTime = duration(2000,speed), holdTime = duration(700,speed);
+      const rollTime = duration(2000*pace,speed), holdTime = duration(700*pace,speed);
       root.dataset.state = 'rolling';
       if (signal?.aborted) { session.finish('cancelled'); return; }
       if (!rollTime || !values.length) { session.finish('completed'); return; }
@@ -132,6 +134,6 @@ function diceFace(type,value,side){
     });
   }
   document.addEventListener('visibilitychange',() => { if (document.hidden) settleAll('cancelled'); });
-  return {play,normalizeDice,controls,settings,beginGame,duration,mode,setMode,skip:() => settleAll('skipped'),cancelAll:() => settleAll('cancelled')};
+  return {play,normalizeDice,controls,settings,beginGame,duration,attackDuration,attackPace,mode,setMode,skip:() => settleAll('skipped'),cancelAll:() => settleAll('cancelled')};
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = DiceSequence;

@@ -1,5 +1,5 @@
 // NUKE 3000 — Service Worker (PWA)
-const CACHE = 'nuke3000-v8-compact-dice';
+const CACHE = 'nuke3000-v9-attack-flow';
 const ASSETS = [
   '/nuke3000/',
   '/nuke3000/index.html',

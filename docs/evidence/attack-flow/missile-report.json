@@ -1,0 +1,560 @@
+[
+  {
+    "tag": "impact-1440",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "intercepted": false,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "420.8px",
+            "top": "382.28px"
+          },
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          },
+          {
+            "left": "579.2px",
+            "top": "473.72px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "targetX": 579.2000122070312,
+        "targetY": 473.72003173828125,
+        "type": "blast",
+        "effect": "impact",
+        "left": "579.2px",
+        "top": "473.72px",
+        "outcome": "impact"
+      }
+    ],
+    "calls": 0,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [],
+      "blocked": false,
+      "destroyed": 3,
+      "accident": null
+    },
+    "remaining": 2,
+    "errors": []
+  },
+  {
+    "tag": "impact-base-1440",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "intercepted": false,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "420.8px",
+            "top": "382.28px"
+          },
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          },
+          {
+            "left": "579.2px",
+            "top": "473.72px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "targetX": 579.2000122070312,
+        "targetY": 473.72003173828125,
+        "type": "blast",
+        "effect": "impact",
+        "left": "579.2px",
+        "top": "473.72px",
+        "outcome": "impact"
+      },
+      {
+        "targetX": 579.2000122070312,
+        "targetY": 473.72003173828125,
+        "type": "nuclear",
+        "effect": "nuclear",
+        "left": "579.2px",
+        "top": "473.72px",
+        "outcome": "impact"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [],
+      "blocked": false,
+      "destroyed": 3,
+      "accident": 1
+    },
+    "remaining": 1,
+    "errors": []
+  },
+  {
+    "tag": "intercept-1440",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "intercepted": true,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "420.8px",
+            "top": "382.28px"
+          },
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          },
+          {
+            "left": "500px",
+            "top": "428px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "type": "defender",
+        "frames": [
+          {
+            "left": "579.2px",
+            "top": "473.72px"
+          },
+          {
+            "left": "500px",
+            "top": "428px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "targetX": 579.2000122070312,
+        "targetY": 473.72003173828125,
+        "type": "blast",
+        "effect": "interception",
+        "left": "500px",
+        "top": "428px",
+        "outcome": "intercepted"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [
+        6
+      ],
+      "blocked": true,
+      "destroyed": 0
+    },
+    "remaining": 5,
+    "errors": []
+  },
+  {
+    "tag": "intercept-base-1440",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "intercepted": true,
+    "base": true,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "420.8px",
+            "top": "382.28px"
+          },
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "484.16px",
+            "top": "418.856px"
+          },
+          {
+            "left": "500px",
+            "top": "428px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "type": "defender",
+        "frames": [
+          {
+            "left": "579.2px",
+            "top": "473.72px"
+          },
+          {
+            "left": "500px",
+            "top": "428px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "targetX": 579.2000122070312,
+        "targetY": 473.72003173828125,
+        "type": "blast",
+        "effect": "interception",
+        "left": "500px",
+        "top": "428px",
+        "outcome": "intercepted"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [
+        6
+      ],
+      "blocked": true,
+      "destroyed": 0
+    },
+    "remaining": 5,
+    "errors": []
+  },
+  {
+    "tag": "impact-844",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "intercepted": false,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "397.406px",
+            "top": "70.8023px"
+          },
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          },
+          {
+            "left": "446.594px",
+            "top": "99.1977px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "targetX": 446.594482421875,
+        "targetY": 99.19772338867188,
+        "type": "blast",
+        "effect": "impact",
+        "left": "446.594px",
+        "top": "99.1977px",
+        "outcome": "impact"
+      }
+    ],
+    "calls": 0,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [],
+      "blocked": false,
+      "destroyed": 3,
+      "accident": null
+    },
+    "remaining": 2,
+    "errors": []
+  },
+  {
+    "tag": "impact-base-844",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "intercepted": false,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "397.406px",
+            "top": "70.8023px"
+          },
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          },
+          {
+            "left": "446.594px",
+            "top": "99.1977px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "targetX": 446.594482421875,
+        "targetY": 99.19772338867188,
+        "type": "blast",
+        "effect": "impact",
+        "left": "446.594px",
+        "top": "99.1977px",
+        "outcome": "impact"
+      },
+      {
+        "targetX": 446.594482421875,
+        "targetY": 99.19772338867188,
+        "type": "nuclear",
+        "effect": "nuclear",
+        "left": "446.594px",
+        "top": "99.1977px",
+        "outcome": "impact"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [],
+      "blocked": false,
+      "destroyed": 3,
+      "accident": 1
+    },
+    "remaining": 1,
+    "errors": []
+  },
+  {
+    "tag": "intercept-844",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "intercepted": true,
+    "base": false,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "397.406px",
+            "top": "70.8023px"
+          },
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          },
+          {
+            "left": "422px",
+            "top": "85px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "type": "defender",
+        "frames": [
+          {
+            "left": "446.594px",
+            "top": "99.1977px"
+          },
+          {
+            "left": "422px",
+            "top": "85px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "targetX": 446.594482421875,
+        "targetY": 99.19772338867188,
+        "type": "blast",
+        "effect": "interception",
+        "left": "422px",
+        "top": "85px",
+        "outcome": "intercepted"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [
+        6
+      ],
+      "blocked": true,
+      "destroyed": 0
+    },
+    "remaining": 5,
+    "errors": []
+  },
+  {
+    "tag": "intercept-base-844",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "intercepted": true,
+    "base": true,
+    "records": [
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "397.406px",
+            "top": "70.8023px"
+          },
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          }
+        ],
+        "simultaneous": 1
+      },
+      {
+        "type": "attacker",
+        "frames": [
+          {
+            "left": "417.081px",
+            "top": "82.1605px"
+          },
+          {
+            "left": "422px",
+            "top": "85px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "type": "defender",
+        "frames": [
+          {
+            "left": "446.594px",
+            "top": "99.1977px"
+          },
+          {
+            "left": "422px",
+            "top": "85px"
+          }
+        ],
+        "simultaneous": 2
+      },
+      {
+        "targetX": 446.594482421875,
+        "targetY": 99.19772338867188,
+        "type": "blast",
+        "effect": "interception",
+        "left": "422px",
+        "top": "85px",
+        "outcome": "intercepted"
+      }
+    ],
+    "calls": 1,
+    "done": 1,
+    "last": {
+      "targetId": "01_02",
+      "target": "sol",
+      "interceptions": [
+        6
+      ],
+      "blocked": true,
+      "destroyed": 0
+    },
+    "remaining": 5,
+    "errors": []
+  }
+]

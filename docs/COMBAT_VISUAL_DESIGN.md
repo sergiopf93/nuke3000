@@ -1,3 +1,17 @@
+# Actualización V9 — ataque y misiles
+
+El motor V4 incorpora el límite defensivo aprobado: defensa automática fuerte con `min(maxDefenseDice, attRolls.length)`. La presentación no genera tiradas. El registro de movimiento se reinicia por turno y el selector utiliza solo unidades disponibles.
+
+`attackOrigins` por territorio conserva las fuentes reales de compromisos, incluidas varias; `sourceIds` viaja en COMBAT_VIEW. Bordes cian continuos / coral discontinuos y etiquetas estáticas distinguen origen y objetivo, también al volver. La cámara encuadra ambos. No se alteran geometría ni adyacencias.
+
+El misil recorre una línea fija tras completar cámara; permanece visible mientras se decide interceptar. Dos misiles convergen en el punto medio y producen un destello azul de choque. Sin intercepción, continúa al centro real del objetivo y explota en naranja. Las bajas/accidentes siguen los eventos del motor. Mapa, paneles y mantenimiento reutilizan `ASSETS.nuclear` con el PNG oficial ya existente.
+
+`DiceSequence.attackPace = 2/3` multiplica los tiempos de ataque y sus dados, además de la preferencia guardada. El disparo base de 520 ms se representa en 346,7 ms a modo normal; setup conserva su ritmo. La señal de aborto/omisión sigue liberando promesas sin omitir decisiones.
+
+[Validación V9](evidence/attack-flow/README.md). El texto inferior documenta V8 y su arquitectura de referencia; sus afirmaciones de archivos de motor intactos y tiempos anteriores no describen los cambios V9.
+
+---
+
 # Presentación oficial sobre el tablero original
 
 El motor V4 no se sustituye. `rules-v4.js`, `battle.js`, `engine.js`, `data.js` y `map.js` conservan sus reglas y geometría. `v4-game.js` coordina resultados ya decididos; no importa `demo.js` ni eventos ficticios.

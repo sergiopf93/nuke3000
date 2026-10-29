@@ -33,10 +33,11 @@ const V4Game = (() => {
   }
   function install(){
     const initial=window.initGame;
-    window.initGame=function(){configure();initial();if(enabled()){for(const [fk,desc] of Object.entries({imp:'Controla 5 regiones completas al final de tu turno.',lib:'Bases globales ≤ jugadores iniciales al final del turno.',clt:'Elimina la última unidad de un jugador enemigo. Fin de turno.',erb:'Controla al menos la mitad de las bases. Fin de turno.',prm:'Controla al menos la mitad de las bases. Fin de turno.',shn:'Controla 5 regiones completas al final de tu turno.'})){FDATA[fk].goalDesc=desc;G.factions[fk].goalDesc=desc;VICTORY_DETAIL[fk]=desc;}G.initialPlayerCount=G.playerCount;G.baseCaptures=[];G.rewardedCaptures=[];G.eliminations=[];G.missileEvents={};G.missileSequence=0;G.movedUnits={};G.v4Maintenance=null;const f=G.factions.lib;if(f){f.plutonium=5;f.soldiers+=5;f.mechs=RULES.setup.startingAssets[G.playerCount].mechs;f.nukes=0;}}};
+    window.initGame=function(){configure();initial();if(enabled()){for(const [fk,desc] of Object.entries({imp:'Controla 5 regiones completas al final de tu turno.',lib:'Bases globales ≤ jugadores iniciales al final del turno.',clt:'Elimina la última unidad de un jugador enemigo. Fin de turno.',erb:'Controla al menos la mitad de las bases. Fin de turno.',prm:'Controla al menos la mitad de las bases. Fin de turno.',shn:'Controla 5 regiones completas al final de tu turno.'})){FDATA[fk].goalDesc=desc;G.factions[fk].goalDesc=desc;VICTORY_DETAIL[fk]=desc;}G.initialPlayerCount=G.playerCount;G.baseCaptures=[];G.rewardedCaptures=[];G.eliminations=[];G.missileEvents={};G.missileSequence=0;G.movedUnits={};G.attackView=null;G.v4Maintenance=null;const f=G.factions.lib;if(f){f.plutonium=5;f.soldiers+=5;f.mechs=RULES.setup.startingAssets[G.playerCount].mechs;f.nukes=0;}}};
     wrap('applyIncome',fk=>{
       const f=G.factions[fk];if(G.gameOver||f.alive===false||f._incomeAppliedRound===G.round)return;
       f._incomeAppliedRound=G.round;
+      G.movedUnits={}; // Movement allowance belongs to this turn, not the lifetime of the army.
       const plan=RulesV4.reinforcements(state(),fk,RULES);f.regionalSoldiers=plan.pools;
       f.pendingSoldiers=Object.values(plan.pools).reduce((a,b)=>a+b,0);
       const n=Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear).length;
@@ -51,12 +52,12 @@ const V4Game = (() => {
     window.showReinforcementCounter=function(id,evt){if(!enabled())return originalCounter(id,evt);if(G.reinforcementMode)G.reinforcementMode.left=G.factions[G.pf].regionalSoldiers?.[G.territories[id].region]||0;originalCounter(id,evt);};
     wrap('showReinforcementUI',count=>{if(!count){G.reinforcementMode=null;return;}const ts=reinforcementTargets(G.pf);G.reinforcementMode={left:count,validIds:new Set(ts.map(t=>t.id)),callback:(id,evt)=>{if(!reinforcementTargets(G.pf).some(t=>t.id===id))return false;showReinforcementCounter(id,evt);return true;}};updateMap();});
     wrap('groundMoveTargets',(id)=>new Set(Object.keys(G.territories).filter(dst=>RulesV4.groundPath(state(),G.territories[id]?.owner,id,dst,RULES))));
-    wrap('getMovableTargets',id=>{const t=G.territories[id],fk=t?.owner,targets=groundMoveTargets(id);if(t?.aircraft)for(const [dst,d]of Object.entries(G.territories))if(dst!==id&&(d.owner===fk||d.adj.some(n=>G.territories[n]?.owner===fk)))targets.add(dst);return targets;});
+    wrap('getMovableTargets',id=>{if(!RulesV4.count(movableArmy(id)))return new Set();const t=G.territories[id],fk=t?.owner,targets=groundMoveTargets(id);if(movableArmy(id).aircraft)for(const [dst,d]of Object.entries(G.territories))if(dst!==id&&(d.owner===fk||d.adj.some(n=>G.territories[n]?.owner===fk)))targets.add(dst);return targets;});
     wrap('transferUnits',(src,dst,units)=>{
       if(G.gameOver||!G_step.isMyTurn||G_step.phase!=='prep'||STEPS.prep[G_step.idx]?.id!=='move'||G.territories[src]?.owner!==G.pf)return false;
       const moved=G.movedUnits?.[src]||{};
       if(keys.some(k=>(units[k]||0)>(G.territories[src][k]||0)-(moved[k]||0)))return false;
-      try{const result=RulesV4.move(state(),G.pf,src,dst,units,RULES);apply(result);G.movedUnits||={};const arrived=G.movedUnits[dst]||={};for(const k of keys)arrived[k]=(arrived[k]||0)+(units[k]||0);sync('Tropas comprometidas V4');return true;}catch(e){addLog(e.message,'sys');return false;}
+      try{const result=RulesV4.move(state(),G.pf,src,dst,units,RULES);apply(result);recordCommit(src,dst,G.pf,units);G.movedUnits||={};const arrived=G.movedUnits[dst]||={};for(const k of keys)arrived[k]=(arrived[k]||0)+(units[k]||0);sync('Tropas comprometidas V4');return true;}catch(e){addLog(e.message,'sys');return false;}
     });
     const clear=clearInteractionModes;window.clearInteractionModes=function(){const moved=G.movedUnits;clear();if(enabled()&&STEPS[G_step.phase]?.[G_step.idx]?.id==='move')G.movedUnits=moved||{};};
     const advance=advanceStep;window.advanceStep=function(){if(enabled()){
@@ -67,7 +68,7 @@ const V4Game = (() => {
     }advance();};
     const endPhase=endPhaseForFaction;window.endPhaseForFaction=function(){if(!enabled())return endPhase();transition(true);};
     const render=renderStepActions;window.renderStepActions=function(step){render(step);if(!enabled()||!G_step.isMyTurn)return;const area=document.getElementById('step-actions');if(!area)return;
-      if(step.id==='attack'){area.innerHTML='<p>Selecciona un territorio con fuerzas comprometidas.</p>';for(const id of RulesV4.pendingAttacks(state(),G.pf))area.appendChild(button('COMBATIR '+terName(id),()=>battle(id,G.pf)));area.insertAdjacentHTML('beforeend',nextBtn('FINALIZAR COMBATES'));}
+      if(step.id==='attack'){area.innerHTML='<p>Combate con las tropas enviadas a territorio enemigo durante MOVIMIENTO Y ATAQUES.</p>';if(!RulesV4.pendingAttacks(state(),G.pf).length)area.insertAdjacentHTML('beforeend','<p>No hay tropas comprometidas. Para atacar, envíalas al enemigo en MOVIMIENTO Y ATAQUES del próximo turno.</p>');for(const id of RulesV4.pendingAttacks(state(),G.pf))area.appendChild(button('COMBATIR '+terName(id),()=>battle(id,G.pf)));area.insertAdjacentHTML('beforeend',nextBtn('FINALIZAR COMBATES'));}
       if(step.id==='maint'){const list=document.createElement('p');list.textContent=Object.values(G.territories).filter(t=>t.owner===G.pf&&t.hasNuclear).map(t=>terName(t.id)).join(' · ');area.prepend(list);}
       if(step.id==='missileBuild')area.innerHTML='<p>1 Pu por misil; máximo 5.</p><button class="abtn" onclick="doMissileBuild()">FABRICAR MISIL</button>'+nextBtn();
       if(step.id==='reinf')area.insertAdjacentHTML('afterbegin','<p>'+Object.entries(G.factions[G.pf].regionalSoldiers||{}).filter(([,n])=>n).map(([r,n])=>(REGIONS.find(x=>x.id===r)?.name||r)+': '+n).join(' · ')+'</p>');
@@ -85,7 +86,7 @@ const V4Game = (() => {
       cpu(step);
     };
     const auto=executeAutoStep;window.executeAutoStep=function(step){if(enabled()&&step.id==='reward'){const r=RulesV4.rewards(state(),G_step.currentFk);apply(r.state);sync('Recompensa: '+r.amount+' Pu');scheduleStepAction(advanceStep,500);return;}auto(step);};
-    const click=onTerritoryClick;window.onTerritoryClick=function(id,event){if(enabled()&&!G.setup?._inSetup&&G_step.isMyTurn){const step=STEPS[G_step.phase]?.[G_step.idx]?.id;if(step==='attack'){if(RulesV4.pendingAttacks(state(),G.pf).includes(id))battle(id,G.pf);else selectTerritory(id);return;}if(step==='move'){if(G.moveSrc){if(getMovableTargets(G.moveSrc).has(id))showMoveUnitsPopup(G.moveSrc,id,event);else{G.moveSrc=null;G.moveTargets=null;}return;}if(G.territories[id]?.owner===G.pf){G.moveSrc=id;G.moveMode=true;G.moveTargets=getMovableTargets(id);selectTerritory(id);return;}}}click(id,event);};
+    const click=onTerritoryClick;window.onTerritoryClick=function(id,event){if(enabled()&&!G.setup?._inSetup&&G_step.isMyTurn){const step=STEPS[G_step.phase]?.[G_step.idx]?.id;if(step==='attack'){if(RulesV4.pendingAttacks(state(),G.pf).includes(id))battle(id,G.pf);else selectTerritory(id);return;}if(step==='move'){if(G.moveSrc){if(getMovableTargets(G.moveSrc).has(id)){if(G.territories[id]?.owner!==G.pf)markAttack([G.moveSrc],id,G.pf);showMoveUnitsPopup(G.moveSrc,id,event);}else{G.moveSrc=null;G.moveTargets=null;}return;}if(G.territories[id]?.owner===G.pf){G.moveSrc=id;G.moveMode=true;G.moveTargets=getMovableTargets(id);markAttack([id],null,G.pf);selectTerritory(id);return;}}}click(id,event);};
     wrap('validAttack',(_src,id,fk)=>RulesV4.pendingAttacks(state(),fk).includes(id));
     wrap('openDice',id=>battle(id,G.pf));
     wrap('retreatCombat',()=>{if(G_combat?.done)closeDice();});
@@ -96,6 +97,24 @@ const V4Game = (() => {
     wrap('doMissileBuild',()=>{const f=G.factions[G.pf];if(G.gameOver||!G_step.isMyTurn||G_step.phase!=='prep'||STEPS.prep[G_step.idx]?.id!=='missileBuild'||f.plutonium<1||f.missiles>=5)return;f.plutonium--;f.missiles++;sync('Misil fabricado');renderStepActions(STEPS.prep[G_step.idx]);});
     wrap('activateMissileFire',()=>{if(G_step.phase==='combat'&&G_step.isMyTurn&&STEPS.combat[G_step.idx]?.id==='missile'&&G.factions[G.pf].missiles>0)G.missileFiringMode=true;});
     wrap('doMissileFire',()=>{const t=G.territories[G.sel];if(G.gameOver||!G_step.isMyTurn||G_step.phase!=='combat'||STEPS.combat[G_step.idx]?.id!=='missile'||!t||t.owner===G.pf||G.factions[G.pf].missiles<1)return;const box=dialog('missile-modal','ELEGIR OBJETIVO DEL MISIL');if(t.soldiers)box.appendChild(button('HASTA 3 SOLDADOS',()=>{box.parentElement.remove();missile(t.id,G.pf,'sol');}));if(t.mechs)box.appendChild(button('1 MECA',()=>{box.parentElement.remove();missile(t.id,G.pf,'mech');}));box.appendChild(button('CANCELAR',()=>box.parentElement.remove()));});
+  }
+  function movableArmy(id){
+    const t=G.territories[id];if(!t)return RulesV4.army({});
+    const available={},moved=G.movedUnits?.[id]||{};
+    for(const k of keys)available[k]=Math.max(0,(t[k]||0)-(moved[k]||0));
+    if(RulesV4.count(available)===RulesV4.count(t)){const guard=keys.find(k=>available[k]>0);if(guard)available[guard]--;}
+    return available;
+  }
+  function markAttack(sourceIds,targetId,fk,units){
+    G.attackView={sourceIds:[...sourceIds],targetId,fk,units:units?JSON.parse(JSON.stringify(units)):null};
+    if(typeof updateMap==='function')updateMap();
+  }
+  function recordCommit(src,dst,fk,units){
+    const t=G.territories[dst];if(t.owner===fk){G.attackView=null;return;}
+    t.attackOrigins??={};if(RulesV4.count(t.attackers?.[fk]||{})===RulesV4.count(units))t.attackOrigins[fk]={};
+    const sources=t.attackOrigins[fk]??={};const army=sources[src]??={};
+    for(const k of keys)army[k]=(army[k]||0)+(units[k]||0);
+    markAttack(Object.keys(sources),dst,fk,t.attackers?.[fk]);
   }
   function transition(forceEnd=false){
     if(G.gameOver||G.awaitingStart||G.setup?._inSetup)return;
@@ -117,7 +136,7 @@ const V4Game = (() => {
     Object.assign(G_step,{phase,currentFk:fk,idx,isMyTurn:fk===G.pf,startedKey:null});
     // Publish the resulting step, never an intermediate exhausted phase.
     if(typeof ONLINE!=='undefined'&&ONLINE.isOnline())ONLINE.pushActionWithState('V4_STEP',{});
-    runCurrentStep();
+    updateMap();runCurrentStep();
   }
   function button(text,action){const b=document.createElement('button');b.className='abtn';b.textContent=text;b.onclick=action;return b;}
   function dialog(id,title){document.getElementById(id)?.remove();const modal=document.createElement('div');modal.id=id;modal.style.cssText='position:fixed;inset:0;background:#000d;z-index:2100;display:grid;place-items:center';const box=document.createElement('div');box.style.cssText='background:#101018;border:1px solid #777;padding:18px;max-height:88vh;max-width:94vw;overflow:auto;display:flex;flex-direction:column;gap:8px';const h=document.createElement('h3');h.textContent=title;box.appendChild(h);modal.appendChild(box);document.body.appendChild(modal);return box;}
@@ -126,7 +145,9 @@ const V4Game = (() => {
   function battle(id,fk,callback){
     if(G.gameOver||G_combat&&!G_combat.done||!RulesV4.pendingAttacks(state(),fk).includes(id))return;
     const target=G.territories[id],before={attacker:RulesV4.army(target.attackers[fk]),defender:RulesV4.army(target)};
-    const ctx=G_combat={srcId:id,targetId:id,attFk:fk,defFk:target.owner,round:1,history:[],initialAtt:RulesV4.count(before.attacker),initialDef:RulesV4.count(before.defender),isPlayerAtt:false,isPlayerDef:target.owner===G.pf,done:false,stepKey:currentStepKey(),callback,before,visualId:currentStepKey()+':'+id};
+    const sourceIds=Object.keys(target.attackOrigins?.[fk]||{});
+    markAttack(sourceIds,id,fk,before.attacker);
+    const ctx=G_combat={srcId:id,targetId:id,sourceIds,attFk:fk,defFk:target.owner,round:1,history:[],initialAtt:RulesV4.count(before.attacker),initialDef:RulesV4.count(before.defender),isPlayerAtt:false,isPlayerDef:target.owner===G.pf,done:false,stepKey:currentStepKey(),callback,before,visualId:currentStepKey()+':'+id};
     document.getElementById('dmodal').classList.add('open');
     document.querySelector('#dmodal h2').textContent='BATALLA · '+terName(id);
     document.getElementById('cdesc').textContent=FDATA[fk].name+' contra '+FDATA[target.owner].name;
@@ -148,7 +169,7 @@ const V4Game = (() => {
       if(G_combat!==ctx||G.gameOver||currentStepKey()!==ctx.stepKey)return;
       if(result.status!=='ongoing')finish(result.status);else present(run,0);
     };
-    function finish(status){ctx.done=true;ctx.status=status;publishCombatView(ctx,ctx.history.at(-1));if(status==='conquered'&&G.territories[id].hasNuclear&&fk===G.pf){const box=dialog('v4-capture','BASE NUCLEAR CONQUISTADA');box.appendChild(button('CONSERVAR',()=>{box.parentElement.remove();done();}));box.appendChild(button('DESTRUIR: ACCIDENTE NUCLEAR',async()=>{box.parentElement.remove();const r=RulesV4.explode(state(),id,fk);apply(r.state);updateEliminations(fk);sync('Base destruida');await effect('nuclear',{targetId:id,centers:r.centers,frames:r.frames});if(G_combat===ctx&&!G.gameOver)done();}));}else done();}
+    function finish(status){if(G.territories[id].attackOrigins)delete G.territories[id].attackOrigins[fk];ctx.done=true;ctx.status=status;publishCombatView(ctx,ctx.history.at(-1));if(status==='conquered'&&G.territories[id].hasNuclear&&fk===G.pf){const box=dialog('v4-capture','BASE NUCLEAR CONQUISTADA');box.appendChild(button('CONSERVAR',()=>{box.parentElement.remove();done();}));box.appendChild(button('DESTRUIR: ACCIDENTE NUCLEAR',async()=>{box.parentElement.remove();const r=RulesV4.explode(state(),id,fk);apply(r.state);updateEliminations(fk);sync('Base destruida');await effect('nuclear',{targetId:id,centers:r.centers,frames:r.frames});if(G_combat===ctx&&!G.gameOver)done();}));}else done();}
     function done(){present(()=>{closeDice();if(typeof BattleScene!=='undefined')BattleScene.close();if(callback)callback();else renderStepActions(STEPS.combat[G_step.idx]);},2200);}
     present(run,700);
   }
@@ -166,7 +187,7 @@ const V4Game = (() => {
     const stations=document.createElement('div');stations.className='maintenance-bases';stations.setAttribute('aria-label','Centrales en mantenimiento; dados sin asignación');
     for(const t of Object.values(G.territories).filter(t=>t.owner===fk&&t.hasNuclear)){
       const base=document.createElement('figure'),image=document.createElement('img'),label=document.createElement('figcaption');
-      base.dataset.baseId=t.id;image.src='assets/cinematic/nuclear_base.png';image.alt='Central nuclear';label.textContent=terName(t.id);base.append(image,label);stations.append(base);
+      base.dataset.baseId=t.id;image.src=ASSETS.nuclear;image.alt='Central nuclear';label.textContent=terName(t.id);base.append(image,label);stations.append(base);
     }
     box.append(stations);
   }
@@ -224,7 +245,7 @@ const V4Game = (() => {
       G.pendingMissile=event;addLog('No se pudo recibir la decisión defensiva. Reintenta cuando se recupere la conexión.','sys');const box=dialog('missile-retry','MISIL PENDIENTE');box.appendChild(button('REINTENTAR DECISIÓN',()=>{box.parentElement.remove();missile(id,fk,target,callback);}));sync('Misil pendiente de decisión');
     }finally{G.waitingMissile=false;if(callback&&!G.pendingMissile)callback();}
   }
-  return {enabled,configure,install,state,apply,battle,maintenance,missile,claimCandidates,homelands};
+  return {enabled,configure,install,state,apply,markAttack,movableArmy,battle,maintenance,missile,claimCandidates,homelands};
 })();
 V4Game.install();
 if(typeof document!=='undefined')document.addEventListener('battle-scene-skip',e=>{const ctx=G_combat;if(!V4Game.enabled()||!ctx||ctx.remote||ctx.targetId!==e.detail?.targetId)return;ctx.skip=true;clearTimeout(ctx.presentationTimer);const action=ctx.nextPresentation;ctx.nextPresentation=null;if(action)action();});

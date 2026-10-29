@@ -1,0 +1,69 @@
+343 tests Node: 343 pasan, 0 fallos.
+Revisión de sintaxis y git diff --check correctas.
+
+nuke-attack-full.log
+PASS integración Chrome: setup manual, combate/guarnición, mejoras, misil y decisiones remotas por clics (transporte controlado)
+PASS navegador 1440x900: lobby, arranque, territorios y cierre controlado sin errores JS
+PASS navegador 844x390: lobby, arranque, territorios y cierre controlado sin errores JS
+PASS combate/misiles 1440x900: humano/CPU, CPU/humano, CPU/CPU visibles, 2 rondas pausadas, callback único, intercepción, elección posterior y sin elegibles
+PASS combate/misiles 844x390: humano/CPU, CPU/humano, CPU/CPU visibles, 2 rondas pausadas, callback único, intercepción, elección posterior y sin elegibles
+PASS Chrome 2 clientes: defensa automática humano/CPU, ventana remota por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+PASS Chrome 2 clientes: defensa automática humano/CPU, ventana remota por rondas e intercepción humana; callback único y estado coincidente; transporte local, sin Firebase
+PASS UX 1440x900 desktop
+PASS UX 844x390 touch
+PASS UX 667x375 touch
+PASS UX 932x430 touch
+PASS UX 390x844 touch
+PASS comparación desktop: tablero sin diferencias fuera de cabecera con AJUSTES, código de sala, tooltip y LED animado
+PASS SW real: actualización automática desde 36a9c15, recarga sin intervención, caché anterior eliminada, SHA256 de 35 recursos coincide y arranque offline con 60 territorios
+PASS E2E real 1440x900 mouse: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 121 acciones UI; 0 mutaciones del estado desde el test
+PASS E2E real 844x390 touch: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 12; 121 acciones UI; 0 mutaciones del estado desde el test
+PASS V4 fixture 1440x900: compromiso, combate obligatorio, misil, mantenimiento/cadena y regiones
+PASS V4 fixture 844x390: compromiso, combate obligatorio, misil, mantenimiento/cadena y regiones
+PASS V4 dos clientes desktop: compromiso compartido, humano/CPU autoritativo, cierre y múltiples intercepciones humanas para ambos atacantes
+PASS V4 dos clientes touch: compromiso compartido, humano/CPU autoritativo, cierre y múltiples intercepciones humanas para ambos atacantes
+PASS E2E V4 real 1440x900 mouse: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 5; 61 acciones UI; 0 mutaciones del estado desde el test
+PASS E2E V4 real 844x390 touch: lobby → dados/setup 60 territorios → turnos → victoria lib, ronda 5; 61 acciones UI; 0 mutaciones del estado desde el test
+PASS cine order-1440
+PASS cine battle-1440
+PASS cine missile-1440
+PASS cine maintenance-1440
+PASS cine order-844
+PASS cine battle-844
+PASS cine missile-844
+PASS cine maintenance-844
+PASS cinematic lifecycle intercepted
+PASS cinematic lifecycle nuclear
+PASS cinematic lifecycle cancel
+PASS tablero original 1440: geometría y SVG exactos, diferencias significativas 0
+PASS tablero original 844: geometría y SVG exactos, diferencias significativas 0
+PASS sorteo online: D6 inicial, desempate entre generaciones, velocidades distintas y avance de pantalla posterior a todos los dados
+PASS compact 1440×900
+PASS compact 844×390
+PASS compact 667×375
+PASS compact 390×844
+
+nuke-attack-specific-final.log
+REPRODUCIDO b1087e9 1440: ataque legal bloqueado tras ingreso del turno siguiente por movedUnits persistente
+PASS reproducción histórica 1440x900: bloqueo confirmado en b1087e9
+REPRODUCIDO b1087e9 844: ataque legal bloqueado tras ingreso del turno siguiente por movedUnits persistente
+PASS reproducción histórica 844x390: bloqueo confirmado en b1087e9
+PASS ataque legal real 1440x900: turno nuevo, gestos origen/destino, compromiso, combate, marcadores y nuclear unificado
+PASS ataque legal real 844x390: turno nuevo, gestos origen/destino, compromiso, combate, marcadores y nuclear unificado
+
+nuke-attack-ui-last.log
+PASS ataque legal real 1440x900: turno nuevo, gestos origen/destino, compromiso, combate, marcadores y nuclear unificado
+PASS ataque legal real 844x390: turno nuevo, gestos origen/destino, compromiso, combate, marcadores y nuclear unificado
+
+nuke-attack-missile-last.log
+PASS misil impact-1440: trayectoria fija, desenlace y RNG autoritativos
+PASS misil impact-base-1440: trayectoria fija, desenlace y RNG autoritativos
+PASS misil intercept-1440: trayectoria fija, desenlace y RNG autoritativos
+PASS misil intercept-base-1440: trayectoria fija, desenlace y RNG autoritativos
+PASS misil impact-844: trayectoria fija, desenlace y RNG autoritativos
+PASS misil impact-base-844: trayectoria fija, desenlace y RNG autoritativos
+PASS misil intercept-844: trayectoria fija, desenlace y RNG autoritativos
+PASS misil intercept-base-844: trayectoria fija, desenlace y RNG autoritativos
+
+nuke-attack-sw-last.log
+PASS SW real: actualización automática desde b1087e9, recarga sin intervención, caché anterior eliminada, SHA256 de 35 recursos coincide y arranque offline con 60 territorios

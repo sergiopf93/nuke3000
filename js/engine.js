@@ -869,7 +869,8 @@ function updateMap(){
     const reg=REGIONS.find(r=>r.id===t.region);
     const isSelected=id===G.sel;
     const isMoveTarget=G.moveSrc&&canMoveTarget(id);
-    const isAttackTarget=G.phase==='combat'&&t.owner&&t.owner!==G.pf&&(typeof GameUX!=='undefined'&&GameUX.isMobile()?G.attackSrc&&validAttack(G.attackSrc,id,G.pf):isAdjOwned(id));
+    const isV4=typeof RULES!=='undefined'&&RULES.version==='v4';
+    const isAttackTarget=isV4?G_step.isMyTurn&&STEPS[G_step.phase]?.[G_step.idx]?.id==='attack'&&(t.attackers?.[G.pf]&&RulesV4.count(t.attackers[G.pf])>0):G.phase==='combat'&&t.owner&&t.owner!==G.pf&&(typeof GameUX!=='undefined'&&GameUX.isMobile()?G.attackSrc&&validAttack(G.attackSrc,id,G.pf):isAdjOwned(id));
     const bg=document.getElementById('tc-'+id); if(!bg) return;
     const reg2=REGIONS.find(r=>r.id===t.region);
     let fillColor=reg2?reg2.color:'#0a0a0e';
@@ -933,7 +934,20 @@ function updateMap(){
     if(!G.sel||!l.id.includes(G.sel)){l.setAttribute('stroke','rgba(255,255,255,0.06)');l.setAttribute('stroke-width','0.8');}
   });
   svgG.setAttribute('transform',`translate(${G.vx},${G.vy}) scale(${G.vscale})`);
+  if(typeof V4Game!=='undefined'&&RULES.version==='v4')renderAttackMarkers();
   if(typeof GameUX!=='undefined')GameUX.refresh();
+}
+
+function renderAttackMarkers(){
+  document.getElementById('attack-markers')?.remove();
+  const view=G.attackView;if(!view||(!view.sourceIds.length&&!view.targetId))return;
+  const group=document.createElementNS(NS,'g');group.id='attack-markers';group.setAttribute('pointer-events','none');
+  for(const [role,ids,color,label]of [['source',view.sourceIds,'#70d9ff','ATACA DESDE'],['target',view.targetId?[view.targetId]:[],'#ff937b','OBJETIVO']])for(const id of ids){
+    const t=G.territories[id],shape=document.getElementById('tr-'+id);if(!t||!shape)continue;
+    const ring=shape.cloneNode(false);ring.removeAttribute('id');ring.dataset.attackRole=role;ring.dataset.territory=id;ring.setAttribute('fill','none');ring.setAttribute('stroke',color);ring.setAttribute('stroke-width','3');ring.setAttribute('vector-effect','non-scaling-stroke');ring.removeAttribute('filter');if(role==='target')ring.setAttribute('stroke-dasharray','7 3');group.append(ring);
+    const text=document.createElementNS(NS,'text');text.setAttribute('x',t.cx);text.setAttribute('y',t.cy-38);text.setAttribute('text-anchor','middle');text.setAttribute('fill',color);text.setAttribute('stroke','#000');text.setAttribute('stroke-width','2');text.setAttribute('paint-order','stroke');text.setAttribute('font-size','8');text.setAttribute('font-family','Rajdhani,sans-serif');text.setAttribute('font-weight','700');text.textContent=label;group.append(text);
+  }
+  svgG.append(group);
 }
 
 function armyPoints(t){return t.soldiers+t.mechs*3+t.aircraft*3+t.scorpions*6;}
