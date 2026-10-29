@@ -39,7 +39,7 @@ const DiceSequence = (() => {
     select.onchange=()=>setMode(select.value);label.append(select);
     const info=element('p',null,'Se aplica a esta partida y se recuerda como preferencia para las siguientes. Se respeta la reducción de movimiento del dispositivo.');
     const close=element('button',null,'GUARDAR Y CERRAR');close.onclick=()=>dialog.close();
-    dialog.append(title,label,info,close);dialog.addEventListener('close',()=>dialog.remove(),{once:true});document.body.append(dialog);dialog.showModal();
+    dialog.append(title,label,info);if(typeof GameAudio!=='undefined')dialog.append(GameAudio.settings());dialog.append(close);dialog.addEventListener('close',()=>dialog.remove(),{once:true});document.body.append(dialog);dialog.showModal();
   }
   function beginGame(){try{const saved=localStorage.getItem(storageKey);if(['normal','fast','minimal'].includes(saved))currentMode=saved;}catch{}}
   function controls({onSkip} = {}) {
@@ -67,7 +67,7 @@ function diceFace(type,value,side){
  return `<svg viewBox="0 0 100 100" class="die-svg" aria-hidden="true" focusable="false"><path d="${outline}" fill="#111b27" stroke="${accent}" stroke-width="4"/>${facets}<path d="${outline}" fill="none" stroke="${accent}" stroke-opacity=".52" stroke-width="2"/><text class="ds-face" x="50" y="59" text-anchor="middle" fill="${ink}" font-size="${type==='d20'?'34':'37'}" font-family="system-ui, sans-serif" font-weight="900" stroke="#08101a" stroke-width="2.3" paint-order="stroke" dominant-baseline="middle">${value}</text></svg>`;
 }
 
-  function play({dice = [],cause = 'TIRADA',container,signal,speed,pace=1,controls:showControls = true} = {}) {
+  function play({id,dice = [],cause = 'TIRADA',container,signal,speed,pace=1,controls:showControls = true} = {}) {
     let values;
     try { values = normalizeDice(dice); } catch { return Promise.resolve({status:'cancelled',reason:'cancelled'}); }
     if (typeof container === 'string') container = document.querySelector(container);
@@ -96,7 +96,7 @@ function diceFace(type,value,side){
     details.append(toggle,math);root.append(details);
     container.append(root);
     return new Promise(resolve => {
-      let done = false, timer = null;
+      let done = false, timer = null, stopAudio = () => {};
       const animations = [];
       const reveal = () => {
         root.dataset.state = 'result';
@@ -107,7 +107,7 @@ function diceFace(type,value,side){
         summary.textContent = values.length ? 'Tirada resuelta' : 'Sin dados';
       };
       const session = {container,finish(status = 'completed') {
-        if (done) return; done = true; clearTimeout(timer); signal?.removeEventListener('abort',abort);
+        if (done) return; done = true; clearTimeout(timer); stopAudio(); signal?.removeEventListener('abort',abort);
         animations.forEach(a => a.cancel()); reveal(); active.delete(session); root.querySelector('.ds-controls')?.remove();
         if (automatic) overlay.remove();
         resolve({status,reason:status});
@@ -119,6 +119,7 @@ function diceFace(type,value,side){
       root.dataset.state = 'rolling';
       if (signal?.aborted) { session.finish('cancelled'); return; }
       if (!rollTime || !values.length) { session.finish('completed'); return; }
+      if(typeof GameAudio!=='undefined')stopAudio=GameAudio.play('dice_roll',{id:id?String(id)+':dice':undefined,signal,durationMs:rollTime});
       items.forEach(({body},index) => {
         if (!body.animate) return;
         try { animations.push(body.animate([

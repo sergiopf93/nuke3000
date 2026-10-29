@@ -6,12 +6,13 @@
     "test:engine": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser-smoke.cjs && node tests/combat-flow.browser.cjs && node tests/online-combat.browser.cjs && NUKE_TOUCH_ONLINE=1 node tests/online-combat.browser.cjs && node tests/mobile-ux.browser.cjs && node tests/desktop-visual.browser.cjs && node tests/service-worker.browser.cjs",
     "test:e2e": "node tests/full-game.e2e.cjs",
-    "test:all": "npm run test:engine && npm run test:browser && npm run test:e2e && npm run test:e2e:mobile && npm run test:v4:browser && npm run test:v4:e2e && npm run test:v4:e2e:mobile && npm run test:cinematic && npm run test:attack",
+    "test:all": "npm run test:engine && npm run test:browser && npm run test:e2e && npm run test:e2e:mobile && npm run test:v4:browser && npm run test:v4:e2e && npm run test:v4:e2e:mobile && npm run test:cinematic && npm run test:attack && npm run test:audio",
     "test:e2e:mobile": "NUKE_E2E_WIDTH=844 NUKE_E2E_HEIGHT=390 NUKE_E2E_TOUCH=1 NUKE_E2E_ARTIFACT=/tmp/nuke-mobile-game node tests/full-game.e2e.cjs",
     "test:v4:browser": "node tests/v4-game.browser.cjs && node tests/v4-online.browser.cjs && NUKE_TOUCH_ONLINE=1 node tests/v4-online.browser.cjs",
     "test:v4:e2e": "NUKE_E2E_FACTION=imp NUKE_E2E_PLAYERS=4 node tests/full-game-v4.e2e.cjs",
     "test:v4:e2e:mobile": "NUKE_E2E_FACTION=imp NUKE_E2E_PLAYERS=4 NUKE_E2E_WIDTH=844 NUKE_E2E_HEIGHT=390 NUKE_E2E_TOUCH=1 NUKE_E2E_ARTIFACT=/tmp/nuke-full-game-v4-mobile node tests/full-game-v4.e2e.cjs",
     "test:cinematic": "node tests/cinematic.browser.cjs && node tests/cinematic-lifecycle.browser.cjs && node tests/map-presentation.browser.cjs && node tests/cinematic-setup-online.browser.cjs && node tests/compact-ux.browser.cjs",
+    "test:audio": "node tests/audio.browser.cjs",
     "test:attack": "node tests/attack-baseline.browser.cjs && node tests/attack-flow.browser.cjs && node tests/missile-path.browser.cjs"
   },
   "engines": {

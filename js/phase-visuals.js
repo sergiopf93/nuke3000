@@ -17,7 +17,7 @@ const PhaseVisuals = (() => {
     }
     if (typeof BattleScene === 'undefined') return Promise.resolve();
     if (packet.kind === 'missile') return BattleScene.presentMissile(packet.data);
-    if (packet.kind === 'nuclear') return BattleScene.effect('nuclear',packet.data);
+    if (packet.kind === 'nuclear') return BattleScene.effect('nuclear',{...packet.data,visualId:packet.id});
     return Promise.resolve();
   }
 

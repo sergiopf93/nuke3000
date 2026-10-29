@@ -1,0 +1,70 @@
+[
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "touch": false,
+    "decodes": 34,
+    "mp3DiceUnavailable": false,
+    "ambientSourcesAcrossPhases": 1,
+    "cues": [
+      "ambient",
+      "turn_notification",
+      "dice_roll",
+      "shot_soldier",
+      "hit_flesh",
+      "unit_fall",
+      "shot_mech",
+      "hit_armor",
+      "unit_degrade",
+      "shot_scorpion",
+      "missile_launch",
+      "missile_intercept",
+      "missile_impact",
+      "nuclear_alert",
+      "nuclear_explosion"
+    ],
+    "energy": 0.11767508089542389,
+    "mixCheck": {
+      "voices": 6,
+      "shots": 2,
+      "peak": 0.948915958404541
+    },
+    "errors": []
+  },
+  {
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "touch": true,
+    "decodes": 34,
+    "mp3DiceUnavailable": true,
+    "ambientSourcesAcrossPhases": 1,
+    "cues": [
+      "ambient",
+      "turn_notification",
+      "dice_roll",
+      "shot_soldier",
+      "hit_flesh",
+      "unit_fall",
+      "shot_mech",
+      "hit_armor",
+      "unit_degrade",
+      "shot_scorpion",
+      "missile_launch",
+      "missile_intercept",
+      "missile_impact",
+      "nuclear_alert",
+      "nuclear_explosion"
+    ],
+    "energy": 0.10837917029857635,
+    "mixCheck": {
+      "voices": 6,
+      "shots": 2,
+      "peak": 0.864955484867096
+    },
+    "errors": []
+  }
+]

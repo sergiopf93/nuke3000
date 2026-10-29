@@ -100,6 +100,7 @@ function updateTurnOrderBar() {
 }
 
 function updatePhaseBanner(fk) {
+  if(typeof GameAudio!=='undefined'&&!G.gameOver&&!G.awaitingStart&&!G.setup?._inSetup&&fk===G.pf)GameAudio.turn(G.round+':'+fk);
   updateTurnOrderBar(); refreshCards();
   const badge=document.getElementById('phase-badge');if(badge)badge.textContent=G.gameOver?'FINAL':G.setup?._inSetup?'SETUP':G_step.phase.toUpperCase();
   const turn=document.getElementById('curturn');if(turn)turn.textContent=FDATA[fk]?.name||'—';
@@ -790,6 +791,7 @@ function declareWin(fk, goal, broadcast = true) {
 }
 
 function declareVictory(goal, fk = G.result?.winner || G.pf) {
+  if(typeof GameAudio!=='undefined')GameAudio.finish(fk===G.pf);
   const fc=FDATA[fk]||{name:fk,color:'#C8A800'};
   const safeGoal=String(goal).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ov=document.createElement('div');

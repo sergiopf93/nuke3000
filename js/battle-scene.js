@@ -108,7 +108,7 @@ const BattleScene = (() => {
     root.append(namesBar);
     const units=node('div','cin-units'),effects=node('div','cin-effects'),dice=node('div','cin-dice'),footer=node('div','cin-footer'),status=node('p','cin-status','Ejércitos desplegados sobre el territorio');status.setAttribute('aria-live','polite');
     const counters=node('div','cin-counters');for(const side of ['att','def']){const el=node('span');el.dataset.cinCount=side;counters.append(el);}footer.append(status,counters);root.append(units,effects,dice,footer);
-    const session={id:ctx.visualId||[ctx.stepKey||'',ctx.attFk,ctx.targetId].join(':'),ctx:copy(ctx),root,units,effects,dice,status,roster:{att:[],def:[]},serial:0,controller:new AbortController(),waits:new Set(),animations:new Set(),queue:Promise.resolve(),seen:new Set(),skipped:false,round:0};
+    const session={id:ctx.visualId||[ctx.stepKey||'',ctx.attFk,ctx.targetId].join(':'),ctx:copy(ctx),root,units,effects,dice,status,roster:{att:[],def:[]},serial:0,controller:new AbortController(),waits:new Set(),animations:new Set(),queue:Promise.resolve(),seen:new Set(),skipped:false,round:0,audioEvent:ctx.visualId,audioIndex:0};
     syncArmy(session,'att',before?.attacker||{});syncArmy(session,'def',before?.defender||{});counts(session,before?.attacker||{},before?.defender||{});arrange(session);
     document.body.append(root);document.body.classList.add('nuke-cinema');position(session);focusCamera(session);return session;
   }
@@ -122,6 +122,9 @@ const BattleScene = (() => {
   function unitForRoll(session,side,roll) {
     const units=session.roster[side].filter(u=>u.alive&&u.type===roll.type);return units[roll.index||0]||null;
   }
+  function sound(session,name,gain=1) {
+    if(typeof GameAudio!=='undefined'&&!session.skipped&&!session.controller.signal.aborted&&duration(1))GameAudio.play(name,{id:session.id+':'+session.audioEvent+':'+(session.audioIndex++)+':'+name,signal:session.controller.signal,gain});
+  }
   async function projectile(session,source,target,winner) {
     if(!source?.el||!target?.el||session.skipped||session.controller.signal.aborted||!duration(1))return;
     const box=session.root.getBoundingClientRect(),a=source.el.getBoundingClientRect(),b=target.el.getBoundingClientRect();
@@ -129,8 +132,9 @@ const BattleScene = (() => {
     const shot=node('span','cin-shot cin-shot-'+source.type);Object.assign(shot.dataset,{sourceUnit:source.id,targetUnit:target.id,winnerSide:winner,sourceX:String(from.x),targetX:String(to.x)});
     const angle=Math.atan2(to.y-from.y,to.x-from.x)*180/Math.PI;
     Object.assign(shot.style,{left:from.x+'px',top:from.y+'px',transform:'rotate('+angle+'deg)'});session.effects.append(shot);
+    sound(session,source.type==='sol'?'shot_soldier':source.type==='scorp'?'shot_scorpion':'shot_mech',source.type==='air'?.65:1);
     animate(session,shot,[{left:from.x+'px',top:from.y+'px',opacity:1},{left:to.x+'px',top:to.y+'px',opacity:1}],520,{easing:'ease-in',fill:'forwards'});
-    await wait(session,520);shot.remove();await blast(session,to,565);
+    await wait(session,520);shot.remove();sound(session,target.type==='sol'?'hit_flesh':'hit_armor');await blast(session,to,565);
   }
   async function blast(session,point,ms=900,nuclear=false,interception=false) {
     if(session.skipped||session.controller.signal.aborted||!duration(1))return;
@@ -143,16 +147,19 @@ const BattleScene = (() => {
     if(!unit.el){if(change.to)unit.type=change.to;else unit.alive=false;return;}
     const el=unit.el;el.classList.add('cin-hit');await wait(session,305);el.classList.remove('cin-hit');
     if(change.to){
+      sound(session,'unit_degrade');
       animate(session,el,[{filter:'brightness(1)',opacity:1},{filter:'brightness(2)',opacity:.3,offset:.5},{filter:'brightness(1)',opacity:1}],850);
       await wait(session,390);unit.type=change.to;el.dataset.type=unit.type;el.querySelector('img').src='assets/cinematic/'+types[unit.type]+'.png';el.querySelector('.cin-unit-label').textContent=names[unit.type];
       await wait(session,350);
     }else{
+      sound(session,'unit_fall');
       unit.alive=false;el.dataset.alive='false';el.style.zIndex='1';el.classList.add('cin-fallen');
       animate(session,el,[{transform:'translate(-50%,-65%) rotate(0deg)',opacity:1},{transform:'translate(-50%,-10%) rotate(85deg) scaleY(.65)',opacity:.25}],900,{fill:'forwards'});await wait(session,900);el.remove();unit.el=null;
     }
   }
   async function runRound(session,ctx,result) {
     if(current!==session)return {status:'cancelled'};
+    session.audioEvent='round:'+(ctx.round||session.round+1);session.audioIndex=0;
     session.round++;session.root.querySelector('.ds-controls').hidden=session.skipped||!duration(1);
     const planned=planRound(result),assigned=planned.map(event=>({...event,a:unitForRoll(session,'att',event.attacker),d:unitForRoll(session,'def',event.defender)}));
     for(const u of session.roster.att.concat(session.roster.def))u.participant=false;
@@ -161,7 +168,7 @@ const BattleScene = (() => {
     const dice=[];
     for(const [side,rolls]of [['att',result.attRolls||[]],['def',result.defRolls||[]]])for(const roll of rolls)dice.push({kind:'d'+roll.sides,value:roll.value,raw:roll.raw,effective:roll.effective??roll.value-(roll.bonus||0),bonus:roll.bonus||0,label:names[roll.type]+' · '+(side==='att'?'ATQ':'DEF'),side});
     await wait(session,session.round===1?1200:500);
-    await DiceSequence.play({dice,cause:'RONDA '+(ctx.round||session.round),container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
+    await DiceSequence.play({id:session.id+':'+session.audioEvent,dice,cause:'RONDA '+(ctx.round||session.round),container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
     for(const event of assigned){
       const winner=event.winner==='attacker'?'att':'def',source=winner==='att'?event.a:event.d,target=winner==='att'?event.d:event.a;
       session.status.textContent=(winner==='att'?'ATAQUE':'DEFENSA')+' GANA'+(event.casualty?' · '+names[event.casualty.from]+' → '+(names[event.casualty.to]||'BAJA'):'');
@@ -200,10 +207,12 @@ const BattleScene = (() => {
     return fallback;
   }
   async function nuclear(session,explosion) {
-    const centers=explosion?.centers||[];for(const id of centers){
+    const centers=explosion?.centers||[];
+    if(centers.length){sound(session,'nuclear_alert',.65);await wait(session,400);}
+    for(const id of centers){
       if(current!==session)return;
       session.status.textContent='ACCIDENTE NUCLEAR · '+(typeof terName==='function'?terName(id):id);
-      const p=missilePoint(session,id,{x:session.root.clientWidth/2,y:session.root.clientHeight*.6});await blast(session,p,1200,true);await wait(session,305);
+      const p=missilePoint(session,id,{x:session.root.clientWidth/2,y:session.root.clientHeight*.6});sound(session,'nuclear_explosion',.7);await blast(session,p,1200,true);await wait(session,305);
     }
   }
   function presentMissile({type,event={},dice,explosion}={}) {
@@ -217,27 +226,28 @@ const BattleScene = (() => {
     const key=type+':'+(snapshot.revision??'')+':'+JSON.stringify(provided||[]);if(session.seen.has(key))return session.queue;session.seen.add(key);
     session.queue=session.queue.then(async()=>{
       if(current!==session)return {status:'cancelled'};
+      session.audioEvent=key;session.audioIndex=0;
       session.root.querySelector('.ds-controls').hidden=session.skipped||!duration(1);
       if(type==='launch'&&camera)await Promise.race([camera.finished.catch(()=>{}),wait(session,1200)]);
       const w=session.root.clientWidth,h=session.root.clientHeight;
       if(!session.missilePath){const origin=missilePoint(session,snapshot.sourceTerritory||snapshot.sourceId,{x:w*.12,y:h*.7}),destination=missilePoint(session,targetId,{x:w*.78,y:h*.65}),mid={x:origin.x+(destination.x-origin.x)*.4,y:origin.y+(destination.y-origin.y)*.4},collision={x:origin.x+(destination.x-origin.x)*.5,y:origin.y+(destination.y-origin.y)*.5};session.missilePath={origin,destination,mid,collision};}
       const {origin,destination,mid,collision}=session.missilePath;
       if(type==='launch'){
-        session.status.textContent='MISIL LANZADO · Objetivo elegido: '+(snapshot.target==='mech'?'1 meca':'hasta 3 soldados');await missileFlight(session,origin,mid,false,true);
+        session.status.textContent='MISIL LANZADO · Objetivo elegido: '+(snapshot.target==='mech'?'1 meca':'hasta 3 soldados');sound(session,'missile_launch');await missileFlight(session,origin,mid,false,true);
       }else if(type==='interception'){
         const raw=snapshot.interceptions?.at(-1);session.status.textContent='INTENTO DE INTERCEPCIÓN '+(snapshot.interceptions?.length||1)+' · D6 ≥ 4';
-        await DiceSequence.play({dice:provided||[{kind:'d6',value:raw,raw,label:'Intercepción',side:'def'}],cause:'INTERCEPCIÓN D6',container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
+        await DiceSequence.play({id:session.id+':'+session.audioEvent,dice:provided||[{kind:'d6',value:raw,raw,label:'Intercepción',side:'def'}],cause:'INTERCEPCIÓN D6',container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
         session.status.textContent=snapshot.blocked?'MISIL INTERCEPTADO · Sin bajas':'INTERCEPCIÓN FALLIDA · El defensor puede intentarlo de nuevo';
-        if(snapshot.blocked){session.root.dataset.missileOutcome='intercepted';session.parkedMissile?.remove();session.parkedMissile=null;await Promise.all([missileFlight(session,mid,collision),missileFlight(session,destination,collision,true)]);const hit=node('span');hit.dataset.missileEvent='intercept';session.effects.append(hit);await blast(session,collision,700,false,true);hit.remove();}await wait(session,1000);
+        if(snapshot.blocked){session.root.dataset.missileOutcome='intercepted';session.parkedMissile?.remove();session.parkedMissile=null;await Promise.all([missileFlight(session,mid,collision),missileFlight(session,destination,collision,true)]);const hit=node('span');hit.dataset.missileEvent='intercept';session.effects.append(hit);sound(session,'missile_intercept');await blast(session,collision,700,false,true);hit.remove();}await wait(session,1000);
       }else if(type==='impact'){
-        session.status.textContent='IMPACTO AUTOMÁTICO · Sin tirada adicional';session.parkedMissile?.remove();session.parkedMissile=null;session.root.dataset.missileOutcome='impact';await missileFlight(session,mid,destination);await blast(session,destination,1200);
+        session.status.textContent='IMPACTO AUTOMÁTICO · Sin tirada adicional';session.parkedMissile?.remove();session.parkedMissile=null;session.root.dataset.missileOutcome='impact';await missileFlight(session,mid,destination);sound(session,'missile_impact');await blast(session,destination,1200);
         const victims=session.roster.def.filter(u=>u.alive&&u.type===snapshot.target).slice(0,snapshot.destroyed||0);
         for(const victim of victims)await casualty(session,victim,{from:victim.type,to:null});
         const directAfter=copy(snapshot.beforeImpact||snapshot.before||{});const targetKey=keys[snapshot.target];if(targetKey)directAfter[targetKey]=Math.max(0,(directAfter[targetKey]||0)-(snapshot.destroyed||0));
         syncArmy(session,'def',directAfter);arrange(session);counts(session,{},directAfter);
         session.status.textContent='IMPACTO · '+(snapshot.destroyed||0)+' '+(snapshot.target==='mech'?'meca':'soldados')+' destruidos';await wait(session,1000);
       }else if(type==='accident'){
-        const raw=snapshot.accidentRoll;await DiceSequence.play({dice:provided||[{kind:'d12',value:raw,raw,label:'Accidente nuclear',side:'def'}],cause:'ACCIDENTE NUCLEAR D12',container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
+        const raw=snapshot.accidentRoll;await DiceSequence.play({id:session.id+':'+session.audioEvent,dice:provided||[{kind:'d12',value:raw,raw,label:'Accidente nuclear',side:'def'}],cause:'ACCIDENTE NUCLEAR D12',container:session.dice,signal:session.controller.signal,pace:DiceSequence.attackPace,controls:false});
         session.status.textContent=raw===1?'ACCIDENTE NUCLEAR':'Sin accidente';if(ex){await nuclear(session,ex);if(snapshot.after){syncArmy(session,'def',snapshot.after);arrange(session);counts(session,{},snapshot.after);}const base=session.units.querySelector('.cin-base');if(base)base.hidden=true;}await wait(session,1000);
       }else if(type==='end'){
         session.status.textContent=snapshot.blocked?'MISIL INTERCEPTADO · 0 bajas':'MISIL RESUELTO · '+(snapshot.destroyed||0)+' bajas';await wait(session,1200);if(current===session)close();
@@ -249,8 +259,8 @@ const BattleScene = (() => {
   function effect(kind,data={}) {
     if(!['nuclear','nuclearChain','explosion'].includes(kind)||!data.centers?.length)return Promise.resolve({status:'completed'});
     const targetId=data.targetId||data.centers[0];
-    if(!current){current=makeSession({visualId:'nuclear:'+targetId,targetId},{attacker:{},defender:{}},'nuclear');const session=current;session.queue=nuclear(session,copy(data)).then(()=>wait(session,700)).then(()=>{if(current===session)close();return {status:'completed'};});return session.queue;}
-    const session=current;session.queue=session.queue.then(()=>nuclear(session,copy(data)));return session.queue;
+    if(!current){current=makeSession({visualId:data.visualId||'nuclear:'+targetId,targetId},{attacker:{},defender:{}},'nuclear');const session=current;session.queue=nuclear(session,copy(data)).then(()=>wait(session,700)).then(()=>{if(current===session)close();return {status:'completed'};});return session.queue;}
+    const session=current;session.queue=session.queue.then(()=>{session.audioEvent=data.visualId||'nuclear:'+data.centers.join(',');session.audioIndex=0;return nuclear(session,copy(data));});return session.queue;
   }
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&current){skip(current);}});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&current)skip(current);});

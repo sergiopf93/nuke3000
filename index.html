@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="nuke-release" content="attack-flow-v9">
+<meta name="nuke-release" content="audio-v10">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>NUKE 3000 — ARMAGEDDON PROTOCOL</title>
@@ -513,6 +513,7 @@
 <script src="js/map.js"></script>
 <script src="js/battle.js"></script>
 <script src="js/rules-v4.js"></script>
+<script src="js/game-audio.js"></script>
 <script src="js/dice-sequence.js"></script>
 <script src="js/battle-scene.js"></script>
 <script src="js/phase-visuals.js"></script>
@@ -769,6 +770,7 @@ function startGame() {
   if (!ONLINE.isOnline()) G.playerCount = parseInt(document.getElementById('pcount').value);
 
   if(typeof DiceSequence!=='undefined')DiceSequence.beginGame();
+  if(typeof GameAudio!=='undefined')GameAudio.beginGame();
   initGame();
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('hdr').style.display = 'flex';

@@ -1,3 +1,19 @@
+# NUKE3000 — audio V10
+
+Música ambiental única y continua durante toda la partida, incluidos combates, turnos y paneles. Se activa tras interacción, entra con fundido y se atenúa al resultado final. Se integran los 17 sonidos de la entrega del usuario: dados, disparos, golpes, degradaciones, caídas, misiles, intercepción, impacto, alerta/explosión nuclear, turno, victoria y derrota. Aeronaves reutilizan discretamente el disparo de meca.
+
+**AJUSTES → AUDIO:** volumen general, música, efectos y silencio, persistentes por dispositivo y disponibles durante la partida. Web Audio con control de ganancia, reanudación tras gesto e interrupciones, pausa de pestaña sin reiniciar la música, límite de voces y cancelación al omitir escenas. MP3 con respaldo OGG; recursos precargados para uso offline bajo `/nuke3000/`.
+
+Se conservan las reglas V4, el mapa original de 60 territorios y las animaciones. El audio no calcula resultados ni modifica el estado o la red; los identificadores de presentación evitan repetir sonidos al recibir de nuevo un evento.
+
+[Jugar](https://sergiopf93.github.io/nuke3000/) · [Sonidos e integración](docs/AUDIO.md) · [Pruebas y evidencia V10](docs/evidence/audio/README.md).
+
+Validación: `npm run test:all` pasa con Node 22, Playwright y Chrome: 343 tests de motor; cuatro partidas completas V3/V4 de escritorio/táctil; dos clientes; presentación; ocho desenlaces de misiles; actualización V9→V10 y arranque offline. `npm run test:audio` comprueba decodificación real MP3/OGG, señal PCM, continuidad, sincronización, cancelación, mezcla sin clipping en el escenario probado, controles, persistencia, resultados y repetición de eventos. No se certifican Safari/iPhone físico, escucha artística o Firebase real desde la emulación local.
+
+---
+
+## Iteración anterior V9
+
 # NUKE3000 — ataques V4, misiles y nucleares V9
 
 La nueva iteración conserva las reglas V4 salvo la restricción defensiva solicitada: en cada ronda, defensa automática con los dados más fuertes y como máximo `min(máximo de defensa, dados atacantes realmente usados)`. No se generan dados defensivos adicionales.
